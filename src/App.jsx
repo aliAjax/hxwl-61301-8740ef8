@@ -292,17 +292,27 @@ const appConfig = {
   ]
 };
 
-const today = new Date().toISOString().slice(0, 10);
+function getLocalDateString(d = new Date()) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const today = getLocalDateString();
 
 function addDays(dateStr, days) {
-  const d = new Date(dateStr);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return getLocalDateString(d);
 }
 
 function diffDays(dateA, dateB) {
-  const a = new Date(dateA);
-  const b = new Date(dateB);
+  const [yA, mA, dA] = dateA.split('-').map(Number);
+  const [yB, mB, dB] = dateB.split('-').map(Number);
+  const a = new Date(yA, mA - 1, dA);
+  const b = new Date(yB, mB - 1, dB);
   return Math.round((a - b) / (1000 * 60 * 60 * 24));
 }
 
@@ -324,7 +334,8 @@ function getNext14Days() {
 }
 
 function formatDateLabel(dateStr) {
-  const d = new Date(dateStr);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   return {
     date: `${d.getMonth() + 1}/${d.getDate()}`,
@@ -410,7 +421,7 @@ function loadDeliveryOrders() {
 }
 
 function generateOrderNo() {
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const dateStr = getLocalDateString().replace(/-/g, '');
   const random = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `JJ-${dateStr}-${random}`;
 }
