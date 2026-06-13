@@ -2450,6 +2450,537 @@ select.with-icon {
   gap: 6px;
 }
 
+.collab-workspace {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 20px;
+}
+
+.collab-metrics {
+  margin-bottom: 16px;
+}
+
+.collab-hint {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 8px 0 14px;
+}
+
+.collab-device-register {
+  padding: 12px 0;
+}
+
+.collab-register-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.collab-register-form .field {
+  flex: 1;
+}
+
+.collab-device-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.collab-device-card {
+  padding: 16px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.collab-device-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.collab-device-id strong {
+  display: block;
+  font-size: 16px;
+  color: #111827;
+}
+
+.collab-device-code {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  font-family: 'SF Mono', monospace;
+}
+
+.collab-device-since {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.collab-form-section h3 {
+  font-size: 15px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.collab-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.collab-item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.collab-item {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.collab-item.collab-local {
+  border-left: 3px solid var(--accent);
+}
+
+.collab-item.collab-remote {
+  border-left: 3px solid #f59e0b;
+  background: #fffbeb;
+}
+
+.collab-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.collab-item-patient {
+  font-size: 15px;
+  color: #111827;
+}
+
+.collab-device-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.badge-local {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.badge-remote {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.collab-item-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.collab-item-note {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.collab-item-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.collab-version {
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-family: 'SF Mono', monospace;
+}
+
+.collab-modified {
+  font-size: 12px;
+}
+
+.collab-item-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.btn-icon {
+  background: transparent;
+  border: 0;
+  color: #9ca3af;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.btn-icon:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.collab-transfer-panel {
+  grid-column: 1 / -1;
+}
+
+.collab-transfer-section {
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.collab-transfer-section:last-child {
+  border-bottom: none;
+}
+
+.collab-transfer-section h4 {
+  font-size: 15px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.collab-import-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.collab-import-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.collab-import-source {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 10px;
+}
+
+.collab-import-source strong {
+  display: block;
+  font-size: 14px;
+  color: #111827;
+}
+
+.collab-import-source span {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: 'SF Mono', monospace;
+}
+
+.collab-import-stats {
+  display: flex;
+  gap: 14px;
+}
+
+.collab-conflicts {
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fff5f5;
+}
+
+.collab-conflicts-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: #dc2626;
+}
+
+.collab-conflicts-header h3 {
+  font-size: 15px;
+  color: #991b1b;
+}
+
+.collab-conflict-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.collab-conflict-item {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.conflict-patient-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  color: #111827;
+}
+
+.conflict-patient-info span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.conflict-compare {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  margin-bottom: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.conflict-side {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.conflict-side.conflict-local {
+  background: #f0fdfa;
+  border-right: none;
+}
+
+.conflict-side.conflict-import {
+  background: #fffbeb;
+  border-left: none;
+}
+
+.conflict-side-label {
+  font-weight: 700;
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.conflict-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  background: #f3f4f6;
+  font-weight: 800;
+  font-size: 12px;
+  color: #9ca3af;
+  border-left: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+}
+
+.conflict-time {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.conflict-resolution {
+  display: flex;
+  gap: 10px;
+}
+
+.conflict-option {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  align-items: flex-start;
+}
+
+.conflict-option:hover {
+  border-color: #94a3b8;
+}
+
+.conflict-option.selected {
+  border-color: var(--accent);
+  background: #f0fdfa;
+}
+
+.conflict-option input[type="radio"] {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.conflict-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.conflict-option-content strong {
+  font-size: 13px;
+  color: #111827;
+}
+
+.conflict-option-content span {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.3;
+}
+
+.collab-timeline-panel {
+  grid-column: 1 / -1;
+}
+
+.collab-timeline-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.collab-timeline-entry {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.collab-timeline-entry:last-child {
+  border-bottom: none;
+}
+
+.collab-tl-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.collab-tl-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.collab-tl-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.collab-tl-type {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.collab-tl-device {
+  font-size: 11px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.collab-tl-detail {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 2px 0;
+}
+
+.collab-tl-time {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.collab-tl-icon:has(svg) {
+  background: #f0fdfa;
+  color: var(--accent);
+}
+
+.collab-timeline-entry[class*="conflict"] .collab-tl-icon {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+@media (max-width: 980px) {
+  .collab-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .collab-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .conflict-compare {
+    flex-direction: column;
+  }
+
+  .conflict-vs {
+    padding: 8px;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .conflict-resolution {
+    flex-direction: column;
+  }
+
+  .collab-import-stats {
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 980px) {
   .data-management {
     grid-template-columns: 1fr;
