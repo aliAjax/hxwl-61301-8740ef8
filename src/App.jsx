@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -11,6 +11,7 @@ const appConfig = {
   "icon": "SmilePlus",
   "storage": "hxwl-61301-dental-shade",
   "patientStorage": "hxwl-61301-patients",
+  "shadeLibraryStorage": "hxwl-61301-shade-library",
   "accent": "#0f766e",
   "statuses": [
     "待修复",
@@ -119,6 +120,50 @@ const appConfig = {
       "shadeCount": 3
     }
   ],
+  "shadeLibrarySeed": [
+    {
+      "code": "A1",
+      "description": "最浅的A系列色号，呈现明亮的乳白色调，透明度较高。",
+      "scenario": "适用于年轻患者、皮肤白皙的患者，或前牙美学修复需求较高的病例。常见于青少年及年轻成年人的天然牙色。",
+      "notes": "选色时需注意颈部与切端的色差，建议在自然光下进行比色。瓷修复体烧结后颜色可能略深，比色时可适当偏浅一号。"
+    },
+    {
+      "code": "A2",
+      "description": "A系列中最常用的色号，呈现自然的浅黄棕色，是多数人天然牙的平均颜色。",
+      "scenario": "适用于大多数成年患者的前后牙修复，是临床最常选择的基准色号。尤其适合中等肤色患者。",
+      "notes": "A2色号适用范围广，但仍需结合患者年龄、性别和肤色综合判断。注意与邻牙的协调过渡。"
+    },
+    {
+      "code": "A3",
+      "description": "A系列中等偏深的色号，呈现较明显的黄棕色，饱和度适中。",
+      "scenario": "适用于中老年患者、肤色偏黄或健康肤色的患者。后牙修复时选用较多，咀嚼功能区的自然色泽。",
+      "notes": "后牙修复时可选用A3作为主体色，颈部适当加深以模拟天然牙的色彩渐变。"
+    },
+    {
+      "code": "B1",
+      "description": "B系列中最浅的色号，偏冷色调，呈现灰白感，比A1更偏白但饱和度较低。",
+      "scenario": "适用于肤色偏冷白的患者，或追求较白修复效果的年轻患者。漂白后牙齿的常见色号。",
+      "notes": "B系列色号偏灰，选色时需谨慎，避免修复体显得不自然。建议与A系列色号交叉比对。"
+    },
+    {
+      "code": "B2",
+      "description": "B系列中等色号，呈现偏灰的黄棕色，色调较A系列更冷。",
+      "scenario": "适用于肤色偏黄偏暗的患者，天然牙偏灰的病例。对于年龄较大、牙齿有磨耗着色的患者较为适用。",
+      "notes": "B系列色号在不同光照下色差可能较大，建议在多种光源下比色确认。"
+    },
+    {
+      "code": "C1",
+      "description": "C系列浅色号，呈现明显的灰色调，是所有色号中最偏灰的浅色。",
+      "scenario": "适用于天然牙偏灰的患者，常见于四环素牙轻度着色、或年龄增长导致的牙齿灰暗。",
+      "notes": "灰色调牙齿修复难度较大，可能需要内染色或特殊饰瓷技术。建议制作诊断蜡型或试戴牙片确认效果。"
+    },
+    {
+      "code": "D2",
+      "description": "D系列中等色号，呈现偏棕灰色调，介于A系列和C系列之间的色泽。",
+      "scenario": "适用于天然牙颜色偏暗偏棕的患者，中老年患者多见。后牙及磨牙区域修复较为常用。",
+      "notes": "D系列色号饱和度适中，适合大多数后牙修复。注意与牙龈颜色的协调搭配。"
+    }
+  ],
   "metrics": [
     [
       "总记录",
@@ -205,6 +250,18 @@ function withPatientIds(patients) {
   return patients.map((p) => ({ id: uid(), createdAt: new Date().toISOString(), ...p }));
 }
 
+function loadShadeLibrary() {
+  const raw = localStorage.getItem(appConfig.shadeLibraryStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return appConfig.shadeLibrarySeed;
+    }
+  }
+  return appConfig.shadeLibrarySeed;
+}
+
 function statusClass(status) {
   const index = appConfig.statuses.indexOf(status);
   return ['status-a', 'status-b', 'status-c', 'status-d'][index] || 'status-a';
@@ -214,6 +271,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('records');
   const [records, setRecords] = useState(loadRecords);
   const [patients, setPatients] = useState(loadPatients);
+  const [shadeLibrary, setShadeLibrary] = useState(loadShadeLibrary);
   const [form, setForm] = useState(appConfig.defaultValues);
   const [filters, setFilters] = useState({ query: '', status: '全部' });
   const [selected, setSelected] = useState(null);
@@ -222,6 +280,8 @@ function App() {
   const [editingPatientId, setEditingPatientId] = useState(null);
   const [patientQuery, setPatientQuery] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [editingShade, setEditingShade] = useState(null);
+  const [shadeDetailModal, setShadeDetailModal] = useState(null);
 
   function persistRecords(next) {
     setRecords(next);
@@ -231,6 +291,32 @@ function App() {
   function persistPatients(next) {
     setPatients(next);
     localStorage.setItem(appConfig.patientStorage, JSON.stringify(next));
+  }
+
+  function persistShadeLibrary(next) {
+    setShadeLibrary(next);
+    localStorage.setItem(appConfig.shadeLibraryStorage, JSON.stringify(next));
+  }
+
+  function getShadeInfo(code) {
+    return shadeLibrary.find((s) => s.code === code);
+  }
+
+  function editShade(shade) {
+    setEditingShade({ ...shade });
+  }
+
+  function saveShade() {
+    if (!editingShade || !editingShade.code) return;
+    const next = shadeLibrary.map((s) =>
+      s.code === editingShade.code ? editingShade : s
+    );
+    persistShadeLibrary(next);
+    setEditingShade(null);
+  }
+
+  function cancelEditShade() {
+    setEditingShade(null);
   }
 
   function addRecord(event) {
@@ -404,6 +490,13 @@ function App() {
           <Users size={16} />
           患者档案
         </button>
+        <button
+          className={'tab ' + (activeTab === 'shadeLibrary' ? 'active' : '')}
+          onClick={() => setActiveTab('shadeLibrary')}
+        >
+          <Palette size={16} />
+          牙色样本库
+        </button>
       </div>
 
       {activeTab === 'records' && (
@@ -474,18 +567,54 @@ function App() {
 
               <div className="form-grid">
                 {appConfig.fields.map((field) => (
-                  <label key={field.key} className={field.type === 'textarea' ? 'wide' : ''}>
-                    <span>{field.label}</span>
-                    {field.type === 'textarea' ? (
-                      <textarea value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} placeholder={field.placeholder} />
-                    ) : field.type === 'select' ? (
+                  field.key === 'shade' ? (
+                    <label key={field.key} className="wide">
+                      <span>{field.label}</span>
                       <select value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}>
                         {field.options.map((option) => <option key={option}>{option}</option>)}
                       </select>
-                    ) : (
-                      <input type={field.type} value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} placeholder={field.placeholder} />
-                    )}
-                  </label>
+                      <div className="shade-picker">
+                        {field.options.map((option) => {
+                          const shadeInfo = getShadeInfo(option);
+                          return (
+                            <div
+                              key={option}
+                              className={'shade-picker-item ' + (form.shade === option ? 'active' : '')}
+                              onClick={() => setForm({ ...form, shade: option })}
+                            >
+                              <div className={'shade-swatch-mini shade-' + option.charAt(0).toLowerCase()}>
+                                <span>{option}</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="shade-info-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShadeDetailModal(shadeInfo || { code: option });
+                                }}
+                                title="查看色号说明"
+                              >
+                                <Info size={12} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </label>
+                  ) : (
+                    <label key={field.key} className={field.type === 'textarea' ? 'wide' : ''}>
+                      <span>{field.label}</span>
+                      {field.type === 'textarea' ? (
+                        <textarea value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} placeholder={field.placeholder} />
+                      ) : field.type === 'select' ? (
+                        <select value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}>
+                          {field.options.map((option) => <option key={option}>{option}</option>)}
+                        </select>
+                      ) : (
+                        <input type={field.type} value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} placeholder={field.placeholder} />
+                      )}
+                    </label>
+                  )
                 ))}
                 <label>
                   <span>当前状态</span>
@@ -561,6 +690,32 @@ function App() {
                   <h3>{selected.patient}</h3>
                   <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
                   <p>{selected.photoNote}</p>
+
+                  {getShadeInfo(selected.shade) && (
+                    <div className="shade-detail-card">
+                      <div className="shade-detail-header">
+                        <div className={'shade-swatch-sm shade-' + selected.shade.charAt(0).toLowerCase()}>
+                          <span>{selected.shade}</span>
+                        </div>
+                        <div>
+                          <h4>色号 {selected.shade} 说明</h4>
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={() => setShadeDetailModal(getShadeInfo(selected.shade))}
+                          >
+                            查看完整说明
+                          </button>
+                        </div>
+                      </div>
+                      <div className="shade-detail-content">
+                        <p><strong>文字说明：</strong>{getShadeInfo(selected.shade)?.description}</p>
+                        <p><strong>适用场景：</strong>{getShadeInfo(selected.shade)?.scenario}</p>
+                        <p><strong>注意事项：</strong>{getShadeInfo(selected.shade)?.notes}</p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="timeline">
                     {(selected.timeline || []).map((step, index) => (
                       <span key={index}>{step.at} · {step.status} · {step.by}</span>
@@ -749,6 +904,158 @@ function App() {
             </aside>
           </section>
         </>
+      )}
+
+      {activeTab === 'shadeLibrary' && (
+        <>
+          <section className="metrics">
+            <article className="metric">
+              <span>色号总数</span>
+              <strong>{shadeLibrary.length}</strong>
+            </article>
+            <article className="metric">
+              <span>A系列</span>
+              <strong>{shadeLibrary.filter((s) => s.code.startsWith('A')).length}</strong>
+            </article>
+            <article className="metric">
+              <span>其他系列</span>
+              <strong>{shadeLibrary.filter((s) => !s.code.startsWith('A')).length}</strong>
+            </article>
+          </section>
+
+          <section className="workspace">
+            <div className="panel form-panel">
+              <div className="panel-title">
+                <Edit3 size={18} />
+                <h2>{editingShade ? '编辑色号说明' : '色号详情'}</h2>
+              </div>
+              {editingShade ? (
+                <div className="form-grid">
+                  <label className="wide">
+                    <span>色号</span>
+                    <input
+                      type="text"
+                      value={editingShade.code}
+                      disabled
+                      style={{ background: '#f9fafb', color: '#667085' }}
+                    />
+                  </label>
+                  <label className="wide">
+                    <span>文字说明</span>
+                    <textarea
+                      value={editingShade.description || ''}
+                      onChange={(e) => setEditingShade({ ...editingShade, description: e.target.value })}
+                      placeholder="请输入该色号的文字说明"
+                      rows={3}
+                    />
+                  </label>
+                  <label className="wide">
+                    <span>适用场景</span>
+                    <textarea
+                      value={editingShade.scenario || ''}
+                      onChange={(e) => setEditingShade({ ...editingShade, scenario: e.target.value })}
+                      placeholder="请输入适用场景描述"
+                      rows={3}
+                    />
+                  </label>
+                  <label className="wide">
+                    <span>注意事项</span>
+                    <textarea
+                      value={editingShade.notes || ''}
+                      onChange={(e) => setEditingShade({ ...editingShade, notes: e.target.value })}
+                      placeholder="请输入注意事项"
+                      rows={3}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="shade-preview-empty">
+                  <Palette size={48} style={{ color: '#d0d5dd' }} />
+                  <p>点击左侧色号卡片查看详情</p>
+                  <p className="hint">或点击「编辑」按钮修改说明内容</p>
+                </div>
+              )}
+              {editingShade && (
+                <>
+                  <button className="primary" type="button" onClick={saveShade}>
+                    <Save size={18} />保存修改
+                  </button>
+                  <button type="button" className="secondary" onClick={cancelEditShade}>
+                    取消编辑
+                  </button>
+                </>
+              )}
+            </div>
+
+            <section className="panel list-panel">
+              <div className="toolbar">
+                <div className="panel-title" style={{ marginBottom: 0 }}>
+                  <Palette size={18} />
+                  <h2>色号列表</h2>
+                </div>
+              </div>
+
+              <div className="shade-cards">
+                {shadeLibrary.map((shade) => (
+                  <article
+                    className="shade-card"
+                    key={shade.code}
+                  >
+                    <div className="shade-card-header">
+                      <div className={'shade-swatch shade-' + shade.code.charAt(0).toLowerCase()}>
+                        <span>{shade.code}</span>
+                      </div>
+                    </div>
+                    <div className="shade-card-body">
+                      <h3>{shade.code}</h3>
+                      <p className="shade-desc">{shade.description}</p>
+                    </div>
+                    <div className="shade-card-footer">
+                      <button type="button" onClick={() => editShade(shade)}>
+                        <Edit3 size={14} />编辑
+                      </button>
+                      <button type="button" onClick={() => setShadeDetailModal(shade)}>
+                        <Info size={14} />查看详情
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </section>
+        </>
+      )}
+
+      {shadeDetailModal && (
+        <div className="modal-overlay" onClick={() => setShadeDetailModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="panel-title" style={{ marginBottom: 0 }}>
+                <div className={'shade-swatch-sm shade-' + shadeDetailModal.code.charAt(0).toLowerCase()}>
+                  <span>{shadeDetailModal.code}</span>
+                </div>
+                <h2>色号 {shadeDetailModal.code} 详情</h2>
+              </div>
+              <button className="modal-close" onClick={() => setShadeDetailModal(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="shade-detail-section">
+                <h4><Info size={16} />文字说明</h4>
+                <p>{shadeDetailModal.description || '暂无说明'}</p>
+              </div>
+              <div className="shade-detail-section">
+                <h4><ClipboardList size={16} />适用场景</h4>
+                <p>{shadeDetailModal.scenario || '暂无描述'}</p>
+              </div>
+              <div className="shade-detail-section">
+                <h4><AlertCircle size={16} />注意事项</h4>
+                <p>{shadeDetailModal.notes || '暂无备注'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
