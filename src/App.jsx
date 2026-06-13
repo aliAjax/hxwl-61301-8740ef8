@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -12,6 +12,7 @@ const appConfig = {
   "storage": "hxwl-61301-dental-shade",
   "patientStorage": "hxwl-61301-patients",
   "shadeLibraryStorage": "hxwl-61301-shade-library",
+  "photoProcessStorage": "hxwl-61301-photo-process",
   "accent": "#0f766e",
   "statuses": [
     "待修复",
@@ -164,6 +165,44 @@ const appConfig = {
       "notes": "D系列色号饱和度适中，适合大多数后牙修复。注意与牙龈颜色的协调搭配。"
     }
   ],
+  "photoSteps": [
+    {
+      "key": "front",
+      "label": "正面照",
+      "icon": "User",
+      "description": "拍摄患者正面照片，确保牙齿与比色板清晰可见",
+      "placeholder": "请输入正面照备注，如：微笑时露出完整牙列，比色板放置于右侧"
+    },
+    {
+      "key": "side",
+      "label": "侧面照",
+      "icon": "User",
+      "description": "拍摄患者侧面照片，观察咬合关系和牙齿形态",
+      "placeholder": "请输入侧面照备注，如：右侧咬合关系，尖牙远中关系"
+    },
+    {
+      "key": "natural",
+      "label": "自然光照",
+      "icon": "Sun",
+      "description": "在自然光线下拍摄，确保颜色还原准确",
+      "placeholder": "请输入自然光照射备注，如：窗边自然光上午10点，避免直射"
+    },
+    {
+      "key": "confirm",
+      "label": "备注确认",
+      "icon": "CheckSquare",
+      "description": "确认所有照片和备注信息，完成拍照流程",
+      "placeholder": "请输入最终确认备注，如：所有照片已核对，比色结果A2确认无误"
+    }
+  ],
+  "photoEnvironments": [
+    "诊室灯光",
+    "窗边自然光",
+    "户外阴影",
+    "无影灯",
+    "冷光灯",
+    "其他"
+  ],
   "metrics": [
     [
       "总记录",
@@ -209,6 +248,17 @@ const appConfig = {
     "phone": "",
     "commonTooth": "",
     "allergyNote": ""
+  },
+  "photoProcessDefaultValues": {
+    "recordId": "",
+    "steps": {
+      "front": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
+      "side": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
+      "natural": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
+      "confirm": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" }
+    },
+    "currentStep": 0,
+    "completed": false
   }
 };
 
@@ -262,6 +312,35 @@ function loadShadeLibrary() {
   return appConfig.shadeLibrarySeed;
 }
 
+function loadPhotoProcesses() {
+  const raw = localStorage.getItem(appConfig.photoProcessStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function createEmptyPhotoProcess(recordId) {
+  return {
+    id: uid(),
+    recordId,
+    steps: {
+      front: { remark: "", environment: "", confirmed: false, imageUrl: "" },
+      side: { remark: "", environment: "", confirmed: false, imageUrl: "" },
+      natural: { remark: "", environment: "", confirmed: false, imageUrl: "" },
+      confirm: { remark: "", environment: "", confirmed: false, imageUrl: "" }
+    },
+    currentStep: 0,
+    completed: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function statusClass(status) {
   const index = appConfig.statuses.indexOf(status);
   return ['status-a', 'status-b', 'status-c', 'status-d'][index] || 'status-a';
@@ -272,6 +351,7 @@ function App() {
   const [records, setRecords] = useState(loadRecords);
   const [patients, setPatients] = useState(loadPatients);
   const [shadeLibrary, setShadeLibrary] = useState(loadShadeLibrary);
+  const [photoProcesses, setPhotoProcesses] = useState(loadPhotoProcesses);
   const [form, setForm] = useState(appConfig.defaultValues);
   const [filters, setFilters] = useState({ query: '', status: '全部' });
   const [selected, setSelected] = useState(null);
@@ -282,6 +362,9 @@ function App() {
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [editingShade, setEditingShade] = useState(null);
   const [shadeDetailModal, setShadeDetailModal] = useState(null);
+  const [editingPhotoProcess, setEditingPhotoProcess] = useState(null);
+  const [selectedPhotoProcess, setSelectedPhotoProcess] = useState(null);
+  const [photoProcessFilter, setPhotoProcessFilter] = useState('all');
 
   function persistRecords(next) {
     setRecords(next);
@@ -296,6 +379,91 @@ function App() {
   function persistShadeLibrary(next) {
     setShadeLibrary(next);
     localStorage.setItem(appConfig.shadeLibraryStorage, JSON.stringify(next));
+  }
+
+  function persistPhotoProcesses(next) {
+    setPhotoProcesses(next);
+    localStorage.setItem(appConfig.photoProcessStorage, JSON.stringify(next));
+  }
+
+  function getPhotoProcessByRecordId(recordId) {
+    return photoProcesses.find((pp) => pp.recordId === recordId) || null;
+  }
+
+  function startPhotoProcess(recordId) {
+    const existing = getPhotoProcessByRecordId(recordId);
+    if (existing) {
+      setEditingPhotoProcess({ ...existing });
+    } else {
+      const newProcess = createEmptyPhotoProcess(recordId);
+      setEditingPhotoProcess(newProcess);
+    }
+  }
+
+  function savePhotoProcess(processData = null) {
+    const dataToSave = processData || editingPhotoProcess;
+    if (!dataToSave) return;
+    const updated = { ...dataToSave, updatedAt: new Date().toISOString() };
+    const existingIndex = photoProcesses.findIndex((pp) => pp.id === updated.id);
+    let next;
+    if (existingIndex >= 0) {
+      next = photoProcesses.map((pp) => (pp.id === updated.id ? updated : pp));
+    } else {
+      next = [updated, ...photoProcesses];
+    }
+    persistPhotoProcesses(next);
+    setEditingPhotoProcess(null);
+    if (selected?.id === updated.recordId) {
+      setSelectedPhotoProcess(updated);
+    }
+  }
+
+  function updatePhotoProcessStep(stepKey, field, value) {
+    if (!editingPhotoProcess) return;
+    const next = {
+      ...editingPhotoProcess,
+      steps: {
+        ...editingPhotoProcess.steps,
+        [stepKey]: {
+          ...editingPhotoProcess.steps[stepKey],
+          [field]: value
+        }
+      },
+      updatedAt: new Date().toISOString()
+    };
+    setEditingPhotoProcess(next);
+  }
+
+  function goToStep(stepIndex) {
+    if (!editingPhotoProcess) return;
+    setEditingPhotoProcess({ ...editingPhotoProcess, currentStep: stepIndex });
+  }
+
+  function nextStep() {
+    if (!editingPhotoProcess) return;
+    const nextIndex = Math.min(editingPhotoProcess.currentStep + 1, appConfig.photoSteps.length - 1);
+    setEditingPhotoProcess({ ...editingPhotoProcess, currentStep: nextIndex });
+  }
+
+  function prevStep() {
+    if (!editingPhotoProcess) return;
+    const prevIndex = Math.max(editingPhotoProcess.currentStep - 1, 0);
+    setEditingPhotoProcess({ ...editingPhotoProcess, currentStep: prevIndex });
+  }
+
+  function handleImageUpload(stepKey, event) {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        updatePhotoProcessStep(stepKey, 'imageUrl', e.target?.result || '');
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function removeImage(stepKey) {
+    updatePhotoProcessStep(stepKey, 'imageUrl', '');
   }
 
   function getShadeInfo(code) {
@@ -472,6 +640,43 @@ function App() {
 
   const selectedTodayFollowUp = selected?.followUp === today ? selected : null;
 
+  const photoProcessMetrics = useMemo(() => {
+    const total = photoProcesses.length;
+    const completed = photoProcesses.filter((pp) => pp.completed).length;
+    const inProgress = photoProcesses.filter((pp) => !pp.completed).length;
+    return [
+      { label: "拍照流程总数", value: total },
+      { label: "已完成", value: completed },
+      { label: "进行中", value: inProgress }
+    ];
+  }, [photoProcesses]);
+
+  const getStepIcon = (iconName) => {
+    const icons = { User, Sun, CheckSquare, Camera };
+    return icons[iconName] || Camera;
+  };
+
+  const getPhotoProcessProgress = (process) => {
+    if (!process) return 0;
+    const steps = Object.values(process.steps);
+    const confirmed = steps.filter((s) => s.confirmed).length;
+    return Math.round((confirmed / steps.length) * 100);
+  };
+
+  const getRecordById = (recordId) => {
+    return records.find((r) => r.id === recordId) || null;
+  };
+
+  const filteredPhotoProcesses = useMemo(() => {
+    let processes = [...photoProcesses];
+    if (photoProcessFilter === 'completed') {
+      processes = processes.filter((pp) => pp.completed);
+    } else if (photoProcessFilter === 'inProgress') {
+      processes = processes.filter((pp) => !pp.completed);
+    }
+    return processes.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+  }, [photoProcesses, photoProcessFilter]);
+
   return (
     <main className="shell" style={{ '--accent': appConfig.accent }}>
       <section className="hero">
@@ -517,6 +722,13 @@ function App() {
         >
           <Palette size={16} />
           牙色样本库
+        </button>
+        <button
+          className={'tab ' + (activeTab === 'photoProcess' ? 'active' : '')}
+          onClick={() => setActiveTab('photoProcess')}
+        >
+          <Camera size={16} />
+          拍照流程
         </button>
       </div>
 
@@ -714,6 +926,70 @@ function App() {
                   <h3>{selected.patient}</h3>
                   <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
                   <p>{selected.photoNote}</p>
+
+                  <div className="detail-actions" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                    <button
+                      className="primary"
+                      type="button"
+                      onClick={() => startPhotoProcess(selected.id)}
+                    >
+                      <Camera size={16} />
+                      {getPhotoProcessByRecordId(selected.id) ? '继续拍照流程' : '开始拍照流程'}
+                    </button>
+                    {getPhotoProcessByRecordId(selected.id) && (
+                      <p className="photo-process-start-hint">
+                        <CheckCircle2 size={14} />
+                        进度：{getPhotoProcessProgress(getPhotoProcessByRecordId(selected.id))}%
+                      </p>
+                    )}
+                  </div>
+
+                  {getPhotoProcessByRecordId(selected.id) && (
+                    <>
+                      <div className="detail-section-divider">
+                        <ClipboardList size={16} />
+                        拍照检查清单
+                      </div>
+                      <div className="photo-checklist">
+                        {appConfig.photoSteps.map((step, idx) => {
+                          const stepData = getPhotoProcessByRecordId(selected.id)?.steps[step.key];
+                          const StepIcon = getStepIcon(step.icon);
+                          const isChecked = stepData?.confirmed;
+                          return (
+                            <div key={step.key} className={'checklist-item ' + (isChecked ? 'checked' : '')}>
+                              <div className="checklist-icon">
+                                {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
+                              </div>
+                              <div className="checklist-content">
+                                <div className="checklist-header">
+                                  <StepIcon size={16} />
+                                  <strong>步骤 {idx + 1}：{step.label}</strong>
+                                  {isChecked && <span className="checklist-badge">已确认</span>}
+                                </div>
+                                {stepData?.remark ? (
+                                  <p className="checklist-note">{stepData.remark}</p>
+                                ) : (
+                                  <p className="checklist-empty">暂无备注</p>
+                                )}
+                                {stepData?.environment && (
+                                  <span className="checklist-env">
+                                    <Sun size={12} /> {stepData.environment}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="checklist-summary">
+                        {getPhotoProcessProgress(getPhotoProcessByRecordId(selected.id)) === 100 ? (
+                          <p className="checklist-complete">✓ 所有步骤已完成确认</p>
+                        ) : (
+                          <p className="checklist-progress">已完成 {appConfig.photoSteps.filter((s) => getPhotoProcessByRecordId(selected.id)?.steps[s.key]?.confirmed).length} / {appConfig.photoSteps.length} 个步骤</p>
+                        )}
+                      </div>
+                    </>
+                  )}
 
                   {getShadeInfo(selected.shade) && (
                     <div className="shade-detail-card">
@@ -1191,6 +1467,317 @@ function App() {
             </aside>
           </section>
         </>
+      )}
+
+      {activeTab === 'photoProcess' && (
+        <>
+          <section className="metrics">
+            {photoProcessMetrics.map((metric) => (
+              <article className="metric" key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </article>
+            ))}
+          </section>
+
+          <section className="workspace">
+            <section className="panel list-panel">
+              <div className="toolbar">
+                <div className="panel-title" style={{ marginBottom: 0, flex: 1 }}>
+                  <Camera size={18} />
+                  <h2>拍照流程列表</h2>
+                </div>
+                <select value={photoProcessFilter} onChange={(e) => setPhotoProcessFilter(e.target.value)}>
+                  <option value="all">全部</option>
+                  <option value="inProgress">进行中</option>
+                  <option value="completed">已完成</option>
+                </select>
+              </div>
+
+              {filteredPhotoProcesses.length > 0 ? (
+                <div className="records">
+                  {filteredPhotoProcesses.map((process) => {
+                    const record = getRecordById(process.recordId);
+                    const progress = getPhotoProcessProgress(process);
+                    return (
+                      <article
+                        className={'record photo-process-record ' + (selectedPhotoProcess?.id === process.id ? 'selected' : '')}
+                        key={process.id}
+                        onClick={() => {
+                          setSelectedPhotoProcess(process);
+                          if (record) setSelected(record);
+                        }}
+                      >
+                        <div className="record-head">
+                          <div>
+                            <h3>{record?.patient || '未知患者'}</h3>
+                            <p>{record ? `牙位 ${record.tooth} · ${record.shade}` : '未关联记录'}</p>
+                          </div>
+                          <span className={'status ' + (process.completed ? 'status-c' : 'status-b')}>
+                            {process.completed ? '已完成' : '进行中'}
+                          </span>
+                        </div>
+                        <div className="step-progress-bar" style={{ marginTop: '10px' }}>
+                          {appConfig.photoSteps.map((step, idx) => (
+                            <div
+                              key={step.key}
+                              className={'step-progress-dot ' + (process.steps[step.key]?.confirmed ? 'done' : '')}
+                              title={step.label}
+                            />
+                          ))}
+                        </div>
+                        <p className="record-detail" style={{ marginTop: '8px' }}>
+                          完成进度：{progress}% · 上次更新：{new Date(process.updatedAt).toLocaleDateString('zh-CN')}
+                        </p>
+                        <div className="actions" onClick={(e) => e.stopPropagation()}>
+                          <button type="button" onClick={() => {
+                            setEditingPhotoProcess({ ...process });
+                          }}>
+                            <Edit3 size={14} />编辑
+                          </button>
+                          <button type="button" className="ghost-danger" onClick={() => {
+                            if (confirm('确定删除该拍照流程吗？')) {
+                              const next = photoProcesses.filter((pp) => pp.id !== process.id);
+                              persistPhotoProcesses(next);
+                              if (selectedPhotoProcess?.id === process.id) {
+                                setSelectedPhotoProcess(null);
+                              }
+                            }
+                          }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <Camera size={48} style={{ color: '#d0d5dd' }} />
+                  <h3>暂无拍照流程</h3>
+                  <p className="empty">在比色记录中点击「开始拍照流程」按钮来创建。</p>
+                </div>
+              )}
+            </section>
+
+            <aside className="panel detail-panel">
+              <div className="panel-title">
+                <CheckCircle2 size={18} />
+                <h2>拍照检查清单</h2>
+              </div>
+              {selectedPhotoProcess ? (
+                <div className="detail">
+                  <div className="photo-process-record-info">
+                    <strong>{getRecordById(selectedPhotoProcess.recordId)?.patient || '未知患者'}</strong>
+                    <span>{getRecordById(selectedPhotoProcess.recordId) ? `牙位 ${getRecordById(selectedPhotoProcess.recordId).tooth} · ${getRecordById(selectedPhotoProcess.recordId).shade}` : '未关联记录'}</span>
+                  </div>
+                  <div className="photo-checklist">
+                    {appConfig.photoSteps.map((step, idx) => {
+                      const stepData = selectedPhotoProcess.steps[step.key];
+                      const StepIcon = getStepIcon(step.icon);
+                      const isChecked = stepData?.confirmed;
+                      return (
+                        <div key={step.key} className={'checklist-item ' + (isChecked ? 'checked' : '')}>
+                          <div className="checklist-icon">
+                            {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
+                          </div>
+                          <div className="checklist-content">
+                            <div className="checklist-header">
+                              <StepIcon size={16} />
+                              <strong>步骤 {idx + 1}：{step.label}</strong>
+                              {isChecked && <span className="checklist-badge">已确认</span>}
+                            </div>
+                            {stepData?.remark ? (
+                              <p className="checklist-note">{stepData.remark}</p>
+                            ) : (
+                              <p className="checklist-empty">暂无备注</p>
+                            )}
+                            {stepData?.environment && (
+                              <span className="checklist-env">
+                                <Sun size={12} /> {stepData.environment}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="checklist-summary">
+                    {getPhotoProcessProgress(selectedPhotoProcess) === 100 ? (
+                      <p className="checklist-complete">✓ 所有步骤已完成确认</p>
+                    ) : (
+                      <p className="checklist-progress">已完成 {appConfig.photoSteps.filter((s) => selectedPhotoProcess.steps[s.key]?.confirmed).length} / {appConfig.photoSteps.length} 个步骤</p>
+                    )}
+                  </div>
+                  <div className="actions" style={{ marginTop: '16px' }}>
+                    <button className="primary" type="button" onClick={() => {
+                      setEditingPhotoProcess({ ...selectedPhotoProcess });
+                    }}>
+                      <Edit3 size={14} />继续编辑
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <ClipboardList size={48} style={{ color: '#d0d5dd' }} />
+                  <p className="empty">点击左侧任意拍照流程查看完整检查清单。</p>
+                </div>
+              )}
+            </aside>
+          </section>
+        </>
+      )}
+
+      {editingPhotoProcess && (
+        <div className="modal-overlay" onClick={() => setEditingPhotoProcess(null)}>
+          <div className="modal-content" style={{ maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="panel-title" style={{ marginBottom: 0 }}>
+                <Camera size={18} />
+                <h2>比色拍照流程</h2>
+              </div>
+              <button className="modal-close" onClick={() => setEditingPhotoProcess(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="photo-process-record-info">
+                <strong>{getRecordById(editingPhotoProcess.recordId)?.patient || '未知患者'}</strong>
+                <span>{getRecordById(editingPhotoProcess.recordId) ? `牙位 ${getRecordById(editingPhotoProcess.recordId).tooth} · ${getRecordById(editingPhotoProcess.recordId).shade}` : '未关联记录'}</span>
+              </div>
+
+              <div className="step-stepper">
+                {appConfig.photoSteps.map((step, idx) => {
+                  const StepIcon = getStepIcon(step.icon);
+                  const isActive = editingPhotoProcess.currentStep === idx;
+                  const isCompleted = editingPhotoProcess.steps[step.key]?.confirmed;
+                  return (
+                    <div
+                      key={step.key}
+                      className={'step-item ' + (isActive ? 'active' : '') + ' ' + (isCompleted ? 'completed' : '')}
+                      onClick={() => goToStep(idx)}
+                    >
+                      <div className="step-icon-wrap">
+                        {isCompleted ? <CheckCheck size={18} /> : <StepIcon size={18} />}
+                      </div>
+                      <span className="step-label">{step.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {(() => {
+                const currentStepConfig = appConfig.photoSteps[editingPhotoProcess.currentStep];
+                const currentStepData = editingPhotoProcess.steps[currentStepConfig.key];
+                const StepIcon = getStepIcon(currentStepConfig.icon);
+                return (
+                  <div className="step-form">
+                    <div className="step-form-header">
+                      <StepIcon size={24} />
+                      <div>
+                        <h3>步骤 {editingPhotoProcess.currentStep + 1}：{currentStepConfig.label}</h3>
+                        <p>{currentStepConfig.description}</p>
+                      </div>
+                    </div>
+
+                    <div className="step-form-image">
+                      {currentStepData?.imageUrl ? (
+                        <div className="image-preview-box">
+                          <img src={currentStepData.imageUrl} alt={currentStepConfig.label} />
+                          <button
+                            type="button"
+                            className="image-remove-btn"
+                            onClick={() => removeImage(currentStepConfig.key)}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="image-upload-area">
+                          <Upload size={32} style={{ color: '#9ca3af' }} />
+                          <span>点击上传{currentStepConfig.label}</span>
+                          <p className="hint">支持 JPG、PNG 格式</p>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => handleImageUpload(currentStepConfig.key, e)}
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="step-form-fields">
+                      <label className="wide">
+                        <span>拍摄备注</span>
+                        <textarea
+                          value={currentStepData?.remark || ''}
+                          onChange={(e) => updatePhotoProcessStep(currentStepConfig.key, 'remark', e.target.value)}
+                          placeholder={currentStepConfig.placeholder}
+                          rows={3}
+                        />
+                      </label>
+                      <label className="wide">
+                        <span>拍摄环境</span>
+                        <select
+                          value={currentStepData?.environment || ''}
+                          onChange={(e) => updatePhotoProcessStep(currentStepConfig.key, 'environment', e.target.value)}
+                        >
+                          <option value="">请选择拍摄环境</option>
+                          {appConfig.photoEnvironments.map((env) => (
+                            <option key={env} value={env}>{env}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="wide step-confirm-label">
+                        <div
+                          className="step-confirm-row"
+                          onClick={() => updatePhotoProcessStep(currentStepConfig.key, 'confirmed', !currentStepData?.confirmed)}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={currentStepData?.confirmed || false}
+                            onChange={(e) => updatePhotoProcessStep(currentStepConfig.key, 'confirmed', e.target.checked)}
+                          />
+                          <span>我已确认该照片符合要求，备注信息准确无误</span>
+                        </div>
+                      </label>
+                    </div>
+
+                    <div className="step-form-nav">
+                      {editingPhotoProcess.currentStep > 0 ? (
+                        <button type="button" className="secondary" onClick={prevStep}>
+                          <ChevronLeft size={16} />上一步
+                        </button>
+                      ) : (
+                        <button type="button" className="secondary" onClick={() => setEditingPhotoProcess(null)}>
+                          取消
+                        </button>
+                      )}
+                      {editingPhotoProcess.currentStep < appConfig.photoSteps.length - 1 ? (
+                        <button type="button" className="primary" onClick={nextStep}>
+                          下一步<ChevronRight size={16} />
+                        </button>
+                      ) : (
+                        <button type="button" className="primary" onClick={() => {
+                          const allConfirmed = appConfig.photoSteps.every((s) => editingPhotoProcess.steps[s.key]?.confirmed);
+                          let dataToSave = editingPhotoProcess;
+                          if (allConfirmed) {
+                            dataToSave = { ...editingPhotoProcess, completed: true };
+                            setEditingPhotoProcess(dataToSave);
+                          }
+                          savePhotoProcess(dataToSave);
+                        }}>
+                          <Save size={16} />完成并保存
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
       )}
 
       {shadeDetailModal && (
