@@ -453,6 +453,117 @@ function statusClass(status) {
   return ['status-a', 'status-b', 'status-c', 'status-d'][index] || 'status-a';
 }
 
+function toothRecordStatusClass(status) {
+  const index = appConfig.statuses.indexOf(status);
+  return ['tooth-status-a', 'tooth-status-b', 'tooth-status-c'][index] || '';
+}
+
+const ADULT_TOOTH_QUADRANTS = {
+  upperRight: ['18', '17', '16', '15', '14', '13', '12', '11'],
+  upperLeft: ['21', '22', '23', '24', '25', '26', '27', '28'],
+  lowerLeft: ['31', '32', '33', '34', '35', '36', '37', '38'],
+  lowerRight: ['48', '47', '46', '45', '44', '43', '42', '41'],
+};
+
+function ToothChart({ value, onChange, enabledTeeth, records }) {
+  const toothRecordsMap = useMemo(() => {
+    const map = {};
+    records.forEach((r) => {
+      if (r.tooth) {
+        if (!map[r.tooth]) {
+          map[r.tooth] = [];
+        }
+        map[r.tooth].push(r);
+      }
+    });
+    return map;
+  }, [records]);
+
+  const getToothStatus = (tooth) => {
+    const toothRecords = toothRecordsMap[tooth] || [];
+    if (toothRecords.length === 0) return null;
+    const statusPriority = ['待修复', '制作中', '已完成修复'];
+    for (const status of statusPriority) {
+      if (toothRecords.some((r) => r.status === status)) return status;
+    }
+    return toothRecords[0].status;
+  };
+
+  const renderTooth = (tooth) => {
+    const isEnabled = enabledTeeth.includes(tooth);
+    const isSelected = value === tooth;
+    const recordStatus = getToothStatus(tooth);
+    const statusCls = recordStatus ? toothRecordStatusClass(recordStatus) : '';
+
+    let className = 'tooth-item';
+    if (!isEnabled) className += ' tooth-disabled';
+    if (isSelected) className += ' tooth-selected';
+    if (statusCls) className += ' ' + statusCls;
+
+    return (
+      <button
+        key={tooth}
+        type="button"
+        className={className}
+        disabled={!isEnabled}
+        onClick={() => isEnabled && onChange(tooth)}
+        title={recordStatus ? `${tooth} - ${recordStatus} (${toothRecordsMap[tooth].length}条记录)` : tooth}
+      >
+        <span className="tooth-number">{tooth}</span>
+        {recordStatus && <span className="tooth-record-dot" />}
+      </button>
+    );
+  };
+
+  return (
+    <div className="tooth-chart">
+      <div className="tooth-chart-row">
+        <div className="tooth-quadrant">
+          {ADULT_TOOTH_QUADRANTS.upperRight.map(renderTooth)}
+        </div>
+        <div className="tooth-quadrant">
+          {ADULT_TOOTH_QUADRANTS.upperLeft.map(renderTooth)}
+        </div>
+      </div>
+      <div className="tooth-midline">
+        <span>上颚</span>
+        <div className="tooth-midline-line" />
+        <span>下颚</span>
+      </div>
+      <div className="tooth-chart-row">
+        <div className="tooth-quadrant">
+          {ADULT_TOOTH_QUADRANTS.lowerRight.map(renderTooth)}
+        </div>
+        <div className="tooth-quadrant">
+          {ADULT_TOOTH_QUADRANTS.lowerLeft.map(renderTooth)}
+        </div>
+      </div>
+      <div className="tooth-chart-legend">
+        <div className="tooth-legend-item">
+          <span className="tooth-legend-swatch tooth-selected" />
+          <span>已选中</span>
+        </div>
+        <div className="tooth-legend-item">
+          <span className="tooth-legend-swatch tooth-status-a" />
+          <span>待修复</span>
+        </div>
+        <div className="tooth-legend-item">
+          <span className="tooth-legend-swatch tooth-status-b" />
+          <span>制作中</span>
+        </div>
+        <div className="tooth-legend-item">
+          <span className="tooth-legend-swatch tooth-status-c" />
+          <span>已完成修复</span>
+        </div>
+        <div className="tooth-legend-item">
+          <span className="tooth-legend-swatch tooth-disabled" />
+          <span>暂未启用</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('records');
   const [records, setRecords] = useState(loadRecords);
@@ -1156,6 +1267,16 @@ function App() {
                           );
                         })}
                       </div>
+                    </label>
+                  ) : field.key === 'tooth' ? (
+                    <label key={field.key} className="wide">
+                      <span>{field.label}</span>
+                      <ToothChart
+                        value={form[field.key] || ''}
+                        onChange={(tooth) => setForm({ ...form, [field.key]: tooth })}
+                        enabledTeeth={field.options}
+                        records={records}
+                      />
                     </label>
                   ) : (
                     <label key={field.key} className={field.type === 'textarea' ? 'wide' : ''}>
