@@ -1316,3 +1316,262 @@ select.with-icon {
     flex-direction: column;
   }
 }
+
+.do-status-a { background: #fef3c7; color: #92400e; }
+.do-status-b { background: #dbeafe; color: #1e40af; }
+.do-status-c { background: #d1fae5; color: #065f46; }
+
+.delivery-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.delivery-select-item {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s;
+  background: #fff;
+}
+
+.delivery-select-item:hover {
+  border-color: var(--accent);
+  background: #f0fdfa;
+}
+
+.delivery-select-item.selected {
+  border-color: var(--accent);
+  background: #ccfbf1;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, .15);
+}
+
+.delivery-select-checkbox {
+  flex-shrink: 0;
+  color: #6b7280;
+  padding-top: 2px;
+}
+
+.delivery-select-item.selected .delivery-select-checkbox {
+  color: var(--accent);
+}
+
+.delivery-select-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.delivery-select-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.delivery-select-head strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.do-tooth-shade {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.delivery-select-note {
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.delivery-select-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0891b2;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: #ecfeff;
+  border-radius: 4px;
+}
+
+.delivery-record {
+  border-left: 4px solid #0ea5e9;
+}
+
+.delivery-record.selected {
+  border-color: var(--accent);
+  background: #f0fdfa;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.15);
+}
+
+.delivery-order-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.delivery-order-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.delivery-order-meta svg {
+  color: #9ca3af;
+}
+
+.delivery-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.delivery-detail-header h3 {
+  font-size: 18px;
+  color: #111827;
+}
+
+.delivery-detail-header p {
+  color: #667085;
+  font-size: 14px;
+}
+
+.delivery-remark-box {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+.delivery-remark-box svg {
+  color: #92400e;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.delivery-remark-box span {
+  color: #78350f;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.delivery-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.delivery-record-item {
+  padding: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.delivery-record-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.delivery-record-head strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.delivery-record-note {
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.delivery-record-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0891b2;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: #ecfeff;
+  border-radius: 4px;
+}
+
+.delivery-link-card {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 14px;
+  margin: 12px 0;
+}
+
+.delivery-link-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #1e40af;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.delivery-link-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.delivery-link-no {
+  color: #1e3a8a;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.delivery-link-lab {
+  color: #3b82f6;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+@media (max-width: 620px) {
+  .delivery-select-head,
+  .delivery-record-head,
+  .delivery-detail-header,
+  .delivery-link-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .delivery-order-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

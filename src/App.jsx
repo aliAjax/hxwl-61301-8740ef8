@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -13,7 +13,13 @@ const appConfig = {
   "patientStorage": "hxwl-61301-patients",
   "shadeLibraryStorage": "hxwl-61301-shade-library",
   "photoProcessStorage": "hxwl-61301-photo-process",
+  "deliveryOrderStorage": "hxwl-61301-delivery-orders",
   "accent": "#0f766e",
+  "deliveryOrderStatuses": [
+    "待发送",
+    "已发送",
+    "已回收"
+  ],
   "statuses": [
     "待修复",
     "制作中",
@@ -265,7 +271,25 @@ const appConfig = {
     },
     "currentStep": 0,
     "completed": false
-  }
+  },
+  "deliveryOrderDefaultValues": {
+    "labName": "",
+    "remark": "",
+    "recordIds": []
+  },
+  "deliveryOrderSeed": [
+    {
+      "id": "do-20260613-001",
+      "orderNo": "JJ-20260613-001",
+      "labName": "精准义齿技工所",
+      "remark": "请加急处理林雨患者的前牙美学修复",
+      "recordIds": ["lin-yu-11"],
+      "status": "已发送",
+      "createdAt": "2026-06-13T09:00:00.000Z",
+      "sentAt": "2026-06-13T10:30:00.000Z",
+      "receivedAt": null
+    }
+  ]
 };
 
 const today = new Date().toISOString().slice(0, 10);
@@ -334,6 +358,29 @@ function loadPhotoProcesses() {
   return [];
 }
 
+function loadDeliveryOrders() {
+  const raw = localStorage.getItem(appConfig.deliveryOrderStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return appConfig.deliveryOrderSeed;
+    }
+  }
+  return appConfig.deliveryOrderSeed;
+}
+
+function generateOrderNo() {
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const random = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `JJ-${dateStr}-${random}`;
+}
+
+function deliveryOrderStatusClass(status) {
+  const index = appConfig.deliveryOrderStatuses.indexOf(status);
+  return ['do-status-a', 'do-status-b', 'do-status-c'][index] || 'do-status-a';
+}
+
 function createEmptyPhotoProcess(recordId) {
   return {
     id: uid(),
@@ -375,6 +422,10 @@ function App() {
   const [editingPhotoProcess, setEditingPhotoProcess] = useState(null);
   const [selectedPhotoProcess, setSelectedPhotoProcess] = useState(null);
   const [photoProcessFilter, setPhotoProcessFilter] = useState('all');
+  const [deliveryOrders, setDeliveryOrders] = useState(loadDeliveryOrders);
+  const [deliveryOrderForm, setDeliveryOrderForm] = useState(appConfig.deliveryOrderDefaultValues);
+  const [selectedDeliveryOrder, setSelectedDeliveryOrder] = useState(null);
+  const [deliveryOrderFilter, setDeliveryOrderFilter] = useState('全部');
 
   function persistRecords(next) {
     setRecords(next);
@@ -394,6 +445,11 @@ function App() {
   function persistPhotoProcesses(next) {
     setPhotoProcesses(next);
     localStorage.setItem(appConfig.photoProcessStorage, JSON.stringify(next));
+  }
+
+  function persistDeliveryOrders(next) {
+    setDeliveryOrders(next);
+    localStorage.setItem(appConfig.deliveryOrderStorage, JSON.stringify(next));
   }
 
   function getPhotoProcessByRecordId(recordId) {
@@ -683,6 +739,73 @@ function App() {
     return records.find((r) => r.id === recordId) || null;
   };
 
+  const getDeliveryOrderByRecordId = (recordId) => {
+    return deliveryOrders.find((d) => d.recordIds.includes(recordId)) || null;
+  };
+
+  const pendingRecords = useMemo(() => {
+    return records.filter((r) => r.status === '待修复' && !getDeliveryOrderByRecordId(r.id));
+  }, [records, deliveryOrders]);
+
+  function createDeliveryOrder(event) {
+    event.preventDefault();
+    if (!deliveryOrderForm.recordIds || deliveryOrderForm.recordIds.length === 0) {
+      alert('请至少选择一条待修复记录');
+      return;
+    }
+    if (!deliveryOrderForm.labName) {
+      alert('请输入技工所名称');
+      return;
+    }
+    const newOrder = {
+      id: uid(),
+      orderNo: generateOrderNo(),
+      labName: deliveryOrderForm.labName,
+      remark: deliveryOrderForm.remark,
+      recordIds: [...deliveryOrderForm.recordIds],
+      status: '待发送',
+      createdAt: new Date().toISOString(),
+      sentAt: null,
+      receivedAt: null
+    };
+    persistDeliveryOrders([newOrder, ...deliveryOrders]);
+    setDeliveryOrderForm(appConfig.deliveryOrderDefaultValues);
+    setSelectedDeliveryOrder(newOrder);
+  }
+
+  function toggleRecordForDelivery(recordId) {
+    const current = deliveryOrderForm.recordIds || [];
+    if (current.includes(recordId)) {
+      setDeliveryOrderForm({ ...deliveryOrderForm, recordIds: current.filter((id) => id !== recordId) });
+    } else {
+      setDeliveryOrderForm({ ...deliveryOrderForm, recordIds: [...current, recordId] });
+    }
+  }
+
+  function updateDeliveryOrderStatus(id, status) {
+    const now = new Date().toISOString();
+    const next = deliveryOrders.map((d) => {
+      if (d.id === id) {
+        const updates = { status };
+        if (status === '已发送' && !d.sentAt) updates.sentAt = now;
+        if (status === '已回收' && !d.receivedAt) updates.receivedAt = now;
+        return { ...d, ...updates };
+      }
+      return d;
+    });
+    persistDeliveryOrders(next);
+    if (selectedDeliveryOrder?.id === id) {
+      setSelectedDeliveryOrder(next.find((d) => d.id === id));
+    }
+  }
+
+  function removeDeliveryOrder(id) {
+    if (!confirm('确定删除该交接单吗？关联记录将解除关联。')) return;
+    const next = deliveryOrders.filter((d) => d.id !== id);
+    persistDeliveryOrders(next);
+    if (selectedDeliveryOrder?.id === id) setSelectedDeliveryOrder(null);
+  }
+
   const filteredPhotoProcesses = useMemo(() => {
     let processes = [...photoProcesses];
     if (photoProcessFilter === 'completed') {
@@ -692,6 +815,26 @@ function App() {
     }
     return processes.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
   }, [photoProcesses, photoProcessFilter]);
+
+  const deliveryOrderMetrics = useMemo(() => {
+    const total = deliveryOrders.length;
+    const pending = deliveryOrders.filter((d) => d.status === '待发送').length;
+    const sent = deliveryOrders.filter((d) => d.status === '已发送').length;
+    const received = deliveryOrders.filter((d) => d.status === '已回收').length;
+    return [
+      { label: '交接单总数', value: total },
+      { label: '待发送', value: pending },
+      { label: '已回收', value: received }
+    ];
+  }, [deliveryOrders]);
+
+  const filteredDeliveryOrders = useMemo(() => {
+    let orders = [...deliveryOrders];
+    if (deliveryOrderFilter !== '全部') {
+      orders = orders.filter((d) => d.status === deliveryOrderFilter);
+    }
+    return orders.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  }, [deliveryOrders, deliveryOrderFilter]);
 
   return (
     <main className="shell" style={{ '--accent': appConfig.accent }}>
@@ -745,6 +888,13 @@ function App() {
         >
           <Camera size={16} />
           拍照流程
+        </button>
+        <button
+          className={'tab ' + (activeTab === 'deliveryOrders' ? 'active' : '')}
+          onClick={() => setActiveTab('deliveryOrders')}
+        >
+          <ArrowLeftRight size={16} />
+          技工所交接单
         </button>
       </div>
 
@@ -1029,6 +1179,35 @@ function App() {
                         <p><strong>适用场景：</strong>{getShadeInfo(selected.shade)?.scenario}</p>
                         <p><strong>注意事项：</strong>{getShadeInfo(selected.shade)?.notes}</p>
                       </div>
+                    </div>
+                  )}
+
+                  {getDeliveryOrderByRecordId(selected.id) && (
+                    <div className="delivery-link-card">
+                      <div className="delivery-link-header">
+                        <ArrowLeftRight size={16} style={{ color: 'var(--accent)' }} />
+                        <strong>关联交接单</strong>
+                      </div>
+                      <div className="delivery-link-content">
+                        <div>
+                          <p className="delivery-link-no">{getDeliveryOrderByRecordId(selected.id).orderNo}</p>
+                          <p className="delivery-link-lab">{getDeliveryOrderByRecordId(selected.id).labName}</p>
+                        </div>
+                        <span className={'status ' + deliveryOrderStatusClass(getDeliveryOrderByRecordId(selected.id).status)}>
+                          {getDeliveryOrderByRecordId(selected.id).status}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="link-btn"
+                        style={{ marginTop: '8px' }}
+                        onClick={() => {
+                          setSelectedDeliveryOrder(getDeliveryOrderByRecordId(selected.id));
+                          setActiveTab('deliveryOrders');
+                        }}
+                      >
+                        查看交接单详情 →
+                      </button>
                     </div>
                   )}
 
@@ -1638,6 +1817,265 @@ function App() {
                   <ClipboardList size={48} style={{ color: '#d0d5dd' }} />
                   <p className="empty">点击左侧任意拍照流程查看完整检查清单。</p>
                 </div>
+              )}
+            </aside>
+          </section>
+        </>
+      )}
+
+      {activeTab === 'deliveryOrders' && (
+        <>
+          <section className="metrics">
+            {deliveryOrderMetrics.map((metric) => (
+              <article className="metric" key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </article>
+            ))}
+          </section>
+
+          <section className="workspace">
+            <form className="panel form-panel" onSubmit={createDeliveryOrder}>
+              <div className="panel-title">
+                <ArrowLeftRight size={18} />
+                <h2>新建交接单</h2>
+              </div>
+
+              <label className="wide">
+                <span>技工所名称</span>
+                <input
+                  type="text"
+                  value={deliveryOrderForm.labName}
+                  onChange={(e) => setDeliveryOrderForm({ ...deliveryOrderForm, labName: e.target.value })}
+                  placeholder="如：精准义齿技工所"
+                  required
+                />
+              </label>
+
+              <label className="wide">
+                <span>交接备注</span>
+                <textarea
+                  value={deliveryOrderForm.remark}
+                  onChange={(e) => setDeliveryOrderForm({ ...deliveryOrderForm, remark: e.target.value })}
+                  placeholder="如：请加急处理、注意颈部颜色等"
+                  rows={3}
+                />
+              </label>
+
+              <div className="panel-title" style={{ marginTop: '8px' }}>
+                <Layers size={16} />
+                <h2 style={{ fontSize: '15px' }}>选择待修复记录（可多选）</h2>
+                <span style={{ marginLeft: 'auto', fontSize: '13px', color: '#667085', fontWeight: '600' }}>
+                  已选 {deliveryOrderForm.recordIds?.length || 0} 条
+                </span>
+              </div>
+
+              {pendingRecords.length > 0 ? (
+                <div className="delivery-select-list">
+                  {pendingRecords.map((record) => {
+                    const isSelected = deliveryOrderForm.recordIds?.includes(record.id);
+                    return (
+                      <div
+                        key={record.id}
+                        className={'delivery-select-item ' + (isSelected ? 'selected' : '')}
+                        onClick={() => toggleRecordForDelivery(record.id)}
+                      >
+                        <div className="delivery-select-checkbox">
+                          {isSelected ? <CheckCheck size={18} /> : <Square size={18} />}
+                        </div>
+                        <div className="delivery-select-content">
+                          <div className="delivery-select-head">
+                            <strong>{record.patient}</strong>
+                            <span className="do-tooth-shade">牙位 {record.tooth} · {record.shade}</span>
+                          </div>
+                          <p className="delivery-select-note">{record.photoNote || '无拍照备注'}</p>
+                          {record.followUp && (
+                            <span className="delivery-select-date">
+                              <CalendarDays size={12} /> 复诊：{record.followUp}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="empty-state" style={{ padding: '30px 20px' }}>
+                  <ClipboardList size={36} style={{ color: '#d0d5dd' }} />
+                  <p className="empty">暂无可交接的待修复记录</p>
+                  <p className="hint">所有待修复记录已创建交接单，或暂无待修复记录。</p>
+                </div>
+              )}
+
+              <button className="primary" type="submit">
+                <Send size={18} />生成交接单
+              </button>
+              <p className="hint">从已录入的牙位、比色结果、拍照备注和复诊日期自动生成交接信息。</p>
+            </form>
+
+            <section className="panel list-panel">
+              <div className="toolbar">
+                <div className="panel-title" style={{ marginBottom: 0, flex: 1 }}>
+                  <Package size={18} />
+                  <h2>交接单列表</h2>
+                </div>
+                <select value={deliveryOrderFilter} onChange={(e) => setDeliveryOrderFilter(e.target.value)}>
+                  <option>全部</option>
+                  {appConfig.deliveryOrderStatuses.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {filteredDeliveryOrders.length > 0 ? (
+                <div className="records">
+                  {filteredDeliveryOrders.map((order) => (
+                    <article
+                      className={'record delivery-record ' + (selectedDeliveryOrder?.id === order.id ? 'selected' : '')}
+                      key={order.id}
+                      onClick={() => setSelectedDeliveryOrder(order)}
+                    >
+                      <div className="record-head">
+                        <div>
+                          <h3>{order.orderNo}</h3>
+                          <p>{order.labName} · {order.recordIds.length} 条记录</p>
+                        </div>
+                        <span className={'status ' + deliveryOrderStatusClass(order.status)}>{order.status}</span>
+                      </div>
+                      {order.remark && <p className="record-detail">{order.remark}</p>}
+                      <div className="delivery-order-meta">
+                        <span><CalendarDays size={12} /> 创建：{new Date(order.createdAt).toLocaleDateString('zh-CN')}</span>
+                        {order.sentAt && <span><Send size={12} /> 发送：{new Date(order.sentAt).toLocaleDateString('zh-CN')}</span>}
+                      </div>
+                      <div className="actions" onClick={(e) => e.stopPropagation()}>
+                        {appConfig.deliveryOrderStatuses.map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateDeliveryOrderStatus(order.id, status)}
+                            disabled={order.status === status}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                        <button className="ghost-danger" type="button" onClick={() => removeDeliveryOrder(order.id)}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <Package size={48} style={{ color: '#d0d5dd' }} />
+                  <h3>暂无交接单</h3>
+                  <p className="empty">在左侧创建新的技工所交接单。</p>
+                </div>
+              )}
+            </section>
+          </section>
+
+          <section className="insights">
+            <div className="panel">
+              <div className="panel-title">
+                <Layers size={18} />
+                <h2>技工所交接统计</h2>
+              </div>
+              <div className="date-groups">
+                {appConfig.deliveryOrderStatuses.map((status) => {
+                  const count = deliveryOrders.filter((d) => d.status === status).length;
+                  return (
+                    <div key={status} className="date-group">
+                      <strong>{status}</strong>
+                      <span>{count} 张交接单</span>
+                    </div>
+                  );
+                })}
+                <div className="date-group">
+                  <strong>关联记录</strong>
+                  <span>{deliveryOrders.reduce((sum, d) => sum + d.recordIds.length, 0)} 条</span>
+                </div>
+              </div>
+            </div>
+
+            <aside className="panel detail-panel">
+              <div className="panel-title">
+                <CheckCircle2 size={18} />
+                <h2>交接单详情</h2>
+              </div>
+              {selectedDeliveryOrder ? (
+                <div className="detail">
+                  <div className="delivery-detail-header">
+                    <div>
+                      <h3>{selectedDeliveryOrder.orderNo}</h3>
+                      <p style={{ marginTop: '4px' }}>{selectedDeliveryOrder.labName}</p>
+                    </div>
+                    <span className={'status ' + deliveryOrderStatusClass(selectedDeliveryOrder.status)}>
+                      {selectedDeliveryOrder.status}
+                    </span>
+                  </div>
+
+                  {selectedDeliveryOrder.remark && (
+                    <div className="delivery-remark-box">
+                      <Info size={14} />
+                      <span>{selectedDeliveryOrder.remark}</span>
+                    </div>
+                  )}
+
+                  <div className="detail-section-divider">
+                    <ClipboardList size={16} />
+                    交接记录清单（{selectedDeliveryOrder.recordIds.length} 条）
+                  </div>
+
+                  <div className="delivery-record-list">
+                    {selectedDeliveryOrder.recordIds.map((rid) => {
+                      const record = getRecordById(rid);
+                      if (!record) return null;
+                      return (
+                        <div key={rid} className="delivery-record-item">
+                          <div className="delivery-record-head">
+                            <strong>{record.patient}</strong>
+                            <span className="do-tooth-shade">牙位 {record.tooth} · {record.shade}</span>
+                          </div>
+                          {record.photoNote && <p className="delivery-record-note">{record.photoNote}</p>}
+                          {record.followUp && (
+                            <span className="delivery-record-date">
+                              <CalendarDays size={12} /> 复诊日期：{record.followUp}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="timeline">
+                    <span>创建时间 · {new Date(selectedDeliveryOrder.createdAt).toLocaleString('zh-CN')}</span>
+                    {selectedDeliveryOrder.sentAt && (
+                      <span>发送时间 · {new Date(selectedDeliveryOrder.sentAt).toLocaleString('zh-CN')}</span>
+                    )}
+                    {selectedDeliveryOrder.receivedAt && (
+                      <span>回收时间 · {new Date(selectedDeliveryOrder.receivedAt).toLocaleString('zh-CN')}</span>
+                    )}
+                  </div>
+
+                  <div className="detail-actions">
+                    <p className="hint">更新交接状态：</p>
+                    <div className="actions">
+                      {appConfig.deliveryOrderStatuses.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => updateDeliveryOrderStatus(selectedDeliveryOrder.id, status)}
+                          disabled={selectedDeliveryOrder.status === status}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="empty">点击任意交接单查看详情和关联记录。</p>
               )}
             </aside>
           </section>
