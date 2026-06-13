@@ -580,7 +580,10 @@ function App() {
                             <div
                               key={option}
                               className={'shade-picker-item ' + (form.shade === option ? 'active' : '')}
-                              onClick={() => setForm({ ...form, shade: option })}
+                              onClick={() => {
+                                setForm({ ...form, shade: option });
+                                setShadeDetailModal(shadeInfo || { code: option });
+                              }}
                             >
                               <div className={'shade-swatch-mini shade-' + option.charAt(0).toLowerCase()}>
                                 <span>{option}</span>
