@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -294,6 +294,45 @@ const appConfig = {
 
 const today = new Date().toISOString().slice(0, 10);
 
+function addDays(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function diffDays(dateA, dateB) {
+  const a = new Date(dateA);
+  const b = new Date(dateB);
+  return Math.round((a - b) / (1000 * 60 * 60 * 24));
+}
+
+function getFollowUpStatus(followUp) {
+  if (!followUp) return { key: 'none', label: '未排期', class: 'status-none' };
+  const diff = diffDays(followUp, today);
+  if (diff < 0) return { key: 'overdue', label: '逾期', class: 'status-overdue' };
+  if (diff === 0) return { key: 'today', label: '今日', class: 'status-today' };
+  if (diff <= 3) return { key: 'soon', label: '即将到期', class: 'status-soon' };
+  return { key: 'normal', label: '已排期', class: 'status-normal' };
+}
+
+function getNext14Days() {
+  const days = [];
+  for (let i = 0; i < 14; i++) {
+    days.push(addDays(today, i));
+  }
+  return days;
+}
+
+function formatDateLabel(dateStr) {
+  const d = new Date(dateStr);
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  return {
+    date: `${d.getMonth() + 1}/${d.getDate()}`,
+    weekday: weekdays[d.getDay()],
+    iso: dateStr
+  };
+}
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -426,6 +465,11 @@ function App() {
   const [deliveryOrderForm, setDeliveryOrderForm] = useState(appConfig.deliveryOrderDefaultValues);
   const [selectedDeliveryOrder, setSelectedDeliveryOrder] = useState(null);
   const [deliveryOrderFilter, setDeliveryOrderFilter] = useState('全部');
+  const [draggedRecordId, setDraggedRecordId] = useState(null);
+  const [dragOverDate, setDragOverDate] = useState(null);
+  const [boardSelectedRecord, setBoardSelectedRecord] = useState(null);
+  const [editingFollowUpRecordId, setEditingFollowUpRecordId] = useState(null);
+  const [boardFilterStatus, setBoardFilterStatus] = useState('全部');
 
   function persistRecords(next) {
     setRecords(next);
@@ -596,6 +640,50 @@ function App() {
     } : item);
     persistRecords(next);
     if (selected?.id === id) setSelected(next.find((item) => item.id === id));
+    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
+  }
+
+  function updateFollowUpDate(id, newDate) {
+    const record = records.find((r) => r.id === id);
+    if (!record) return;
+    const oldDate = record.followUp || '未排期';
+    const next = records.map((item) => item.id === id ? {
+      ...item,
+      followUp: newDate,
+      timeline: [...(item.timeline || []), { status: `复诊日期调整: ${oldDate} → ${newDate}`, at: today, by: '排期调整' }]
+    } : item);
+    persistRecords(next);
+    if (selected?.id === id) setSelected(next.find((item) => item.id === id));
+    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
+  }
+
+  function handleDragStart(e, recordId) {
+    setDraggedRecordId(recordId);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDragOver(e, date) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverDate(date);
+  }
+
+  function handleDragLeave() {
+    setDragOverDate(null);
+  }
+
+  function handleDrop(e, date) {
+    e.preventDefault();
+    if (draggedRecordId) {
+      updateFollowUpDate(draggedRecordId, date);
+    }
+    setDraggedRecordId(null);
+    setDragOverDate(null);
+  }
+
+  function handleDragEnd() {
+    setDraggedRecordId(null);
+    setDragOverDate(null);
   }
 
   function removeRecord(id) {
@@ -836,6 +924,49 @@ function App() {
     return orders.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }, [deliveryOrders, deliveryOrderFilter]);
 
+  const next14Days = useMemo(() => getNext14Days(), [today]);
+
+  const boardRecords = useMemo(() => {
+    return records.filter((r) => {
+      if (!r.followUp) return false;
+      const diff = diffDays(r.followUp, today);
+      return diff < 14;
+    });
+  }, [records, today]);
+
+  const boardMetrics = useMemo(() => {
+    const overdue = boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === 'overdue').length;
+    const todayCount = boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === 'today').length;
+    const soon = boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === 'soon').length;
+    return [
+      { label: '逾期复诊', value: overdue },
+      { label: '今日复诊', value: todayCount },
+      { label: '即将到期(3天内)', value: soon },
+      { label: '14天内总计', value: boardRecords.length }
+    ];
+  }, [boardRecords]);
+
+  const recordsByDate = useMemo(() => {
+    const grouped = {};
+    next14Days.forEach((d) => { grouped[d] = []; });
+    const overdueRecords = [];
+    boardRecords.forEach((r) => {
+      const diff = diffDays(r.followUp, today);
+      if (diff < 0) {
+        overdueRecords.push(r);
+      } else if (diff < 14) {
+        if (!grouped[r.followUp]) grouped[r.followUp] = [];
+        grouped[r.followUp].push(r);
+      }
+    });
+    return { grouped, overdueRecords };
+  }, [boardRecords, next14Days, today]);
+
+  const filteredBoardRecordsByStatus = useMemo(() => {
+    if (boardFilterStatus === '全部') return boardRecords;
+    return boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === boardFilterStatus);
+  }, [boardRecords, boardFilterStatus]);
+
   return (
     <main className="shell" style={{ '--accent': appConfig.accent }}>
       <section className="hero">
@@ -895,6 +1026,18 @@ function App() {
         >
           <ArrowLeftRight size={16} />
           技工所交接单
+        </button>
+        <button
+          className={'tab ' + (activeTab === 'followUpBoard' ? 'active' : '')}
+          onClick={() => setActiveTab('followUpBoard')}
+        >
+          <CalendarRange size={16} />
+          复诊排期看板
+          {boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === 'overdue').length > 0 && (
+            <span className="tab-badge">
+              {boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === 'overdue').length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -2076,6 +2219,320 @@ function App() {
                 </div>
               ) : (
                 <p className="empty">点击任意交接单查看详情和关联记录。</p>
+              )}
+            </aside>
+          </section>
+        </>
+      )}
+
+      {activeTab === 'followUpBoard' && (
+        <>
+          <section className="metrics" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+            {boardMetrics.map((metric) => (
+              <article className={'metric ' + (metric.label === '逾期复诊' && metric.value > 0 ? 'metric-overdue' : '')} key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </article>
+            ))}
+          </section>
+
+          <div className="panel" style={{ marginBottom: '18px' }}>
+            <div className="board-toolbar">
+              <div className="panel-title" style={{ marginBottom: 0 }}>
+                <CalendarRange size={18} />
+                <h2>未来14天复诊排期 · 拖拽卡片调整日期</h2>
+              </div>
+              <div className="board-filters">
+                <select value={boardFilterStatus} onChange={(e) => setBoardFilterStatus(e.target.value)}>
+                  <option value="全部">全部状态</option>
+                  <option value="overdue">逾期</option>
+                  <option value="today">今日</option>
+                  <option value="soon">即将到期(3天内)</option>
+                  <option value="normal">已排期</option>
+                </select>
+              </div>
+            </div>
+            <div className="board-legend">
+              <div className="legend-item"><span className="legend-dot legend-overdue"></span>逾期</div>
+              <div className="legend-item"><span className="legend-dot legend-today"></span>今日</div>
+              <div className="legend-item"><span className="legend-dot legend-soon"></span>即将到期(3天内)</div>
+              <div className="legend-item"><span className="legend-dot legend-normal"></span>已排期</div>
+            </div>
+          </div>
+
+          <section className="board-container">
+            {recordsByDate.overdueRecords.length > 0 && (
+              <div className="board-column board-overdue-column">
+                <div className="board-column-header board-header-overdue">
+                  <div>
+                    <AlertOctagon size={16} />
+                    <strong>逾期未复诊</strong>
+                  </div>
+                  <span className="board-count">{recordsByDate.overdueRecords.length} 条</span>
+                </div>
+                <div
+                  className="board-column-body"
+                  onDragOver={(e) => handleDragOver(e, 'overdue')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, addDays(today, -1))}
+                >
+                  {recordsByDate.overdueRecords.map((record) => {
+                    const status = getFollowUpStatus(record.followUp);
+                    const isFiltered = filteredBoardRecordsByStatus.find((r) => r.id === record.id);
+                    if (boardFilterStatus !== '全部' && !isFiltered) return null;
+                    return (
+                      <div
+                        key={record.id}
+                        className={'board-card ' + status.class + ' ' + (boardSelectedRecord?.id === record.id ? 'selected' : '') + ' ' + (draggedRecordId === record.id ? 'dragging' : '')}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, record.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setBoardSelectedRecord(record)}
+                      >
+                        <div className="board-card-header">
+                          <GripVertical size={14} className="drag-handle" />
+                          <h4>{record.patient}</h4>
+                          <span className={'status ' + statusClass(record.status)}>{record.status}</span>
+                        </div>
+                        <div className="board-card-meta">
+                          <span>牙位 {record.tooth} · {record.shade}</span>
+                        </div>
+                        <div className="board-card-footer">
+                          <span className="board-followup-date">
+                            <Clock size={12} />
+                            {record.followUp}（逾期 {Math.abs(diffDays(record.followUp, today))} 天）
+                          </span>
+                        </div>
+                        {editingFollowUpRecordId === record.id ? (
+                          <div className="board-card-date-picker" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="date"
+                              value={record.followUp || ''}
+                              onChange={(e) => {
+                                updateFollowUpDate(record.id, e.target.value);
+                                setEditingFollowUpRecordId(null);
+                              }}
+                              autoFocus
+                            />
+                            <button type="button" onClick={() => setEditingFollowUpRecordId(null)}>
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="board-edit-date-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingFollowUpRecordId(record.id);
+                            }}
+                          >
+                            <Edit3 size={12} /> 调整日期
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="board-scroll-wrapper">
+              <div className="board-days-row">
+                {next14Days.map((dateStr) => {
+                  const dateInfo = formatDateLabel(dateStr);
+                  const dayRecords = recordsByDate.grouped[dateStr] || [];
+                  const isToday = dateStr === today;
+                  const dayStatus = isToday ? 'today' : (diffDays(dateStr, today) <= 3 ? 'soon' : 'normal');
+                  return (
+                    <div
+                      key={dateStr}
+                      className={'board-column ' + (dragOverDate === dateStr ? 'drag-over' : '') + ' ' + (isToday ? 'board-column-today' : '')}
+                    >
+                      <div className={'board-column-header board-header-' + dayStatus}>
+                        <div>
+                          <strong>{dateInfo.date}</strong>
+                          <span className="board-weekday">{dateInfo.weekday}</span>
+                        </div>
+                        <span className="board-count">{dayRecords.length} 条</span>
+                      </div>
+                      <div
+                        className="board-column-body"
+                        onDragOver={(e) => handleDragOver(e, dateStr)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, dateStr)}
+                      >
+                        {dayRecords.map((record) => {
+                          const status = getFollowUpStatus(record.followUp);
+                          const isFiltered = filteredBoardRecordsByStatus.find((r) => r.id === record.id);
+                          if (boardFilterStatus !== '全部' && !isFiltered) return null;
+                          return (
+                            <div
+                              key={record.id}
+                              className={'board-card ' + status.class + ' ' + (boardSelectedRecord?.id === record.id ? 'selected' : '') + ' ' + (draggedRecordId === record.id ? 'dragging' : '')}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, record.id)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => setBoardSelectedRecord(record)}
+                            >
+                              <div className="board-card-header">
+                                <GripVertical size={14} className="drag-handle" />
+                                <h4>{record.patient}</h4>
+                                <span className={'status ' + statusClass(record.status)}>{record.status}</span>
+                              </div>
+                              <div className="board-card-meta">
+                                <span>牙位 {record.tooth} · {record.shade}</span>
+                              </div>
+                              <div className="board-card-footer">
+                                <span className="board-followup-date">
+                                  <Clock size={12} />
+                                  {isToday ? '今日复诊' : `${diffDays(dateStr, today)}天后`}
+                                </span>
+                              </div>
+                              {editingFollowUpRecordId === record.id ? (
+                                <div className="board-card-date-picker" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="date"
+                                    value={record.followUp || ''}
+                                    onChange={(e) => {
+                                      updateFollowUpDate(record.id, e.target.value);
+                                      setEditingFollowUpRecordId(null);
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button type="button" onClick={() => setEditingFollowUpRecordId(null)}>
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="board-edit-date-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingFollowUpRecordId(record.id);
+                                  }}
+                                >
+                                  <Edit3 size={12} /> 调整日期
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <section className="insights">
+            <div className="panel">
+              <div className="panel-title">
+                <CalendarDays size={18} />
+                <h2>复诊排期统计（受筛选同步影响）</h2>
+              </div>
+              <div className="date-groups">
+                {['overdue', 'today', 'soon', 'normal'].map((key) => {
+                  const labels = { overdue: '逾期', today: '今日', soon: '即将到期', normal: '已排期' };
+                  const count = filteredBoardRecordsByStatus.filter((r) => getFollowUpStatus(r.followUp).key === key).length;
+                  return (
+                    <div key={key} className="date-group">
+                      <strong>{labels[key]}</strong>
+                      <span>{count} 条记录</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <aside className="panel detail-panel">
+              <div className="panel-title">
+                <CheckCircle2 size={18} />
+                <h2>复诊详情</h2>
+              </div>
+              {boardSelectedRecord ? (
+                <div className="detail">
+                  <h3>{boardSelectedRecord.patient}</h3>
+                  <p>{`牙位 ${boardSelectedRecord.tooth} · ${boardSelectedRecord.shade}`}</p>
+                  <p>{boardSelectedRecord.photoNote}</p>
+                  <div className="detail-followup-status">
+                    <div className={'followup-status-tag ' + getFollowUpStatus(boardSelectedRecord.followUp).class}>
+                      {getFollowUpStatus(boardSelectedRecord.followUp).key === 'overdue' && <AlertOctagon size={14} />}
+                      {getFollowUpStatus(boardSelectedRecord.followUp).key === 'today' && <CalendarCheck size={14} />}
+                      {getFollowUpStatus(boardSelectedRecord.followUp).key === 'soon' && <Clock size={14} />}
+                      {getFollowUpStatus(boardSelectedRecord.followUp).key === 'normal' && <CalendarDays size={14} />}
+                      <strong>{getFollowUpStatus(boardSelectedRecord.followUp).label}</strong>
+                      <span>· 复诊日期：{boardSelectedRecord.followUp}</span>
+                    </div>
+                  </div>
+                  <div className="detail-section-divider">
+                    <Edit3 size={16} />
+                    调整复诊日期
+                  </div>
+                  <label className="wide">
+                    <span>选择新的复诊日期</span>
+                    <input
+                      type="date"
+                      value={boardSelectedRecord.followUp || ''}
+                      onChange={(e) => updateFollowUpDate(boardSelectedRecord.id, e.target.value)}
+                    />
+                  </label>
+
+                  {getShadeInfo(boardSelectedRecord.shade) && (
+                    <div className="shade-detail-card">
+                      <div className="shade-detail-header">
+                        <div className={'shade-swatch-sm shade-' + boardSelectedRecord.shade.charAt(0).toLowerCase()}>
+                          <span>{boardSelectedRecord.shade}</span>
+                        </div>
+                        <div>
+                          <h4>色号 {boardSelectedRecord.shade} 说明</h4>
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={() => setShadeDetailModal(getShadeInfo(boardSelectedRecord.shade))}
+                          >
+                            查看完整说明
+                          </button>
+                        </div>
+                      </div>
+                      <div className="shade-detail-content">
+                        <p><strong>文字说明：</strong>{getShadeInfo(boardSelectedRecord.shade)?.description}</p>
+                        <p><strong>适用场景：</strong>{getShadeInfo(boardSelectedRecord.shade)?.scenario}</p>
+                        <p><strong>注意事项：</strong>{getShadeInfo(boardSelectedRecord.shade)?.notes}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="timeline">
+                    {(boardSelectedRecord.timeline || []).map((step, index) => (
+                      <span key={index}>{step.at} · {step.status} · {step.by}</span>
+                    ))}
+                  </div>
+
+                  <div className="detail-actions">
+                    <p className="hint">快速更新修复状态：</p>
+                    <div className="actions">
+                      {appConfig.statuses.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => updateStatus(boardSelectedRecord.id, status)}
+                          disabled={boardSelectedRecord.status === status}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state" style={{ padding: '40px 20px' }}>
+                  <Info size={48} style={{ color: '#d0d5dd' }} />
+                  <p className="empty">点击看板中任意复诊记录查看详情和时间线。</p>
+                  <p className="hint">可拖拽卡片至不同日期列，或点击「调整日期」按钮选择新日期。</p>
+                </div>
               )}
             </aside>
           </section>
