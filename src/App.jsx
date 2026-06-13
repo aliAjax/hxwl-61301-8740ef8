@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -592,6 +592,8 @@ function App() {
   const [boardSelectedRecord, setBoardSelectedRecord] = useState(null);
   const [editingFollowUpRecordId, setEditingFollowUpRecordId] = useState(null);
   const [boardFilterStatus, setBoardFilterStatus] = useState('全部');
+  const [importPreview, setImportPreview] = useState(null);
+  const [importFileName, setImportFileName] = useState('');
 
   function persistRecords(next) {
     setRecords(next);
@@ -616,6 +618,128 @@ function App() {
   function persistDeliveryOrders(next) {
     setDeliveryOrders(next);
     localStorage.setItem(appConfig.deliveryOrderStorage, JSON.stringify(next));
+  }
+
+  function exportData() {
+    const exportObj = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      records: records,
+      patients: patients,
+      meta: {
+        recordCount: records.length,
+        patientCount: patients.length,
+      }
+    };
+    const jsonStr = JSON.stringify(exportObj, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = getLocalDateString().replace(/-/g, '');
+    a.download = `dental-shade-export-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function analyzeImportData(importData) {
+    const existingRecordIds = new Set(records.map(r => r.id));
+    const existingPatientIds = new Set(patients.map(p => p.id));
+    const existingPatientNames = new Set(patients.map(p => p.name));
+
+    const importRecords = importData.records || [];
+    const importPatients = importData.patients || [];
+
+    const duplicateRecordIds = importRecords.filter(r => existingRecordIds.has(r.id)).map(r => r.id);
+    const newRecords = importRecords.filter(r => !existingRecordIds.has(r.id));
+    const overwrittenRecords = importRecords.filter(r => existingRecordIds.has(r.id));
+
+    const duplicatePatientIds = importPatients.filter(p => existingPatientIds.has(p.id)).map(p => p.id);
+    const duplicatePatientNames = importPatients.filter(p => existingPatientNames.has(p.name)).map(p => p.name);
+    const newPatients = importPatients.filter(p => !existingPatientIds.has(p.id));
+    const overwrittenPatients = importPatients.filter(p => existingPatientIds.has(p.id));
+
+    return {
+      totalRecords: importRecords.length,
+      totalPatients: importPatients.length,
+      newRecords: newRecords.length,
+      overwrittenRecords: overwrittenRecords.length,
+      duplicateRecordIds,
+      newPatients: newPatients.length,
+      overwrittenPatients: overwrittenPatients.length,
+      duplicatePatientIds,
+      duplicatePatientNames,
+      importData
+    };
+  }
+
+  function handleImportFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImportFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result;
+        if (typeof content !== 'string') throw new Error('文件格式错误');
+        const data = JSON.parse(content);
+        if (!data.records && !data.patients) {
+          throw new Error('未找到有效的记录或患者数据');
+        }
+        const analysis = analyzeImportData(data);
+        setImportPreview(analysis);
+      } catch (err) {
+        alert('导入失败：' + (err.message || '文件格式错误'));
+        setImportPreview(null);
+        setImportFileName('');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  function confirmImport() {
+    if (!importPreview) return;
+    const { importData } = importPreview;
+
+    const existingRecordIds = new Set(records.map(r => r.id));
+    const existingPatientIds = new Set(patients.map(p => p.id));
+
+    const importRecords = importData.records || [];
+    const importPatients = importData.patients || [];
+
+    let mergedRecords = [...records];
+    importRecords.forEach(ir => {
+      if (existingRecordIds.has(ir.id)) {
+        mergedRecords = mergedRecords.map(r => r.id === ir.id ? ir : r);
+      } else {
+        mergedRecords.push(ir);
+      }
+    });
+
+    let mergedPatients = [...patients];
+    importPatients.forEach(ip => {
+      if (existingPatientIds.has(ip.id)) {
+        mergedPatients = mergedPatients.map(p => p.id === ip.id ? ip : p);
+      } else {
+        mergedPatients.push(ip);
+      }
+    });
+
+    persistRecords(mergedRecords);
+    persistPatients(mergedPatients);
+
+    alert(`导入成功！\n新增记录：${importPreview.newRecords} 条，覆盖记录：${importPreview.overwrittenRecords} 条\n新增患者：${importPreview.newPatients} 人，覆盖患者：${importPreview.overwrittenPatients} 人`);
+    cancelImport();
+  }
+
+  function cancelImport() {
+    setImportPreview(null);
+    setImportFileName('');
   }
 
   function getPhotoProcessByRecordId(recordId) {
@@ -1160,6 +1284,13 @@ function App() {
               {boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === 'overdue').length}
             </span>
           )}
+        </button>
+        <button
+          className={'tab ' + (activeTab === 'dataManagement' ? 'active' : '')}
+          onClick={() => setActiveTab('dataManagement')}
+        >
+          <Database size={16} />
+          数据管理
         </button>
       </div>
 
@@ -2813,6 +2944,153 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'dataManagement' && (
+        <section className="workspace data-management">
+          <div className="panel form-panel data-panel">
+            <div className="panel-title">
+              <Download size={18} />
+              <h2>数据导出</h2>
+            </div>
+            <p className="data-description">
+              将当前浏览器中存储的牙色记录、患者档案和时间线数据导出为 JSON 文件，用于备份或迁移。
+            </p>
+            <div className="data-stats">
+              <div className="data-stat-item">
+                <ClipboardList size={20} />
+                <div>
+                  <strong>{records.length}</strong>
+                  <span>牙色记录</span>
+                </div>
+              </div>
+              <div className="data-stat-item">
+                <Users size={20} />
+                <div>
+                  <strong>{patients.length}</strong>
+                  <span>患者档案</span>
+                </div>
+              </div>
+            </div>
+            <button className="primary" type="button" onClick={exportData}>
+              <Download size={18} />导出数据为 JSON
+            </button>
+          </div>
+
+          <div className="panel list-panel data-panel">
+            <div className="panel-title">
+              <HardDriveUpload size={18} />
+              <h2>数据导入</h2>
+            </div>
+            <p className="data-description">
+              选择从本系统导出的 JSON 文件进行数据导入。导入前会展示详细的统计信息和冲突提示，确认后才会执行合并。
+            </p>
+
+            {!importPreview ? (
+              <div className="import-area">
+                <label className="import-label">
+                  <Upload size={32} style={{ color: '#9ca3af' }} />
+                  <span>点击选择 JSON 文件或拖拽到此处</span>
+                  <p className="hint">仅支持由本系统导出的数据文件</p>
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    style={{ display: 'none' }}
+                    onChange={handleImportFile}
+                  />
+                </label>
+                {importFileName && (
+                  <p className="import-filename">已选择：{importFileName}</p>
+                )}
+              </div>
+            ) : (
+              <div className="import-preview">
+                <div className="import-preview-header">
+                  <CheckCircle2 size={20} style={{ color: 'var(--accent)' }} />
+                  <h3>文件解析成功</h3>
+                </div>
+
+                <div className="import-stats">
+                  <div className="import-stat-card">
+                    <h4>牙色记录</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <span className="label">总计</span>
+                        <strong>{importPreview.totalRecords}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">新增</span>
+                        <strong className="text-success">{importPreview.newRecords}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">覆盖</span>
+                        <strong className="text-warning">{importPreview.overwrittenRecords}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>患者档案</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <span className="label">总计</span>
+                        <strong>{importPreview.totalPatients}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">新增</span>
+                        <strong className="text-success">{importPreview.newPatients}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">覆盖</span>
+                        <strong className="text-warning">{importPreview.overwrittenPatients}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {importPreview.duplicatePatientNames.length > 0 && (
+                  <div className="import-warning">
+                    <AlertTriangle size={18} />
+                    <div>
+                      <strong>检测到重复患者姓名</strong>
+                      <p>以下患者姓名在当前数据中已存在：{importPreview.duplicatePatientNames.join('、')}</p>
+                      <p className="hint">系统将按 ID 合并数据，如有冲突请确认导入后检查。</p>
+                    </div>
+                  </div>
+                )}
+
+                {importPreview.overwrittenRecords > 0 && (
+                  <div className="import-warning">
+                    <AlertTriangle size={18} />
+                    <div>
+                      <strong>将覆盖 {importPreview.overwrittenRecords} 条已有记录</strong>
+                      <p>这些记录 ID 在当前数据中已存在，导入后将被新数据替换。</p>
+                    </div>
+                  </div>
+                )}
+
+                {importPreview.overwrittenPatients > 0 && (
+                  <div className="import-warning">
+                    <AlertTriangle size={18} />
+                    <div>
+                      <strong>将覆盖 {importPreview.overwrittenPatients} 个已有患者档案</strong>
+                      <p>这些患者 ID 在当前数据中已存在，导入后将被新数据替换。</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="import-actions">
+                  <button type="button" className="secondary" onClick={cancelImport}>
+                    <X size={16} />取消
+                  </button>
+                  <button type="button" className="primary" onClick={confirmImport}>
+                    <CheckCircle2 size={16} />确认合并导入
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {shadeDetailModal && (
