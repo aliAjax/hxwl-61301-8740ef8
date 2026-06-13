@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -77,7 +77,7 @@ const appConfig = {
       "tooth": "11",
       "shade": "A2",
       "photoNote": "自然光下正面照，颈部略深",
-      "followUp": "2026-06-18",
+      "followUp": "2026-06-13",
       "status": "待修复"
     },
     {
@@ -85,7 +85,7 @@ const appConfig = {
       "tooth": "21",
       "shade": "B1",
       "photoNote": "临时冠试戴后复拍",
-      "followUp": "2026-06-20",
+      "followUp": "2026-06-13",
       "status": "制作中"
     },
     {
@@ -461,6 +461,15 @@ function App() {
     }, {});
   }, [filteredRecords]);
 
+  const todayFollowUps = useMemo(() => {
+    return records
+      .filter((item) => item.followUp === today)
+      .sort((a, b) => {
+        const statusOrder = { '待修复': 0, '制作中': 1, '已完成修复': 2 };
+        return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
+      });
+  }, [records, today]);
+
   return (
     <main className="shell" style={{ '--accent': appConfig.accent }}>
       <section className="hero">
@@ -482,6 +491,16 @@ function App() {
         >
           <ClipboardList size={16} />
           比色记录
+        </button>
+        <button
+          className={'tab ' + (activeTab === 'todayFollowUps' ? 'active' : '')}
+          onClick={() => setActiveTab('todayFollowUps')}
+        >
+          <CalendarCheck size={16} />
+          今日复诊
+          {todayFollowUps.length > 0 && (
+            <span className="tab-badge">{todayFollowUps.length}</span>
+          )}
         </button>
         <button
           className={'tab ' + (activeTab === 'patients' ? 'active' : '')}
@@ -1025,6 +1044,149 @@ function App() {
                 ))}
               </div>
             </section>
+          </section>
+        </>
+      )}
+
+      {activeTab === 'todayFollowUps' && (
+        <>
+          <section className="metrics">
+            <article className="metric">
+              <span>今日复诊</span>
+              <strong>{todayFollowUps.length}</strong>
+            </article>
+            <article className="metric">
+              <span>待处理</span>
+              <strong>{todayFollowUps.filter((item) => item.status === '待修复').length}</strong>
+            </article>
+            <article className="metric">
+              <span>已完成</span>
+              <strong>{todayFollowUps.filter((item) => item.status === '已完成修复').length}</strong>
+            </article>
+          </section>
+
+          <section className="workspace">
+            <section className="panel list-panel">
+              <div className="panel-title">
+                <Stethoscope size={18} />
+                <h2>今日复诊清单 · {today}</h2>
+              </div>
+
+              {todayFollowUps.length > 0 ? (
+                <div className="records">
+                  {todayFollowUps.map((item) => (
+                    <article
+                      className={'record follow-up-record ' + (item.conflict ? 'conflict' : '')}
+                      key={item.id}
+                      onClick={() => setSelected(item)}
+                    >
+                      <div className="record-head">
+                        <div>
+                          <h3>{item.patient}</h3>
+                          <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
+                        </div>
+                        <span className={'status ' + statusClass(item.status)}>{item.status}</span>
+                      </div>
+                      <p className="record-detail">{item.photoNote}</p>
+                      {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
+                      <div className="actions quick-actions" onClick={(event) => event.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="quick-action-btn"
+                          onClick={() => updateStatus(item.id, '制作中')}
+                          disabled={item.status === '制作中'}
+                        >
+                          <RotateCcw size={14} />
+                          制作中
+                        </button>
+                        <button
+                          type="button"
+                          className="quick-action-btn primary-action"
+                          onClick={() => updateStatus(item.id, '已完成修复')}
+                          disabled={item.status === '已完成修复'}
+                        >
+                          <CheckCircle2 size={14} />
+                          已完成
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <CalendarCheck size={48} style={{ color: '#d0d5dd' }} />
+                  <h3>今日无复诊安排</h3>
+                  <p className="empty">今天没有患者需要复诊，可以安心处理其他工作。</p>
+                  <p className="hint">在比色记录中设置复诊日期后，患者会自动出现在这里。</p>
+                </div>
+              )}
+            </section>
+
+            <aside className="panel detail-panel">
+              <div className="panel-title">
+                <CheckCircle2 size={18} />
+                <h2>复诊详情</h2>
+              </div>
+              {selected ? (
+                <div className="detail">
+                  <h3>{selected.patient}</h3>
+                  <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
+                  <p>{selected.photoNote}</p>
+
+                  {getShadeInfo(selected.shade) && (
+                    <div className="shade-detail-card">
+                      <div className="shade-detail-header">
+                        <div className={'shade-swatch-sm shade-' + selected.shade.charAt(0).toLowerCase()}>
+                          <span>{selected.shade}</span>
+                        </div>
+                        <div>
+                          <h4>色号 {selected.shade} 说明</h4>
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={() => setShadeDetailModal(getShadeInfo(selected.shade))}
+                          >
+                            查看完整说明
+                          </button>
+                        </div>
+                      </div>
+                      <div className="shade-detail-content">
+                        <p><strong>文字说明：</strong>{getShadeInfo(selected.shade)?.description}</p>
+                        <p><strong>适用场景：</strong>{getShadeInfo(selected.shade)?.scenario}</p>
+                        <p><strong>注意事项：</strong>{getShadeInfo(selected.shade)?.notes}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="timeline">
+                    {(selected.timeline || []).map((step, index) => (
+                      <span key={index}>{step.at} · {step.status} · {step.by}</span>
+                    ))}
+                  </div>
+
+                  <div className="detail-actions">
+                    <p className="hint">快速更新状态：</p>
+                    <div className="actions">
+                      {appConfig.statuses.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => updateStatus(selected.id, status)}
+                          disabled={selected.status === status}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <Info size={48} style={{ color: '#d0d5dd' }} />
+                  <p className="empty">点击左侧任意复诊记录查看详情和状态流转。</p>
+                </div>
+              )}
+            </aside>
           </section>
         </>
       )}
