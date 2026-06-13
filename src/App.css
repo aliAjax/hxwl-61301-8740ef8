@@ -55,6 +55,41 @@ h1 { font-size: 34px; line-height: 1.15; letter-spacing: 0; }
 .port-card span { color: #64748b; font-size: 13px; }
 .port-card strong { font-size: 30px; color: var(--accent); }
 
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 6px;
+  width: fit-content;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 14px;
+  transition: all .2s;
+}
+
+.tab:hover {
+  color: var(--accent);
+  background: #f0fdfa;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: white;
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -114,6 +149,128 @@ textarea { min-height: 76px; resize: vertical; }
   background: var(--accent);
   color: white;
   font-weight: 800;
+}
+
+.secondary {
+  margin-top: 10px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 12px;
+  background: #fff;
+  color: #344054;
+  font-weight: 700;
+}
+
+.secondary:hover {
+  background: #f9fafb;
+}
+
+.patient-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.patient-select-wrapper .input-icon {
+  position: absolute;
+  left: 11px;
+  color: #64748b;
+  pointer-events: none;
+  z-index: 1;
+}
+
+select.with-icon {
+  padding-left: 38px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  padding-right: 38px;
+}
+
+.patient-info-card {
+  margin-bottom: 14px;
+  border: 1px solid #d1fae5;
+  border-radius: 8px;
+  background: #ecfdf5;
+  padding: 12px;
+}
+
+.patient-info-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #065f46;
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.patient-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.patient-info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.patient-info-item.allergy {
+  grid-column: 1 / -1;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.patient-record {
+  border-left: 4px solid var(--accent);
+}
+
+.patient-name {
+  font-size: 17px;
+}
+
+.patient-phone {
+  color: #667085;
+  margin-top: 2px;
+}
+
+.allergy-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 9px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #344054;
+  line-height: 1.6;
+}
+
+.detail-item svg {
+  color: #667085;
+  flex-shrink: 0;
 }
 
 .hint { margin-top: 10px; color: #667085; font-size: 13px; line-height: 1.5; }
@@ -247,12 +404,17 @@ textarea { min-height: 76px; resize: vertical; }
 @media (max-width: 980px) {
   .shell { padding: 16px; }
   .hero, .workspace, .insights { grid-template-columns: 1fr; display: grid; }
-  .metrics { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(3, 1fr); }
   .port-card { min-height: 110px; border-left: 0; border-top: 4px solid var(--accent); }
+  .tabs { width: 100%; }
+  .tab { flex: 1; justify-content: center; }
 }
 
 @media (max-width: 620px) {
   h1 { font-size: 26px; }
   .form-grid, .toolbar { grid-template-columns: 1fr; display: grid; }
   .record-head { display: grid; }
+  .metrics { grid-template-columns: 1fr; }
+  .patient-info-grid { grid-template-columns: 1fr; }
+  .tabs { flex-direction: column; }
 }

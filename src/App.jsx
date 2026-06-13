@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -10,6 +10,7 @@ const appConfig = {
   "domain": "牙科诊所",
   "icon": "SmilePlus",
   "storage": "hxwl-61301-dental-shade",
+  "patientStorage": "hxwl-61301-patients",
   "accent": "#0f766e",
   "statuses": [
     "待修复",
@@ -95,6 +96,29 @@ const appConfig = {
       "status": "已完成修复"
     }
   ],
+  "patientSeed": [
+    {
+      "name": "林雨",
+      "phone": "13800138001",
+      "commonTooth": "11, 21",
+      "allergyNote": "青霉素过敏",
+      "shadeCount": 2
+    },
+    {
+      "name": "周航",
+      "phone": "13900139002",
+      "commonTooth": "21, 22",
+      "allergyNote": "无",
+      "shadeCount": 1
+    },
+    {
+      "name": "陈澄",
+      "phone": "13700137003",
+      "commonTooth": "36, 46",
+      "allergyNote": "金属过敏",
+      "shadeCount": 3
+    }
+  ],
   "metrics": [
     [
       "总记录",
@@ -134,6 +158,12 @@ const appConfig = {
     "photoNote": "自然光下正面照，颈部略深",
     "followUp": "",
     "status": "待修复"
+  },
+  "patientDefaultValues": {
+    "name": "",
+    "phone": "",
+    "commonTooth": "",
+    "allergyNote": ""
   }
 };
 
@@ -159,41 +189,20 @@ function loadRecords() {
   return withIds(appConfig.seed);
 }
 
-function avg(numbers) {
-  const valid = numbers.filter((value) => Number.isFinite(value));
-  if (!valid.length) return 0;
-  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+function loadPatients() {
+  const raw = localStorage.getItem(appConfig.patientStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return withPatientIds(appConfig.patientSeed);
+    }
+  }
+  return withPatientIds(appConfig.patientSeed);
 }
 
-function money(value) {
-  return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(value || 0);
-}
-
-function inNextDays(dateText, days) {
-  if (!dateText) return false;
-  const date = new Date(dateText);
-  const now = new Date(today);
-  const diff = (date.getTime() - now.getTime()) / 86400000;
-  return diff >= 0 && diff <= days;
-}
-
-function latestTemp(item) {
-  const temps = item.temps || [Number(item.temperature)];
-  return temps[temps.length - 1];
-}
-
-function hasHotTemp(item) {
-  const temps = item.temps || [Number(item.temperature)];
-  return temps.some((value) => Number(value) > 2);
-}
-
-function priorityRank(value) {
-  return { 危急: 0, 加急: 1, 常规: 2, 高: 0, 中: 1, 低: 2 }[value] ?? 9;
-}
-
-function hasOverlap(target, records) {
-  if (!target.bed || !target.date || !target.start || !target.end) return false;
-  return records.some((item) => item.id !== target.id && item.bed === target.bed && item.date === target.date && target.start < item.end && target.end > item.start);
+function withPatientIds(patients) {
+  return patients.map((p) => ({ id: uid(), createdAt: new Date().toISOString(), ...p }));
 }
 
 function statusClass(status) {
@@ -202,14 +211,26 @@ function statusClass(status) {
 }
 
 function App() {
+  const [activeTab, setActiveTab] = useState('records');
   const [records, setRecords] = useState(loadRecords);
+  const [patients, setPatients] = useState(loadPatients);
   const [form, setForm] = useState(appConfig.defaultValues);
   const [filters, setFilters] = useState({ query: '', status: '全部' });
   const [selected, setSelected] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientForm, setPatientForm] = useState(appConfig.patientDefaultValues);
+  const [editingPatientId, setEditingPatientId] = useState(null);
+  const [patientQuery, setPatientQuery] = useState('');
+  const [selectedPatientId, setSelectedPatientId] = useState('');
 
-  function persist(next) {
+  function persistRecords(next) {
     setRecords(next);
     localStorage.setItem(appConfig.storage, JSON.stringify(next));
+  }
+
+  function persistPatients(next) {
+    setPatients(next);
+    localStorage.setItem(appConfig.patientStorage, JSON.stringify(next));
   }
 
   function addRecord(event) {
@@ -222,20 +243,27 @@ function App() {
       timeline: [{ status: form.status || appConfig.primaryStatus, at: today, by: '录入' }]
     };
 
-    if (appConfig.conflict === 'date-slot' && records.some((item) => item.date === nextRecord.date && item.slot === nextRecord.slot)) {
-      nextRecord.conflict = true;
-    }
-    if (appConfig.conflict === 'bed-time' && hasOverlap(nextRecord, records)) {
-      nextRecord.conflict = true;
-    }
-    if (appConfig.chart) {
-      const temp = Number(nextRecord.temperature || 0);
-      nextRecord.temps = [temp];
-      if (temp > 2) nextRecord.status = '异常';
+    persistRecords([nextRecord, ...records]);
+
+    if (selectedPatientId) {
+      const updatedPatients = patients.map((p) => {
+        if (p.id === selectedPatientId) {
+          const currentCount = p.shadeCount || 0;
+          let commonTooth = p.commonTooth || '';
+          const toothList = commonTooth.split(',').map((t) => t.trim()).filter(Boolean);
+          if (!toothList.includes(form.tooth) && form.tooth) {
+            toothList.push(form.tooth);
+            commonTooth = toothList.join(', ');
+          }
+          return { ...p, shadeCount: currentCount + 1, commonTooth };
+        }
+        return p;
+      });
+      persistPatients(updatedPatients);
     }
 
-    persist([nextRecord, ...records]);
     setForm(appConfig.defaultValues);
+    setSelectedPatientId('');
     setSelected(nextRecord);
   }
 
@@ -245,33 +273,69 @@ function App() {
       status,
       timeline: [...(item.timeline || []), { status, at: today, by: '操作员' }]
     } : item);
-    persist(next);
+    persistRecords(next);
     if (selected?.id === id) setSelected(next.find((item) => item.id === id));
   }
 
   function removeRecord(id) {
     const next = records.filter((item) => item.id !== id);
-    persist(next);
+    persistRecords(next);
     if (selected?.id === id) setSelected(null);
   }
 
   function duplicateRecord(item) {
     const copied = { ...item, id: uid(), status: appConfig.primaryStatus, timeline: [{ status: appConfig.primaryStatus, at: today, by: '复制' }] };
-    persist([copied, ...records]);
+    persistRecords([copied, ...records]);
     setSelected(copied);
   }
 
-  function addTemperature(item) {
-    const value = Number(prompt('录入新的温度读数'));
-    if (!Number.isFinite(value)) return;
-    const next = records.map((record) => record.id === item.id ? {
-      ...record,
-      temps: [...(record.temps || []), value],
-      temperature: String(value),
-      status: value > 2 ? '异常' : record.status
-    } : record);
-    persist(next);
-    setSelected(next.find((record) => record.id === item.id));
+  function addPatient(event) {
+    event.preventDefault();
+    if (editingPatientId) {
+      const next = patients.map((p) => p.id === editingPatientId ? { ...p, ...patientForm } : p);
+      persistPatients(next);
+      setEditingPatientId(null);
+    } else {
+      const newPatient = {
+        id: uid(),
+        ...patientForm,
+        shadeCount: 0,
+        createdAt: new Date().toISOString()
+      };
+      persistPatients([newPatient, ...patients]);
+    }
+    setPatientForm(appConfig.patientDefaultValues);
+  }
+
+  function editPatient(patient) {
+    setPatientForm({ name: patient.name, phone: patient.phone, commonTooth: patient.commonTooth, allergyNote: patient.allergyNote });
+    setEditingPatientId(patient.id);
+  }
+
+  function removePatient(id) {
+    if (!confirm('确定删除该患者档案吗？')) return;
+    const next = patients.filter((p) => p.id !== id);
+    persistPatients(next);
+    if (selectedPatient?.id === id) setSelectedPatient(null);
+  }
+
+  function cancelEditPatient() {
+    setEditingPatientId(null);
+    setPatientForm(appConfig.patientDefaultValues);
+  }
+
+  function handlePatientSelect(patientId) {
+    setSelectedPatientId(patientId);
+    if (patientId) {
+      const patient = patients.find((p) => p.id === patientId);
+      if (patient) {
+        setForm({
+          ...form,
+          patient: patient.name,
+          tooth: patient.commonTooth ? patient.commonTooth.split(',')[0].trim() : form.tooth
+        });
+      }
+    }
   }
 
   const filteredRecords = useMemo(() => {
@@ -279,15 +343,17 @@ function App() {
       .filter((item) => !filters.query || (item.patient || '').includes(filters.query))
       .filter((item) => filters.status === '全部' || item.status === filters.status)
       .sort((a, b) => {
-        if (appConfig.sort === 'priority') {
-          const rank = priorityRank(a.priority) - priorityRank(b.priority);
-          if (rank !== 0) return rank;
-        }
-        const aDate = a[appConfig.dateKey] || a.sentAt || a.createdAt || '';
-        const bDate = b[appConfig.dateKey] || b.sentAt || b.createdAt || '';
-        return String(aDate).localeCompare(String(bDate));
+        const aDate = a[appConfig.dateKey] || a.createdAt || '';
+        const bDate = b[appConfig.dateKey] || b.createdAt || '';
+        return String(bDate).localeCompare(String(aDate));
       });
   }, [records, filters]);
+
+  const filteredPatients = useMemo(() => {
+    return patients
+      .filter((p) => !patientQuery || p.name.includes(patientQuery) || (p.phone || '').includes(patientQuery))
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  }, [patients, patientQuery]);
 
   const metrics = [
     { label: "总记录", value: records.length },
@@ -295,21 +361,19 @@ function App() {
     { label: "今日复诊", value: records.filter((item) => item.followUp === today).length },
   ];
 
+  const patientMetrics = [
+    { label: "患者总数", value: patients.length },
+    { label: "有备注", value: patients.filter((p) => p.allergyNote && p.allergyNote !== '无').length },
+    { label: "总比色次数", value: patients.reduce((sum, p) => sum + (p.shadeCount || 0), 0) },
+  ];
+
   const groupedByDate = useMemo(() => {
     return filteredRecords.reduce((acc, item) => {
-      const key = item[appConfig.dateKey] || item.date || item.enrollDate || '未排期';
+      const key = item[appConfig.dateKey] || '未排期';
       (acc[key] ||= []).push(item);
       return acc;
     }, {});
   }, [filteredRecords]);
-
-  const directory = useMemo(() => {
-    return records.reduce((acc, item) => {
-      const key = item.issue || '未分类';
-      (acc[key] ||= []).push(item);
-      return acc;
-    }, {});
-  }, [records]);
 
   return (
     <main className="shell" style={{ '--accent': appConfig.accent }}>
@@ -325,138 +389,367 @@ function App() {
         </div>
       </section>
 
-      <section className="metrics">
-        {metrics.map((metric) => (
-          <article className="metric" key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-          </article>
-        ))}
-      </section>
+      <div className="tabs">
+        <button
+          className={'tab ' + (activeTab === 'records' ? 'active' : '')}
+          onClick={() => setActiveTab('records')}
+        >
+          <ClipboardList size={16} />
+          比色记录
+        </button>
+        <button
+          className={'tab ' + (activeTab === 'patients' ? 'active' : '')}
+          onClick={() => setActiveTab('patients')}
+        >
+          <Users size={16} />
+          患者档案
+        </button>
+      </div>
 
-      <section className="workspace">
-        <form className="panel form-panel" onSubmit={addRecord}>
-          <div className="panel-title">
-            <ClipboardList size={18} />
-            <h2>新增记录</h2>
-          </div>
-          <div className="form-grid">
-            {appConfig.fields.map((field) => (
-              <label key={field.key} className={field.type === 'textarea' ? 'wide' : ''}>
-                <span>{field.label}</span>
-                {field.type === 'textarea' ? (
-                  <textarea value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} placeholder={field.placeholder} />
-                ) : field.type === 'select' ? (
-                  <select value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}>
-                    {field.options.map((option) => <option key={option}>{option}</option>)}
-                  </select>
-                ) : (
-                  <input type={field.type} value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} placeholder={field.placeholder} />
-                )}
-              </label>
-            ))}
-            <label>
-              <span>当前状态</span>
-              <select value={form.status || appConfig.primaryStatus} onChange={(event) => setForm({ ...form, status: event.target.value })}>
-                {appConfig.statuses.map((status) => <option key={status}>{status}</option>)}
-              </select>
-            </label>
-          </div>
-          <button className="primary" type="submit"><Plus size={18} />新增</button>
-          <p className="hint">{appConfig.note}</p>
-        </form>
-
-        <section className="panel list-panel">
-          <div className="toolbar">
-            <div className="search">
-              <Search size={16} />
-              <input value={filters.query} onChange={(event) => setFilters({ ...filters, query: event.target.value })} placeholder={appConfig.filters[0]?.label || '搜索'} />
-            </div>
-            <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
-              <option>全部</option>
-              {appConfig.statuses.map((status) => <option key={status}>{status}</option>)}
-            </select>
-          </div>
-
-          <div className="records">
-            {filteredRecords.map((item) => (
-              <article className={'record ' + (item.conflict || hasOverlap(item, records) ? 'conflict' : '')} key={item.id} onClick={() => setSelected(item)}>
-                <div className="record-head">
-                  <div>
-                    <h3>{item.patient}</h3>
-                    <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
-                  </div>
-                  <span className={'status ' + statusClass(item.status)}>{item.status}</span>
-                </div>
-                <p className="record-detail">{item.photoNote}</p>
-                {(item.conflict || hasOverlap(item, records)) && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
-                <div className="actions" onClick={(event) => event.stopPropagation()}>
-                  {appConfig.statuses.map((status) => (
-                    <button key={status} type="button" onClick={() => updateStatus(item.id, status)}>{status}</button>
-                  ))}
-                  {appConfig.action === 'copyRecipe' && <button type="button" onClick={() => duplicateRecord(item)}><RotateCcw size={14} />复制</button>}
-                  {appConfig.chart && <button type="button" onClick={() => addTemperature(item)}>加温度</button>}
-                  <button className="ghost-danger" type="button" onClick={() => removeRecord(item.id)}><Trash2 size={14} /></button>
-                </div>
+      {activeTab === 'records' && (
+        <>
+          <section className="metrics">
+            {metrics.map((metric) => (
+              <article className="metric" key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
               </article>
             ))}
-          </div>
-        </section>
-      </section>
+          </section>
 
-      <section className="insights">
-        <div className="panel">
-          <div className="panel-title">
-            <CalendarDays size={18} />
-            <h2>{appConfig.directory ? '证据目录预览' : appConfig.board ? '床位看板' : '分组视图'}</h2>
-          </div>
-          {appConfig.directory ? (
-            <div className="directory">
-              {Object.entries(directory).map(([issue, items]) => (
-                <div key={issue} className="directory-group">
-                  <strong>{issue}</strong>
-                  {items.map((item, index) => <span key={item.id}>{index + 1}. {item.evidence}｜{item.purpose}</span>)}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="date-groups">
-              {Object.entries(groupedByDate).map(([date, items]) => (
-                <div key={date} className="date-group">
-                  <strong>{date}</strong>
-                  <span>{items.length}条记录</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          <section className="workspace">
+            <form className="panel form-panel" onSubmit={addRecord}>
+              <div className="panel-title">
+                <ClipboardList size={18} />
+                <h2>新增记录</h2>
+              </div>
 
-        <aside className="panel detail-panel">
-          <div className="panel-title">
-            <CheckCircle2 size={18} />
-            <h2>详情</h2>
-          </div>
-          {selected ? (
-            <div className="detail">
-              <h3>{selected.patient}</h3>
-              <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
-              <p>{selected.photoNote}</p>
-              {selected.temps && (
-                <div className="temp-chart">
-                  {selected.temps.map((value, index) => <i key={index} style={{ height: Math.max(10, 56 + Number(value) * 8) }} title={String(value)} />)}
+              <label>
+                <span>选择患者（可选）</span>
+                <div className="patient-select-wrapper">
+                  <Users size={16} className="input-icon" />
+                  <select
+                    value={selectedPatientId}
+                    onChange={(e) => handlePatientSelect(e.target.value)}
+                    className="with-icon"
+                  >
+                    <option value="">手动输入患者信息</option>
+                    {patients.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} - {p.phone || '无电话'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+
+              {selectedPatientId && (
+                <div className="patient-info-card">
+                  <div className="patient-info-header">
+                    <UserPlus size={16} />
+                    <span>已选患者信息</span>
+                  </div>
+                  <div className="patient-info-grid">
+                    <div className="patient-info-item">
+                      <Phone size={14} />
+                      <span>{patients.find((p) => p.id === selectedPatientId)?.phone || '未填写'}</span>
+                    </div>
+                    <div className="patient-info-item">
+                      <MapPin size={14} />
+                      <span>常用牙位: {patients.find((p) => p.id === selectedPatientId)?.commonTooth || '未填写'}</span>
+                    </div>
+                    {(patients.find((p) => p.id === selectedPatientId)?.allergyNote && patients.find((p) => p.id === selectedPatientId)?.allergyNote !== '无') && (
+                      <div className="patient-info-item allergy">
+                        <AlertCircle size={14} />
+                        <span>过敏: {patients.find((p) => p.id === selectedPatientId)?.allergyNote}</span>
+                      </div>
+                    )}
+                    <div className="patient-info-item">
+                      <FileText size={14} />
+                      <span>历史比色: {patients.find((p) => p.id === selectedPatientId)?.shadeCount || 0} 次</span>
+                    </div>
+                  </div>
                 </div>
               )}
-              <div className="timeline">
-                {(selected.timeline || []).map((step, index) => (
-                  <span key={index}>{step.at} · {step.status} · {step.by}</span>
+
+              <div className="form-grid">
+                {appConfig.fields.map((field) => (
+                  <label key={field.key} className={field.type === 'textarea' ? 'wide' : ''}>
+                    <span>{field.label}</span>
+                    {field.type === 'textarea' ? (
+                      <textarea value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} placeholder={field.placeholder} />
+                    ) : field.type === 'select' ? (
+                      <select value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}>
+                        {field.options.map((option) => <option key={option}>{option}</option>)}
+                      </select>
+                    ) : (
+                      <input type={field.type} value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} placeholder={field.placeholder} />
+                    )}
+                  </label>
+                ))}
+                <label>
+                  <span>当前状态</span>
+                  <select value={form.status || appConfig.primaryStatus} onChange={(event) => setForm({ ...form, status: event.target.value })}>
+                    {appConfig.statuses.map((status) => <option key={status}>{status}</option>)}
+                  </select>
+                </label>
+              </div>
+              <button className="primary" type="submit"><Plus size={18} />新增</button>
+              <p className="hint">{appConfig.note}</p>
+            </form>
+
+            <section className="panel list-panel">
+              <div className="toolbar">
+                <div className="search">
+                  <Search size={16} />
+                  <input value={filters.query} onChange={(event) => setFilters({ ...filters, query: event.target.value })} placeholder={appConfig.filters[0]?.label || '搜索'} />
+                </div>
+                <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
+                  <option>全部</option>
+                  {appConfig.statuses.map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </div>
+
+              <div className="records">
+                {filteredRecords.map((item) => (
+                  <article className={'record ' + (item.conflict ? 'conflict' : '')} key={item.id} onClick={() => setSelected(item)}>
+                    <div className="record-head">
+                      <div>
+                        <h3>{item.patient}</h3>
+                        <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
+                      </div>
+                      <span className={'status ' + statusClass(item.status)}>{item.status}</span>
+                    </div>
+                    <p className="record-detail">{item.photoNote}</p>
+                    {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
+                    <div className="actions" onClick={(event) => event.stopPropagation()}>
+                      {appConfig.statuses.map((status) => (
+                        <button key={status} type="button" onClick={() => updateStatus(item.id, status)}>{status}</button>
+                      ))}
+                      <button type="button" onClick={() => duplicateRecord(item)}><RotateCcw size={14} />复制</button>
+                      <button className="ghost-danger" type="button" onClick={() => removeRecord(item.id)}><Trash2 size={14} /></button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </section>
+
+          <section className="insights">
+            <div className="panel">
+              <div className="panel-title">
+                <CalendarDays size={18} />
+                <h2>按复诊日期分组</h2>
+              </div>
+              <div className="date-groups">
+                {Object.entries(groupedByDate).map(([date, items]) => (
+                  <div key={date} className="date-group">
+                    <strong>{date}</strong>
+                    <span>{items.length}条记录</span>
+                  </div>
                 ))}
               </div>
             </div>
-          ) : (
-            <p className="empty">点击任意记录查看详情和状态流转。</p>
-          )}
-        </aside>
-      </section>
+
+            <aside className="panel detail-panel">
+              <div className="panel-title">
+                <CheckCircle2 size={18} />
+                <h2>详情</h2>
+              </div>
+              {selected ? (
+                <div className="detail">
+                  <h3>{selected.patient}</h3>
+                  <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
+                  <p>{selected.photoNote}</p>
+                  <div className="timeline">
+                    {(selected.timeline || []).map((step, index) => (
+                      <span key={index}>{step.at} · {step.status} · {step.by}</span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="empty">点击任意记录查看详情和状态流转。</p>
+              )}
+            </aside>
+          </section>
+        </>
+      )}
+
+      {activeTab === 'patients' && (
+        <>
+          <section className="metrics">
+            {patientMetrics.map((metric) => (
+              <article className="metric" key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </article>
+            ))}
+          </section>
+
+          <section className="workspace">
+            <form className="panel form-panel" onSubmit={addPatient}>
+              <div className="panel-title">
+                <UserPlus size={18} />
+                <h2>{editingPatientId ? '编辑患者档案' : '新增患者档案'}</h2>
+              </div>
+              <div className="form-grid">
+                <label className="wide">
+                  <span>患者姓名</span>
+                  <input
+                    type="text"
+                    value={patientForm.name}
+                    onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
+                    placeholder="请输入患者姓名"
+                    required
+                  />
+                </label>
+                <label className="wide">
+                  <span>联系电话</span>
+                  <input
+                    type="tel"
+                    value={patientForm.phone}
+                    onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })}
+                    placeholder="请输入联系电话"
+                  />
+                </label>
+                <label className="wide">
+                  <span>常用牙位（逗号分隔）</span>
+                  <input
+                    type="text"
+                    value={patientForm.commonTooth}
+                    onChange={(e) => setPatientForm({ ...patientForm, commonTooth: e.target.value })}
+                    placeholder="如：11, 21, 36"
+                  />
+                </label>
+                <label className="wide">
+                  <span>过敏备注</span>
+                  <textarea
+                    value={patientForm.allergyNote}
+                    onChange={(e) => setPatientForm({ ...patientForm, allergyNote: e.target.value })}
+                    placeholder="如：青霉素过敏、金属过敏等"
+                    rows={3}
+                  />
+                </label>
+              </div>
+              <button className="primary" type="submit">
+                {editingPatientId ? <><Edit3 size={18} />保存修改</> : <><Plus size={18} />新增患者</>}
+              </button>
+              {editingPatientId && (
+                <button type="button" className="secondary" onClick={cancelEditPatient}>取消编辑</button>
+              )}
+              <p className="hint">患者档案数据保存在本地浏览器中。</p>
+            </form>
+
+            <section className="panel list-panel">
+              <div className="toolbar">
+                <div className="search">
+                  <Search size={16} />
+                  <input
+                    value={patientQuery}
+                    onChange={(e) => setPatientQuery(e.target.value)}
+                    placeholder="搜索患者姓名或电话"
+                  />
+                </div>
+              </div>
+
+              <div className="records">
+                {filteredPatients.map((patient) => (
+                  <article
+                    className="record patient-record"
+                    key={patient.id}
+                    onClick={() => setSelectedPatient(patient)}
+                  >
+                    <div className="record-head">
+                      <div>
+                        <h3 className="patient-name">{patient.name}</h3>
+                        <p className="patient-phone">{patient.phone || '未填写电话'}</p>
+                      </div>
+                      <span className="status status-b">{patient.shadeCount || 0} 次比色</span>
+                    </div>
+                    <p className="record-detail">
+                      <strong>常用牙位：</strong>{patient.commonTooth || '未填写'}
+                    </p>
+                    {patient.allergyNote && patient.allergyNote !== '无' && (
+                      <div className="allergy-tag">
+                        <AlertCircle size={14} />
+                        过敏: {patient.allergyNote}
+                      </div>
+                    )}
+                    <div className="actions" onClick={(e) => e.stopPropagation()}>
+                      <button type="button" onClick={() => editPatient(patient)}>
+                        <Edit3 size={14} />编辑
+                      </button>
+                      <button className="ghost-danger" type="button" onClick={() => removePatient(patient.id)}>
+                        <Trash2 size={14} />删除
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </section>
+
+          <section className="insights">
+            <div className="panel">
+              <div className="panel-title">
+                <Users size={18} />
+                <h2>患者概览</h2>
+              </div>
+              <div className="date-groups">
+                <div className="date-group">
+                  <strong>活跃患者</strong>
+                  <span>{patients.filter((p) => p.shadeCount > 0).length} 位</span>
+                </div>
+                <div className="date-group">
+                  <strong>有过敏记录</strong>
+                  <span>{patients.filter((p) => p.allergyNote && p.allergyNote !== '无').length} 位</span>
+                </div>
+                <div className="date-group">
+                  <strong>本月新增</strong>
+                  <span>{patients.filter((p) => {
+                    const created = new Date(p.createdAt);
+                    const now = new Date();
+                    return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+                  }).length} 位</span>
+                </div>
+              </div>
+            </div>
+
+            <aside className="panel detail-panel">
+              <div className="panel-title">
+                <CheckCircle2 size={18} />
+                <h2>患者详情</h2>
+              </div>
+              {selectedPatient ? (
+                <div className="detail">
+                  <h3>{selectedPatient.name}</h3>
+                  <p className="detail-item">
+                    <Phone size={16} />
+                    <span>{selectedPatient.phone || '未填写'}</span>
+                  </p>
+                  <p className="detail-item">
+                    <MapPin size={16} />
+                    <span>常用牙位: {selectedPatient.commonTooth || '未填写'}</span>
+                  </p>
+                  <p className="detail-item">
+                    <AlertCircle size={16} />
+                    <span>过敏备注: {selectedPatient.allergyNote || '无'}</span>
+                  </p>
+                  <p className="detail-item">
+                    <FileText size={16} />
+                    <span>历史比色: {selectedPatient.shadeCount || 0} 次</span>
+                  </p>
+                  <div className="timeline">
+                    <span>创建时间: {new Date(selectedPatient.createdAt).toLocaleDateString('zh-CN')}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="empty">点击任意患者查看详细信息。</p>
+              )}
+            </aside>
+          </section>
+        </>
+      )}
     </main>
   );
 }
