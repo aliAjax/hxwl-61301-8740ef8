@@ -1401,23 +1401,32 @@ function App() {
       }
     });
 
-    persistCollabRecords(nextRecords);
-
-    const now = new Date().toISOString();
-    const newTimelineEntries = timelineEntries.map((te) => ({
-      id: uid(),
-      ...te,
-      at: now,
-      deviceId: collabDevice?.id || '',
-      deviceName: collabDevice?.name || ''
-    }));
-    persistCollabTimeline([...newTimelineEntries, ...collabTimeline]);
-
     const conflictCount = collabConflicts.length;
     const keptLocal = Object.values(collabConflictResolutions).filter((r) => r === 'keepLocal').length;
     const usedImport = Object.values(collabConflictResolutions).filter((r) => r === 'useImport').length;
     const duplicated = Object.values(collabConflictResolutions).filter((r) => r === 'duplicate').length;
-    addCollabTimelineEntry('合并完成', `导入 ${importRecords.length} 条记录，冲突 ${conflictCount} 条（保留本地${keptLocal}，采用导入${usedImport}，生成副本${duplicated}）`);
+
+    persistCollabRecords(nextRecords);
+
+    const now = new Date().toISOString();
+    const newTimelineEntries = [
+      {
+        id: uid(),
+        type: '合并完成',
+        detail: `导入 ${importRecords.length} 条记录，冲突 ${conflictCount} 条（保留本地${keptLocal}，采用导入${usedImport}，生成副本${duplicated}）`,
+        at: now,
+        deviceId: collabDevice?.id || '',
+        deviceName: collabDevice?.name || ''
+      },
+      ...timelineEntries.map((te) => ({
+        id: uid(),
+        ...te,
+        at: now,
+        deviceId: collabDevice?.id || '',
+        deviceName: collabDevice?.name || ''
+      }))
+    ];
+    persistCollabTimeline([...newTimelineEntries, ...collabTimeline]);
 
     cancelCollabImport();
   }
