@@ -74,6 +74,7 @@ const appConfig = {
   ],
   "seed": [
     {
+      "id": "lin-yu-11",
       "patient": "林雨",
       "tooth": "11",
       "shade": "A2",
@@ -82,6 +83,7 @@ const appConfig = {
       "status": "待修复"
     },
     {
+      "id": "zhou-hang-21",
       "patient": "周航",
       "tooth": "21",
       "shade": "B1",
@@ -90,6 +92,7 @@ const appConfig = {
       "status": "制作中"
     },
     {
+      "id": "chen-cheng-36",
       "patient": "陈澄",
       "tooth": "36",
       "shade": "A3",
@@ -100,6 +103,7 @@ const appConfig = {
   ],
   "patientSeed": [
     {
+      "id": "p-lin-yu",
       "name": "林雨",
       "phone": "13800138001",
       "commonTooth": "11, 21",
@@ -107,6 +111,7 @@ const appConfig = {
       "shadeCount": 2
     },
     {
+      "id": "p-zhou-hang",
       "name": "周航",
       "phone": "13900139002",
       "commonTooth": "21, 22",
@@ -114,6 +119,7 @@ const appConfig = {
       "shadeCount": 1
     },
     {
+      "id": "p-chen-cheng",
       "name": "陈澄",
       "phone": "13700137003",
       "commonTooth": "36, 46",
@@ -269,7 +275,11 @@ function uid() {
 }
 
 function withIds(items) {
-  return items.map((item) => ({ id: uid(), timeline: item.timeline || [{ status: item.status, at: today, by: '系统' }], ...item }));
+  return items.map((item) => ({
+    id: item.id || uid(),
+    timeline: item.timeline || [{ status: item.status, at: today, by: '系统' }],
+    ...item
+  }));
 }
 
 function loadRecords() {
@@ -297,7 +307,7 @@ function loadPatients() {
 }
 
 function withPatientIds(patients) {
-  return patients.map((p) => ({ id: uid(), createdAt: new Date().toISOString(), ...p }));
+  return patients.map((p) => ({ id: p.id || uid(), createdAt: new Date().toISOString(), ...p }));
 }
 
 function loadShadeLibrary() {
@@ -403,7 +413,8 @@ function App() {
   function savePhotoProcess(processData = null) {
     const dataToSave = processData || editingPhotoProcess;
     if (!dataToSave) return;
-    const updated = { ...dataToSave, updatedAt: new Date().toISOString() };
+    const allConfirmed = appConfig.photoSteps.every((s) => dataToSave.steps[s.key]?.confirmed);
+    const updated = { ...dataToSave, completed: allConfirmed, updatedAt: new Date().toISOString() };
     const existingIndex = photoProcesses.findIndex((pp) => pp.id === updated.id);
     let next;
     if (existingIndex >= 0) {
@@ -534,7 +545,12 @@ function App() {
   function removeRecord(id) {
     const next = records.filter((item) => item.id !== id);
     persistRecords(next);
+    const nextPhotoProcesses = photoProcesses.filter((pp) => pp.recordId !== id);
+    if (nextPhotoProcesses.length !== photoProcesses.length) {
+      persistPhotoProcesses(nextPhotoProcesses);
+    }
     if (selected?.id === id) setSelected(null);
+    if (selectedPhotoProcess?.recordId === id) setSelectedPhotoProcess(null);
   }
 
   function duplicateRecord(item) {
@@ -1759,15 +1775,7 @@ function App() {
                           下一步<ChevronRight size={16} />
                         </button>
                       ) : (
-                        <button type="button" className="primary" onClick={() => {
-                          const allConfirmed = appConfig.photoSteps.every((s) => editingPhotoProcess.steps[s.key]?.confirmed);
-                          let dataToSave = editingPhotoProcess;
-                          if (allConfirmed) {
-                            dataToSave = { ...editingPhotoProcess, completed: true };
-                            setEditingPhotoProcess(dataToSave);
-                          }
-                          savePhotoProcess(dataToSave);
-                        }}>
+                        <button type="button" className="primary" onClick={() => savePhotoProcess()}>
                           <Save size={16} />完成并保存
                         </button>
                       )}
