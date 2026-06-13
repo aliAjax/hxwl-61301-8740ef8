@@ -470,6 +470,8 @@ function App() {
       });
   }, [records, today]);
 
+  const selectedTodayFollowUp = selected?.followUp === today ? selected : null;
+
   return (
     <main className="shell" style={{ '--accent': appConfig.accent }}>
       <section className="hero">
@@ -1127,39 +1129,39 @@ function App() {
                 <CheckCircle2 size={18} />
                 <h2>复诊详情</h2>
               </div>
-              {selected ? (
+              {selectedTodayFollowUp ? (
                 <div className="detail">
-                  <h3>{selected.patient}</h3>
-                  <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
-                  <p>{selected.photoNote}</p>
+                  <h3>{selectedTodayFollowUp.patient}</h3>
+                  <p>{`牙位 ${selectedTodayFollowUp.tooth} · ${selectedTodayFollowUp.shade}`}</p>
+                  <p>{selectedTodayFollowUp.photoNote}</p>
 
-                  {getShadeInfo(selected.shade) && (
+                  {getShadeInfo(selectedTodayFollowUp.shade) && (
                     <div className="shade-detail-card">
                       <div className="shade-detail-header">
-                        <div className={'shade-swatch-sm shade-' + selected.shade.charAt(0).toLowerCase()}>
-                          <span>{selected.shade}</span>
+                        <div className={'shade-swatch-sm shade-' + selectedTodayFollowUp.shade.charAt(0).toLowerCase()}>
+                          <span>{selectedTodayFollowUp.shade}</span>
                         </div>
                         <div>
-                          <h4>色号 {selected.shade} 说明</h4>
+                          <h4>色号 {selectedTodayFollowUp.shade} 说明</h4>
                           <button
                             type="button"
                             className="link-btn"
-                            onClick={() => setShadeDetailModal(getShadeInfo(selected.shade))}
+                            onClick={() => setShadeDetailModal(getShadeInfo(selectedTodayFollowUp.shade))}
                           >
                             查看完整说明
                           </button>
                         </div>
                       </div>
                       <div className="shade-detail-content">
-                        <p><strong>文字说明：</strong>{getShadeInfo(selected.shade)?.description}</p>
-                        <p><strong>适用场景：</strong>{getShadeInfo(selected.shade)?.scenario}</p>
-                        <p><strong>注意事项：</strong>{getShadeInfo(selected.shade)?.notes}</p>
+                        <p><strong>文字说明：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.description}</p>
+                        <p><strong>适用场景：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.scenario}</p>
+                        <p><strong>注意事项：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.notes}</p>
                       </div>
                     </div>
                   )}
 
                   <div className="timeline">
-                    {(selected.timeline || []).map((step, index) => (
+                    {(selectedTodayFollowUp.timeline || []).map((step, index) => (
                       <span key={index}>{step.at} · {step.status} · {step.by}</span>
                     ))}
                   </div>
@@ -1171,8 +1173,8 @@ function App() {
                         <button
                           key={status}
                           type="button"
-                          onClick={() => updateStatus(selected.id, status)}
-                          disabled={selected.status === status}
+                          onClick={() => updateStatus(selectedTodayFollowUp.id, status)}
+                          disabled={selectedTodayFollowUp.status === status}
                         >
                           {status}
                         </button>
