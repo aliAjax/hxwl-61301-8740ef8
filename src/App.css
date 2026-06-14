@@ -481,6 +481,7 @@ select.with-icon {
 .shade-b { background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 50%, #d1d5db 100%); }
 .shade-c { background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 50%, #9ca3af 100%); }
 .shade-d { background: linear-gradient(135deg, #fef3c7 0%, #d1d5db 50%, #9ca3af 100%); }
+.shade-custom { background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 50%, #a78bfa 100%); }
 
 .shade-info-btn {
   position: absolute;
@@ -595,6 +596,91 @@ select.with-icon {
 
 .shade-card-footer button:hover {
   background: #f9fafb;
+}
+
+.shade-card-footer .icon-btn {
+  flex: 0 0 auto;
+  width: 32px;
+  padding: 6px;
+}
+
+.shade-card-footer .icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.shade-card-footer .danger-btn {
+  flex: 0 0 auto;
+  width: 32px;
+  padding: 6px;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.shade-card-footer .danger-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.shade-drag-handle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  color: #9ca3af;
+  cursor: grab;
+  opacity: 0.6;
+  transition: opacity .15s;
+}
+
+.shade-card:hover .shade-drag-handle {
+  opacity: 1;
+}
+
+.shade-drag-handle:active {
+  cursor: grabbing;
+}
+
+.shade-card-dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+.shade-card-header {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.shade-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #0f766e;
+  background: #f0fdfa;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.shade-archived-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #d97706;
+  background: #fffbeb;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.toolbar .primary.small {
+  padding: 6px 12px;
+  font-size: 13px;
 }
 
 .shade-preview-empty {
