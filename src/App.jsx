@@ -298,10 +298,10 @@ const appConfig = {
   "photoProcessDefaultValues": {
     "recordId": "",
     "steps": {
-      "front": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
-      "side": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
-      "natural": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
-      "confirm": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" }
+      "front": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "", "fileSize": 0 },
+      "side": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "", "fileSize": 0 },
+      "natural": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "", "fileSize": 0 },
+      "confirm": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "", "fileSize": 0 }
     },
     "currentStep": 0,
     "completed": false
@@ -688,15 +688,78 @@ function deliveryOrderStatusClass(status) {
   return ['do-status-a', 'do-status-b', 'do-status-c'][index] || 'do-status-a';
 }
 
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function compressImage(file, maxSizeKB = 500, quality = 0.75, maxDimension = 1920) {
+  return new Promise((resolve, reject) => {
+    const originalSize = file.size;
+    if (originalSize <= maxSizeKB * 1024) {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve({ dataUrl: e.target.result, size: originalSize, compressed: false });
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        const base64Str = dataUrl.split(',')[1];
+        const compressedSize = Math.round((base64Str.length * 3) / 4);
+
+        resolve({ dataUrl, size: compressedSize, compressed: true, originalSize });
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function getStepPhotoStatus(stepData) {
+  if (!stepData) return 'missing';
+  if (stepData.imageUrl && stepData.imageUrl.length > 0) return 'has-photo';
+  if (stepData.remark && stepData.remark.trim().length > 0) return 'only-note';
+  return 'missing';
+}
+
 function createEmptyPhotoProcess(recordId) {
   return {
     id: uid(),
     recordId,
     steps: {
-      front: { remark: "", environment: "", confirmed: false, imageUrl: "" },
-      side: { remark: "", environment: "", confirmed: false, imageUrl: "" },
-      natural: { remark: "", environment: "", confirmed: false, imageUrl: "" },
-      confirm: { remark: "", environment: "", confirmed: false, imageUrl: "" }
+      front: { remark: "", environment: "", confirmed: false, imageUrl: "", fileSize: 0 },
+      side: { remark: "", environment: "", confirmed: false, imageUrl: "", fileSize: 0 },
+      natural: { remark: "", environment: "", confirmed: false, imageUrl: "", fileSize: 0 },
+      confirm: { remark: "", environment: "", confirmed: false, imageUrl: "", fileSize: 0 }
     },
     currentStep: 0,
     completed: false,
@@ -840,6 +903,7 @@ function App() {
   const [shadeDetailModal, setShadeDetailModal] = useState(null);
   const [deleteShadeConfirm, setDeleteShadeConfirm] = useState(null);
   const [editingPhotoProcess, setEditingPhotoProcess] = useState(null);
+  const [compressMessage, setCompressMessage] = useState(null);
   const [selectedPhotoProcess, setSelectedPhotoProcess] = useState(null);
   const [photoProcessFilter, setPhotoProcessFilter] = useState('all');
   const [deliveryOrders, setDeliveryOrders] = useState(loadDeliveryOrders);
@@ -1519,19 +1583,42 @@ function App() {
     setEditingPhotoProcess({ ...editingPhotoProcess, currentStep: prevIndex });
   }
 
-  function handleImageUpload(stepKey, event) {
+  async function handleImageUpload(stepKey, event) {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        updatePhotoProcessStep(stepKey, 'imageUrl', e.target?.result || '');
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setCompressMessage({ type: 'loading', text: '正在处理图片...' });
+
+    try {
+      const result = await compressImage(file, 500, 0.75, 1920);
+      updatePhotoProcessStep(stepKey, 'imageUrl', result.dataUrl);
+      updatePhotoProcessStep(stepKey, 'fileSize', result.size);
+
+      if (result.compressed) {
+        const savedKB = Math.round((result.originalSize - result.size) / 1024);
+        const savedPercent = Math.round((savedKB * 1024 / result.originalSize) * 100);
+        setCompressMessage({
+          type: 'success',
+          text: `图片已压缩：${formatFileSize(result.originalSize)} → ${formatFileSize(result.size)}（节省 ${savedPercent}%）`
+        });
+      } else {
+        setCompressMessage({
+          type: 'info',
+          text: `图片大小正常：${formatFileSize(result.size)}`
+        });
+      }
+
+      setTimeout(() => setCompressMessage(null), 4000);
+    } catch (err) {
+      console.error('图片处理失败:', err);
+      setCompressMessage({ type: 'error', text: '图片处理失败，请重试' });
+      setTimeout(() => setCompressMessage(null), 4000);
     }
   }
 
   function removeImage(stepKey) {
     updatePhotoProcessStep(stepKey, 'imageUrl', '');
+    updatePhotoProcessStep(stepKey, 'fileSize', 0);
   }
 
   function getShadeInfo(code) {
@@ -2900,8 +2987,18 @@ function App() {
                           const stepData = getPhotoProcessByRecordId(selected.id)?.steps[step.key];
                           const StepIcon = getStepIcon(step.icon);
                           const isChecked = stepData?.confirmed;
+                          const stepStatus = getStepPhotoStatus(stepData);
                           return (
                             <div key={step.key} className={'checklist-item ' + (isChecked ? 'checked' : '')}>
+                              <div className="checklist-thumb">
+                                {stepData?.imageUrl ? (
+                                  <img src={stepData.imageUrl} alt="" className="checklist-thumb-img" />
+                                ) : (
+                                  <div className="checklist-thumb-placeholder">
+                                    <StepIcon size={18} style={{ color: '#9ca3af' }} />
+                                  </div>
+                                )}
+                              </div>
                               <div className="checklist-icon">
                                 {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
                               </div>
@@ -2910,17 +3007,27 @@ function App() {
                                   <StepIcon size={16} />
                                   <strong>步骤 {idx + 1}：{step.label}</strong>
                                   {isChecked && <span className="checklist-badge">已确认</span>}
+                                  {stepStatus === 'has-photo' && <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />有照片</span>}
+                                  {stepStatus === 'only-note' && <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />只有备注</span>}
+                                  {stepStatus === 'missing' && <span className="photo-status-tag status-missing"><AlertCircle size={12} />缺失</span>}
                                 </div>
                                 {stepData?.remark ? (
                                   <p className="checklist-note">{stepData.remark}</p>
                                 ) : (
                                   <p className="checklist-empty">暂无备注</p>
                                 )}
-                                {stepData?.environment && (
-                                  <span className="checklist-env">
-                                    <Sun size={12} /> {stepData.environment}
-                                  </span>
-                                )}
+                                <div className="checklist-meta">
+                                  {stepData?.environment && (
+                                    <span className="checklist-env">
+                                      <Sun size={12} /> {stepData.environment}
+                                    </span>
+                                  )}
+                                  {stepData?.fileSize > 0 && (
+                                    <span className="file-size-tag-inline">
+                                      <HardDriveUpload size={12} /> {formatFileSize(stepData.fileSize)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -3700,6 +3807,10 @@ function App() {
                   {filteredPhotoProcesses.map((process) => {
                     const record = getRecordById(process.recordId);
                     const progress = getPhotoProcessProgress(process);
+                    const stepStatuses = appConfig.photoSteps.map((s) => getStepPhotoStatus(process.steps[s.key]));
+                    const hasPhotoCount = stepStatuses.filter((s) => s === 'has-photo').length;
+                    const onlyNoteCount = stepStatuses.filter((s) => s === 'only-note').length;
+                    const missingCount = stepStatuses.filter((s) => s === 'missing').length;
                     return (
                       <article
                         className={'record photo-process-record ' + (selectedPhotoProcess?.id === process.id ? 'selected' : '')}
@@ -3719,13 +3830,27 @@ function App() {
                           </span>
                         </div>
                         <div className="step-progress-bar" style={{ marginTop: '10px' }}>
-                          {appConfig.photoSteps.map((step, idx) => (
-                            <div
-                              key={step.key}
-                              className={'step-progress-dot ' + (process.steps[step.key]?.confirmed ? 'done' : '')}
-                              title={step.label}
-                            />
-                          ))}
+                          {appConfig.photoSteps.map((step, idx) => {
+                            const st = getStepPhotoStatus(process.steps[step.key]);
+                            return (
+                              <div
+                                key={step.key}
+                                className={'step-progress-dot ' + (process.steps[step.key]?.confirmed ? 'done' : '') + ' pstatus-' + st}
+                                title={`${step.label} - ${st === 'has-photo' ? '有照片' : st === 'only-note' ? '仅备注' : '待补充'}`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <div className="photo-status-summary" style={{ marginTop: '10px' }}>
+                          {hasPhotoCount > 0 && (
+                            <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />{hasPhotoCount}张照片</span>
+                          )}
+                          {onlyNoteCount > 0 && (
+                            <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />{onlyNoteCount}仅备注</span>
+                          )}
+                          {missingCount > 0 && (
+                            <span className="photo-status-tag status-missing"><AlertCircle size={12} />{missingCount}待补充</span>
+                          )}
                         </div>
                         <p className="record-detail" style={{ marginTop: '8px' }}>
                           完成进度：{progress}% · 上次更新：{new Date(process.updatedAt).toLocaleDateString('zh-CN')}
@@ -3772,13 +3897,38 @@ function App() {
                     <strong>{getRecordById(selectedPhotoProcess.recordId)?.patient || '未知患者'}</strong>
                     <span>{getRecordById(selectedPhotoProcess.recordId) ? `牙位 ${getRecordById(selectedPhotoProcess.recordId).tooth} · ${getRecordById(selectedPhotoProcess.recordId).shade}` : '未关联记录'}</span>
                   </div>
+                  <div className="photo-status-summary" style={{ marginBottom: '12px' }}>
+                    {(() => {
+                      const ss = appConfig.photoSteps.map((s) => getStepPhotoStatus(selectedPhotoProcess.steps[s.key]));
+                      const hc = ss.filter((s) => s === 'has-photo').length;
+                      const oc = ss.filter((s) => s === 'only-note').length;
+                      const mc = ss.filter((s) => s === 'missing').length;
+                      return (
+                        <>
+                          {hc > 0 && <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />{hc}张照片</span>}
+                          {oc > 0 && <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />{oc}仅备注</span>}
+                          {mc > 0 && <span className="photo-status-tag status-missing"><AlertCircle size={12} />{mc}待补充</span>}
+                        </>
+                      );
+                    })()}
+                  </div>
                   <div className="photo-checklist">
                     {appConfig.photoSteps.map((step, idx) => {
                       const stepData = selectedPhotoProcess.steps[step.key];
                       const StepIcon = getStepIcon(step.icon);
                       const isChecked = stepData?.confirmed;
+                      const stepStatus = getStepPhotoStatus(stepData);
                       return (
                         <div key={step.key} className={'checklist-item ' + (isChecked ? 'checked' : '')}>
+                          <div className="checklist-thumb">
+                            {stepData?.imageUrl ? (
+                              <img src={stepData.imageUrl} alt="" className="checklist-thumb-img" />
+                            ) : (
+                              <div className="checklist-thumb-placeholder">
+                                <StepIcon size={18} style={{ color: '#9ca3af' }} />
+                              </div>
+                            )}
+                          </div>
                           <div className="checklist-icon">
                             {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
                           </div>
@@ -3787,17 +3937,27 @@ function App() {
                               <StepIcon size={16} />
                               <strong>步骤 {idx + 1}：{step.label}</strong>
                               {isChecked && <span className="checklist-badge">已确认</span>}
+                              {stepStatus === 'has-photo' && <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />有照片</span>}
+                              {stepStatus === 'only-note' && <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />只有备注</span>}
+                              {stepStatus === 'missing' && <span className="photo-status-tag status-missing"><AlertCircle size={12} />缺失</span>}
                             </div>
                             {stepData?.remark ? (
                               <p className="checklist-note">{stepData.remark}</p>
                             ) : (
                               <p className="checklist-empty">暂无备注</p>
                             )}
-                            {stepData?.environment && (
-                              <span className="checklist-env">
-                                <Sun size={12} /> {stepData.environment}
-                              </span>
-                            )}
+                            <div className="checklist-meta">
+                              {stepData?.environment && (
+                                <span className="checklist-env">
+                                  <Sun size={12} /> {stepData.environment}
+                                </span>
+                              )}
+                              {stepData?.fileSize > 0 && (
+                                <span className="file-size-tag-inline">
+                                  <HardDriveUpload size={12} /> {formatFileSize(stepData.fileSize)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -4452,10 +4612,45 @@ function App() {
                 })}
               </div>
 
+              <div className="photo-quality-overview">
+                {appConfig.photoSteps.map((step) => {
+                  const stepData = editingPhotoProcess.steps[step.key];
+                  const status = getStepPhotoStatus(stepData);
+                  const StepIcon = getStepIcon(step.icon);
+                  const statusConfig = {
+                    'has-photo': { label: '有照片', cls: 'status-has-photo', icon: <CheckCircle2 size={12} /> },
+                    'only-note': { label: '仅备注', cls: 'status-only-note', icon: <AlertTriangle size={12} /> },
+                    'missing': { label: '待补充', cls: 'status-missing', icon: <AlertCircle size={12} /> }
+                  }[status];
+                  return (
+                    <div
+                      key={step.key}
+                      className={'photo-quality-mini ' + (editingPhotoProcess.steps[step.key]?.confirmed ? 'confirmed' : '')}
+                      onClick={() => goToStep(appConfig.photoSteps.indexOf(step))}
+                    >
+                      <div className="pqm-thumb">
+                        {stepData?.imageUrl ? (
+                          <img src={stepData.imageUrl} alt="" />
+                        ) : (
+                          <StepIcon size={18} style={{ color: '#9ca3af' }} />
+                        )}
+                      </div>
+                      <div className="pqm-info">
+                        <div className="pqm-label">{step.label}</div>
+                        <span className={'photo-status-tag ' + statusConfig.cls}>
+                          {statusConfig.icon}{statusConfig.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
               {(() => {
                 const currentStepConfig = appConfig.photoSteps[editingPhotoProcess.currentStep];
                 const currentStepData = editingPhotoProcess.steps[currentStepConfig.key];
                 const StepIcon = getStepIcon(currentStepConfig.icon);
+                const stepStatus = getStepPhotoStatus(currentStepData);
                 return (
                   <div className="step-form">
                     <div className="step-form-header">
@@ -4469,7 +4664,7 @@ function App() {
                     <div className="step-form-image">
                       {currentStepData?.imageUrl ? (
                         <div className="image-preview-box">
-                          <img src={currentStepData.imageUrl} alt={currentStepConfig.label} />
+                          <img src={currentStepData.imageUrl} alt={currentStepConfig.label} className="step-thumbnail" />
                           <button
                             type="button"
                             className="image-remove-btn"
@@ -4482,7 +4677,7 @@ function App() {
                         <label className="image-upload-area">
                           <Upload size={32} style={{ color: '#9ca3af' }} />
                           <span>点击上传{currentStepConfig.label}</span>
-                          <p className="hint">支持 JPG、PNG 格式</p>
+                          <p className="hint">支持 JPG、PNG 格式，超过 500KB 将自动压缩</p>
                           <input
                             type="file"
                             accept="image/*"
@@ -4490,6 +4685,73 @@ function App() {
                             onChange={(e) => handleImageUpload(currentStepConfig.key, e)}
                           />
                         </label>
+                      )}
+                    </div>
+
+                    {compressMessage && (
+                      <div className={'compress-hint compress-' + compressMessage.type}>
+                        {compressMessage.type === 'loading' && <RefreshCw size={14} className="spin" />}
+                        {compressMessage.type === 'success' && <CheckCircle2 size={14} />}
+                        {compressMessage.type === 'info' && <Info size={14} />}
+                        {compressMessage.type === 'error' && <AlertTriangle size={14} />}
+                        <span>{compressMessage.text}</span>
+                      </div>
+                    )}
+
+                    <div className="photo-quality-card">
+                      <div className="pqc-header">
+                        <HardDriveUpload size={16} />
+                        <strong>照片质量检查</strong>
+                      </div>
+                      <div className="pqc-grid">
+                        <div className="pqc-item">
+                          <span className="pqc-label">文件大小</span>
+                          <span className="pqc-value file-size-tag">
+                            {currentStepData?.fileSize > 0 ? formatFileSize(currentStepData.fileSize) : '--'}
+                          </span>
+                        </div>
+                        <div className="pqc-item">
+                          <span className="pqc-label">拍摄环境</span>
+                          <span className="pqc-value">
+                            {currentStepData?.environment ? (
+                              <span className="checklist-env-inline">
+                                <Sun size={12} /> {currentStepData.environment}
+                              </span>
+                            ) : (
+                              <span className="pqc-empty">未选择</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="pqc-item">
+                          <span className="pqc-label">确认状态</span>
+                          <span className="pqc-value">
+                            {currentStepData?.confirmed ? (
+                              <span className="pqc-confirmed"><CheckCheck size={14} />已确认</span>
+                            ) : (
+                              <span className="pqc-unconfirmed"><Square size={14} />待确认</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="pqc-item">
+                          <span className="pqc-label">照片状态</span>
+                          <span className="pqc-value">
+                            {stepStatus === 'has-photo' && <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />有照片</span>}
+                            {stepStatus === 'only-note' && <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />只有备注</span>}
+                            {stepStatus === 'missing' && <span className="photo-status-tag status-missing"><AlertCircle size={12} />缺失</span>}
+                          </span>
+                        </div>
+                      </div>
+                      {stepStatus === 'missing' && (
+                        <div className="missing-warning">
+                          <AlertOctagon size={14} />
+                          <span>请上传照片或填写备注，完成本步骤的资料记录</span>
+                        </div>
+                      )}
+                      {stepStatus === 'only-note' && (
+                        <div className="missing-warning note-only">
+                          <AlertTriangle size={14} />
+                          <span>当前只有文字备注，建议补充照片资料</span>
+                        </div>
                       )}
                     </div>
 
