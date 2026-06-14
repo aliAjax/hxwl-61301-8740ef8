@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge, ArrowUp, ArrowDown } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -158,43 +158,57 @@ const appConfig = {
       "code": "A1",
       "description": "最浅的A系列色号，呈现明亮的乳白色调，透明度较高。",
       "scenario": "适用于年轻患者、皮肤白皙的患者，或前牙美学修复需求较高的病例。常见于青少年及年轻成年人的天然牙色。",
-      "notes": "选色时需注意颈部与切端的色差，建议在自然光下进行比色。瓷修复体烧结后颜色可能略深，比色时可适当偏浅一号。"
+      "notes": "选色时需注意颈部与切端的色差，建议在自然光下进行比色。瓷修复体烧结后颜色可能略深，比色时可适当偏浅一号。",
+      "isBuiltIn": true,
+      "order": 0
     },
     {
       "code": "A2",
       "description": "A系列中最常用的色号，呈现自然的浅黄棕色，是多数人天然牙的平均颜色。",
       "scenario": "适用于大多数成年患者的前后牙修复，是临床最常选择的基准色号。尤其适合中等肤色患者。",
-      "notes": "A2色号适用范围广，但仍需结合患者年龄、性别和肤色综合判断。注意与邻牙的协调过渡。"
+      "notes": "A2色号适用范围广，但仍需结合患者年龄、性别和肤色综合判断。注意与邻牙的协调过渡。",
+      "isBuiltIn": true,
+      "order": 1
     },
     {
       "code": "A3",
       "description": "A系列中等偏深的色号，呈现较明显的黄棕色，饱和度适中。",
       "scenario": "适用于中老年患者、肤色偏黄或健康肤色的患者。后牙修复时选用较多，咀嚼功能区的自然色泽。",
-      "notes": "后牙修复时可选用A3作为主体色，颈部适当加深以模拟天然牙的色彩渐变。"
+      "notes": "后牙修复时可选用A3作为主体色，颈部适当加深以模拟天然牙的色彩渐变。",
+      "isBuiltIn": true,
+      "order": 2
     },
     {
       "code": "B1",
       "description": "B系列中最浅的色号，偏冷色调，呈现灰白感，比A1更偏白但饱和度较低。",
       "scenario": "适用于肤色偏冷白的患者，或追求较白修复效果的年轻患者。漂白后牙齿的常见色号。",
-      "notes": "B系列色号偏灰，选色时需谨慎，避免修复体显得不自然。建议与A系列色号交叉比对。"
+      "notes": "B系列色号偏灰，选色时需谨慎，避免修复体显得不自然。建议与A系列色号交叉比对。",
+      "isBuiltIn": true,
+      "order": 3
     },
     {
       "code": "B2",
       "description": "B系列中等色号，呈现偏灰的黄棕色，色调较A系列更冷。",
       "scenario": "适用于肤色偏黄偏暗的患者，天然牙偏灰的病例。对于年龄较大、牙齿有磨耗着色的患者较为适用。",
-      "notes": "B系列色号在不同光照下色差可能较大，建议在多种光源下比色确认。"
+      "notes": "B系列色号在不同光照下色差可能较大，建议在多种光源下比色确认。",
+      "isBuiltIn": true,
+      "order": 4
     },
     {
       "code": "C1",
       "description": "C系列浅色号，呈现明显的灰色调，是所有色号中最偏灰的浅色。",
       "scenario": "适用于天然牙偏灰的患者，常见于四环素牙轻度着色、或年龄增长导致的牙齿灰暗。",
-      "notes": "灰色调牙齿修复难度较大，可能需要内染色或特殊饰瓷技术。建议制作诊断蜡型或试戴牙片确认效果。"
+      "notes": "灰色调牙齿修复难度较大，可能需要内染色或特殊饰瓷技术。建议制作诊断蜡型或试戴牙片确认效果。",
+      "isBuiltIn": true,
+      "order": 5
     },
     {
       "code": "D2",
       "description": "D系列中等色号，呈现偏棕灰色调，介于A系列和C系列之间的色泽。",
       "scenario": "适用于天然牙颜色偏暗偏棕的患者，中老年患者多见。后牙及磨牙区域修复较为常用。",
-      "notes": "D系列色号饱和度适中，适合大多数后牙修复。注意与牙龈颜色的协调搭配。"
+      "notes": "D系列色号饱和度适中，适合大多数后牙修复。注意与牙龈颜色的协调搭配。",
+      "isBuiltIn": true,
+      "order": 6
     }
   ],
   "photoSteps": [
@@ -559,14 +573,23 @@ function withPatientIds(patients) {
 
 function loadShadeLibrary() {
   const raw = localStorage.getItem(appConfig.shadeLibraryStorage);
+  let library;
   if (raw) {
     try {
-      return JSON.parse(raw);
+      library = JSON.parse(raw);
     } catch {
-      return appConfig.shadeLibrarySeed;
+      library = appConfig.shadeLibrarySeed;
     }
+  } else {
+    library = appConfig.shadeLibrarySeed;
   }
-  return appConfig.shadeLibrarySeed;
+  const builtInCodes = appConfig.shadeLibrarySeed.map((s) => s.code);
+  const migrated = library.map((s, i) => ({
+    ...s,
+    isBuiltIn: s.isBuiltIn !== undefined ? s.isBuiltIn : builtInCodes.includes(s.code),
+    order: s.order !== undefined ? s.order : i
+  }));
+  return migrated.sort((a, b) => a.order - b.order);
 }
 
 function loadPhotoProcesses() {
@@ -814,8 +837,8 @@ function App() {
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [editingShade, setEditingShade] = useState(null);
   const [isAddingShade, setIsAddingShade] = useState(false);
-  const [draggedShadeCode, setDraggedShadeCode] = useState(null);
   const [shadeDetailModal, setShadeDetailModal] = useState(null);
+  const [deleteShadeConfirm, setDeleteShadeConfirm] = useState(null);
   const [editingPhotoProcess, setEditingPhotoProcess] = useState(null);
   const [selectedPhotoProcess, setSelectedPhotoProcess] = useState(null);
   const [photoProcessFilter, setPhotoProcessFilter] = useState('all');
@@ -980,15 +1003,17 @@ function App() {
 
   function exportCollabData() {
     const exportObj = {
-      version: '2.0',
+      version: '2.1',
       exportedAt: new Date().toISOString(),
       sourceDeviceId: currentDeviceId,
       sourceDeviceName: getDeviceInfo(currentDeviceId).name,
       records: records.map(r => ({ ...r })),
       patients: patients.map(p => ({ ...p })),
+      shadeLibrary: shadeLibrary.map(s => ({ ...s })),
       meta: {
         recordCount: records.length,
         patientCount: patients.length,
+        shadeCount: shadeLibrary.length,
       }
     };
     const jsonStr = JSON.stringify(exportObj, null, 2);
@@ -1014,6 +1039,7 @@ function App() {
   function analyzeCollabImport(importData) {
     const importRecords = importData.records || [];
     const importPatients = importData.patients || [];
+    const importShadeLibrary = importData.shadeLibrary || [];
     const sourceDeviceId = importData.sourceDeviceId || 'unknown';
     const sourceDeviceName = importData.sourceDeviceName || '未知设备';
 
@@ -1022,15 +1048,22 @@ function App() {
     const existingPatientIds = new Set(patients.map(p => p.id));
     const newPatients = importPatients.filter(p => !existingPatientIds.has(p.id));
 
+    const existingShadeCodes = new Set(shadeLibrary.map(s => s.code));
+    const newShades = importShadeLibrary.filter(s => !existingShadeCodes.has(s.code));
+    const existingImportShades = importShadeLibrary.filter(s => existingShadeCodes.has(s.code));
+
     return {
       sourceDeviceId,
       sourceDeviceName,
       exportedAt: importData.exportedAt,
       totalRecords: importRecords.length,
       totalPatients: importPatients.length,
+      totalShades: importShadeLibrary.length,
       conflicts,
       addedRecords: added,
       newPatients,
+      newShades,
+      existingImportShades,
       importData
     };
   }
@@ -1187,6 +1220,22 @@ function App() {
       });
     }
 
+    if (collabImportPreview.newShades && collabImportPreview.newShades.length > 0) {
+      const maxOrder = shadeLibrary.length > 0 ? Math.max(...shadeLibrary.map((s) => s.order)) : -1;
+      const newShadesWithOrder = collabImportPreview.newShades.map((s, i) => ({
+        ...s,
+        order: maxOrder + i + 1
+      }));
+      const mergedShades = [...shadeLibrary, ...newShadesWithOrder];
+      persistShadeLibrary(mergedShades);
+      timelineEntries.push({
+        type: 'import-shades',
+        deviceId: sourceDeviceId,
+        title: '导入新增色号',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newShades.length} 个自定义色号`
+      });
+    }
+
     persistRecords(mergedRecords);
     persistPatients(mergedPatients);
 
@@ -1199,7 +1248,8 @@ function App() {
       collabConflicts ? ` - 保留本地：${collabConflicts.filter(c => c.resolution === 'keepLocal').length} 条` : '',
       collabConflicts ? ` - 采用导入：${collabConflicts.filter(c => c.resolution === 'useImport').length} 条` : '',
       collabConflicts ? ` - 生成副本：${collabConflicts.filter(c => c.resolution === 'makeCopy').length} 条` : '',
-      `新增患者：${collabImportPreview.newPatients?.length || 0} 位`
+      `新增患者：${collabImportPreview.newPatients?.length || 0} 位`,
+      `新增色号：${collabImportPreview.newShades?.length || 0} 个`
     ].filter(Boolean).join('\n');
     alert(summaryMsg);
 
@@ -1256,13 +1306,15 @@ function App() {
 
   function exportData() {
     const exportObj = {
-      version: '1.0',
+      version: '1.1',
       exportedAt: new Date().toISOString(),
       records: records,
       patients: patients,
+      shadeLibrary: shadeLibrary,
       meta: {
         recordCount: records.length,
         patientCount: patients.length,
+        shadeCount: shadeLibrary.length,
       }
     };
     const jsonStr = JSON.stringify(exportObj, null, 2);
@@ -1282,9 +1334,11 @@ function App() {
     const existingRecordIds = new Set(records.map(r => r.id));
     const existingPatientIds = new Set(patients.map(p => p.id));
     const existingPatientNames = new Set(patients.map(p => p.name));
+    const existingShadeCodes = new Set(shadeLibrary.map(s => s.code));
 
     const importRecords = importData.records || [];
     const importPatients = importData.patients || [];
+    const importShadeLibrary = importData.shadeLibrary || [];
 
     const duplicateRecordIds = importRecords.filter(r => existingRecordIds.has(r.id)).map(r => r.id);
     const newRecords = importRecords.filter(r => !existingRecordIds.has(r.id));
@@ -1295,9 +1349,13 @@ function App() {
     const newPatients = importPatients.filter(p => !existingPatientIds.has(p.id));
     const overwrittenPatients = importPatients.filter(p => existingPatientIds.has(p.id));
 
+    const newShades = importShadeLibrary.filter(s => !existingShadeCodes.has(s.code));
+    const overwrittenShades = importShadeLibrary.filter(s => existingShadeCodes.has(s.code));
+
     return {
       totalRecords: importRecords.length,
       totalPatients: importPatients.length,
+      totalShades: importShadeLibrary.length,
       newRecords: newRecords.length,
       overwrittenRecords: overwrittenRecords.length,
       duplicateRecordIds,
@@ -1305,6 +1363,10 @@ function App() {
       overwrittenPatients: overwrittenPatients.length,
       duplicatePatientIds,
       duplicatePatientNames,
+      newShades: newShades.length,
+      overwrittenShades: overwrittenShades.length,
+      newShadesList: newShades,
+      overwrittenShadesList: overwrittenShades,
       importData
     };
   }
@@ -1345,6 +1407,7 @@ function App() {
 
     const importRecords = importData.records || [];
     const importPatients = importData.patients || [];
+    const importShadeLibrary = importData.shadeLibrary || [];
 
     let mergedRecords = [...records];
     importRecords.forEach(ir => {
@@ -1364,10 +1427,24 @@ function App() {
       }
     });
 
+    if (importShadeLibrary.length > 0) {
+      const existingShadeCodes = new Set(shadeLibrary.map(s => s.code));
+      let mergedShades = [...shadeLibrary];
+      importShadeLibrary.forEach(is => {
+        if (existingShadeCodes.has(is.code)) {
+          mergedShades = mergedShades.map(s => s.code === is.code ? { ...is, order: s.order } : s);
+        } else {
+          const maxOrder = mergedShades.length > 0 ? Math.max(...mergedShades.map(s => s.order)) : -1;
+          mergedShades.push({ ...is, order: maxOrder + 1 });
+        }
+      });
+      persistShadeLibrary(mergedShades);
+    }
+
     persistRecords(mergedRecords);
     persistPatients(mergedPatients);
 
-    alert(`导入成功！\n新增记录：${importPreview.newRecords} 条，覆盖记录：${importPreview.overwrittenRecords} 条\n新增患者：${importPreview.newPatients} 人，覆盖患者：${importPreview.overwrittenPatients} 人`);
+    alert(`导入成功！\n新增记录：${importPreview.newRecords} 条，覆盖记录：${importPreview.overwrittenRecords} 条\n新增患者：${importPreview.newPatients} 人，覆盖患者：${importPreview.overwrittenPatients} 人\n新增色号：${importPreview.newShades} 个，覆盖色号：${importPreview.overwrittenShades} 个`);
     cancelImport();
   }
 
@@ -1461,48 +1538,46 @@ function App() {
     return shadeLibrary.find((s) => s.code === code);
   }
 
-  function editShade(shade) {
-    setEditingShade({ ...shade });
+  function getShadeOptions() {
+    return [...shadeLibrary].sort((a, b) => a.order - b.order).map((s) => s.code);
   }
 
-  function saveShade() {
-    if (!editingShade || !editingShade.code) return;
-    const next = shadeLibrary.map((s) =>
-      s.code === editingShade.code ? editingShade : s
-    );
-    persistShadeLibrary(next);
-    setEditingShade(null);
+  function getShadeSwatchClass(code) {
+    if (!code) return 'shade-default';
+    const first = code.charAt(0);
+    return first.match(/[a-d]/i) ? 'shade-' + first.toLowerCase() : 'shade-default';
   }
 
-  function cancelEditShade() {
-    setEditingShade(null);
-    setIsAddingShade(false);
-  }
-
-  function addNewShade() {
-    setIsAddingShade(true);
+  function startAddShade() {
+    const maxOrder = shadeLibrary.length > 0 ? Math.max(...shadeLibrary.map((s) => s.order)) : -1;
     setEditingShade({
       code: '',
       description: '',
       scenario: '',
-      notes: ''
+      notes: '',
+      isBuiltIn: false,
+      order: maxOrder + 1
     });
+    setIsAddingShade(true);
+  }
+
+  function editShade(shade) {
+    setEditingShade({ ...shade });
+    setIsAddingShade(false);
   }
 
   function saveShade() {
     if (!editingShade || !editingShade.code) return;
-    
     const code = editingShade.code.trim();
     if (!code) return;
-
     if (isAddingShade) {
-      const exists = shadeLibrary.some((s) => s.code === code);
-      if (exists) {
-        alert('色号已存在，请使用其他色号名称。');
+      if (shadeLibrary.some((s) => s.code === code)) {
+        alert('该色号已存在，请使用其他色号名称。');
         return;
       }
-      const next = [...shadeLibrary, { ...editingShade, code }];
-      persistShadeLibrary(next);
+      const maxOrder = shadeLibrary.length > 0 ? Math.max(...shadeLibrary.map((s) => s.order)) : -1;
+      const newShade = { ...editingShade, code, order: maxOrder + 1, isBuiltIn: false };
+      persistShadeLibrary([...shadeLibrary, newShade]);
     } else {
       const next = shadeLibrary.map((s) =>
         s.code === editingShade.code ? editingShade : s
@@ -1513,64 +1588,53 @@ function App() {
     setIsAddingShade(false);
   }
 
-  function getShadeUsageCount(code) {
-    return records.filter((r) => r.shade === code).length;
+  function cancelEditShade() {
+    setEditingShade(null);
+    setIsAddingShade(false);
   }
 
   function deleteShade(code) {
-    const usageCount = getShadeUsageCount(code);
-    if (usageCount > 0) {
-      const confirmed = window.confirm(
-        `风险提示：色号「${code}」当前有 ${usageCount} 条比色记录正在使用。\n\n删除后，历史记录中的色号文本将保留，但在新建记录和筛选时将不再可用。\n\n确认要删除该色号吗？`
-      );
-      if (!confirmed) return;
+    const usedByRecords = records.filter((r) => r.shade === code);
+    if (usedByRecords.length > 0) {
+      setDeleteShadeConfirm({ code, usedByCount: usedByRecords.length });
     } else {
-      const confirmed = window.confirm(`确认删除色号「${code}」吗？`);
-      if (!confirmed) return;
+      confirmDeleteShade(code);
     }
+  }
 
+  function confirmDeleteShade(code) {
     const next = shadeLibrary.filter((s) => s.code !== code);
-    persistShadeLibrary(next);
-    
-    if (editingShade?.code === code) {
+    const renumbered = next
+      .sort((a, b) => a.order - b.order)
+      .map((s, i) => ({ ...s, order: i }));
+    persistShadeLibrary(renumbered);
+    setDeleteShadeConfirm(null);
+    if (editingShade && editingShade.code === code) {
       setEditingShade(null);
       setIsAddingShade(false);
     }
   }
 
-  function moveShade(code, direction) {
-    const index = shadeLibrary.findIndex((s) => s.code === code);
-    if (index === -1) return;
-    
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= shadeLibrary.length) return;
-    
-    const next = [...shadeLibrary];
-    const [removed] = next.splice(index, 1);
-    next.splice(targetIndex, 0, removed);
-    persistShadeLibrary(next);
+  function cancelDeleteShade() {
+    setDeleteShadeConfirm(null);
   }
 
-  function handleShadeDragStart(code) {
-    setDraggedShadeCode(code);
+  function moveShadeUp(code) {
+    const sorted = [...shadeLibrary].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((s) => s.code === code);
+    if (idx <= 0) return;
+    [sorted[idx - 1], sorted[idx]] = [sorted[idx], sorted[idx - 1]];
+    const renumbered = sorted.map((s, i) => ({ ...s, order: i }));
+    persistShadeLibrary(renumbered);
   }
 
-  function handleShadeDragOver(e, code) {
-    e.preventDefault();
-    if (draggedShadeCode === code || !draggedShadeCode) return;
-    
-    const fromIndex = shadeLibrary.findIndex((s) => s.code === draggedShadeCode);
-    const toIndex = shadeLibrary.findIndex((s) => s.code === code);
-    if (fromIndex === -1 || toIndex === -1) return;
-    
-    const next = [...shadeLibrary];
-    const [removed] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, removed);
-    persistShadeLibrary(next);
-  }
-
-  function handleShadeDragEnd() {
-    setDraggedShadeCode(null);
+  function moveShadeDown(code) {
+    const sorted = [...shadeLibrary].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((s) => s.code === code);
+    if (idx < 0 || idx >= sorted.length - 1) return;
+    [sorted[idx], sorted[idx + 1]] = [sorted[idx + 1], sorted[idx]];
+    const renumbered = sorted.map((s, i) => ({ ...s, order: i }));
+    persistShadeLibrary(renumbered);
   }
 
   function addRecord(event) {
@@ -2496,21 +2560,20 @@ function App() {
                     <label key={field.key} className="wide">
                       <span>{field.label}</span>
                       <select value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}>
-                        {shadeLibrary.map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
+                        {[...shadeLibrary].sort((a, b) => a.order - b.order).map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
                       </select>
                       <div className="shade-picker">
-                        {shadeLibrary.map((shade) => {
-                          const shadeInfo = shade;
+                        {[...shadeLibrary].sort((a, b) => a.order - b.order).map((shade) => {
                           return (
                             <div
                               key={shade.code}
                               className={'shade-picker-item ' + (form.shade === shade.code ? 'active' : '')}
                               onClick={() => {
                                 setForm({ ...form, shade: shade.code });
-                                setShadeDetailModal(shadeInfo || { code: shade.code });
+                                setShadeDetailModal(shade);
                               }}
                             >
-                              <div className={'shade-swatch-mini shade-' + (shade.code.charAt(0).match(/[a-zA-Z]/) ? shade.code.charAt(0).toLowerCase() : 'custom')}>
+                              <div className={'shade-swatch-mini shade-' + (shade.code.charAt(0).match(/[a-d]/i) ? shade.code.charAt(0).toLowerCase() : 'default')}>
                                 <span>{shade.code}</span>
                               </div>
                               <button
@@ -2518,7 +2581,7 @@ function App() {
                                 className="shade-info-btn"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setShadeDetailModal(shadeInfo || { code: shade.code });
+                                  setShadeDetailModal(shade);
                                 }}
                                 title="查看色号说明"
                               >
@@ -2581,7 +2644,7 @@ function App() {
                 </select>
                 <select value={filters.shade} onChange={(event) => setFilters({ ...filters, shade: event.target.value })}>
                   <option value="全部">全部色号</option>
-                  {shadeLibrary.map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
+                  {[...shadeLibrary].sort((a, b) => a.order - b.order).map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
                 </select>
                 <select value={filters.followUpStatus} onChange={(event) => setFilters({ ...filters, followUpStatus: event.target.value })}>
                   <option value="全部">全部复诊状态</option>
@@ -2722,30 +2785,30 @@ function App() {
                             value={editRecordForm.shade}
                             onChange={(e) => setEditRecordForm({ ...editRecordForm, shade: e.target.value })}
                           >
-                            {shadeLibrary.map((s) => (
-                              <option key={s.code} value={s.code}>{s.code}</option>
+                            {getShadeOptions().map((shade) => (
+                              <option key={shade}>{shade}</option>
                             ))}
                           </select>
                           <div className="shade-picker" style={{ marginTop: '8px' }}>
-                            {shadeLibrary.map((shade) => {
-                              const shadeInfo = shade;
+                            {getShadeOptions().map((option) => {
+                              const shadeInfo = getShadeInfo(option);
                               return (
                                 <div
-                                  key={shade.code}
-                                  className={'shade-picker-item ' + (editRecordForm.shade === shade.code ? 'active' : '')}
+                                  key={option}
+                                  className={'shade-picker-item ' + (editRecordForm.shade === option ? 'active' : '')}
                                   onClick={() => {
-                                    setEditRecordForm({ ...editRecordForm, shade: shade.code });
+                                    setEditRecordForm({ ...editRecordForm, shade: option });
                                   }}
                                 >
-                                  <div className={'shade-swatch-mini shade-' + (shade.code.charAt(0).match(/[a-zA-Z]/) ? shade.code.charAt(0).toLowerCase() : 'custom')}>
-                                    <span>{shade.code}</span>
+                                  <div className={'shade-swatch-mini ' + getShadeSwatchClass(option)}>
+                                    <span>{option}</span>
                                   </div>
                                   <button
                                     type="button"
                                     className="shade-info-btn"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setShadeDetailModal(shadeInfo || { code: shade.code });
+                                      setShadeDetailModal(shadeInfo || { code: option });
                                     }}
                                     title="查看色号说明"
                                   >
@@ -2873,36 +2936,36 @@ function App() {
                     </>
                   )}
 
-                  <div className="shade-detail-card">
-                    <div className="shade-detail-header">
-                      <div className={'shade-swatch-sm shade-' + (selected.shade?.charAt(0).match(/[a-zA-Z]/) ? selected.shade.charAt(0).toLowerCase() : 'custom')}>
-                        <span>{selected.shade}</span>
+                  {selected.shade && (
+                    <div className="shade-detail-card">
+                      <div className="shade-detail-header">
+                        <div className={'shade-swatch-sm ' + getShadeSwatchClass(selected.shade)}>
+                          <span>{selected.shade}</span>
+                        </div>
+                        <div>
+                          <h4>色号 {selected.shade} 说明</h4>
+                          {getShadeInfo(selected.shade) ? (
+                            <button
+                              type="button"
+                              className="link-btn"
+                              onClick={() => setShadeDetailModal(getShadeInfo(selected.shade))}
+                            >
+                              查看完整说明
+                            </button>
+                          ) : (
+                            <span className="shade-deleted-hint">（该色号已从样本库移除，仅保留历史记录）</span>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <h4>色号 {selected.shade}</h4>
-                        {getShadeInfo(selected.shade) ? (
-                          <button
-                            type="button"
-                            className="link-btn"
-                            onClick={() => setShadeDetailModal(getShadeInfo(selected.shade))}
-                          >
-                            查看完整说明
-                          </button>
-                        ) : (
-                          <span className="shade-archived-hint">
-                            <AlertCircle size={12} /> 该色号已从色号库移除
-                          </span>
-                        )}
-                      </div>
+                      {getShadeInfo(selected.shade) && (
+                        <div className="shade-detail-content">
+                          <p><strong>文字说明：</strong>{getShadeInfo(selected.shade)?.description}</p>
+                          <p><strong>适用场景：</strong>{getShadeInfo(selected.shade)?.scenario}</p>
+                          <p><strong>注意事项：</strong>{getShadeInfo(selected.shade)?.notes}</p>
+                        </div>
+                      )}
                     </div>
-                    {getShadeInfo(selected.shade) && (
-                      <div className="shade-detail-content">
-                        <p><strong>文字说明：</strong>{getShadeInfo(selected.shade)?.description}</p>
-                        <p><strong>适用场景：</strong>{getShadeInfo(selected.shade)?.scenario}</p>
-                        <p><strong>注意事项：</strong>{getShadeInfo(selected.shade)?.notes}</p>
-                      </div>
-                    )}
-                  </div>
+                  )}
 
                   {getDeliveryOrderByRecordId(selected.id) && (
                     <div className="delivery-link-card">
@@ -3259,7 +3322,7 @@ function App() {
                               <div className="patient-history-tooth-shade">
                                 <span className="history-tooth">牙位 {record.tooth}</span>
                                 <span className="history-shade">
-                                  <span className={'shade-swatch-tiny shade-' + (record.shade?.charAt(0).toLowerCase() || 'a')}>
+                                  <span className={'shade-swatch-tiny ' + getShadeSwatchClass(record.shade)}>
                                     {record.shade}
                                   </span>
                                 </span>
@@ -3332,7 +3395,7 @@ function App() {
             <div className="panel form-panel">
               <div className="panel-title">
                 <Edit3 size={18} />
-                <h2>{isAddingShade ? '新增色号' : (editingShade ? '编辑色号说明' : '色号详情')}</h2>
+                <h2>{editingShade ? (isAddingShade ? '新增自定义色号' : '编辑色号说明') : '色号详情'}</h2>
               </div>
               {editingShade ? (
                 <div className="form-grid">
@@ -3342,10 +3405,11 @@ function App() {
                       type="text"
                       value={editingShade.code}
                       disabled={!isAddingShade}
-                      style={{ background: isAddingShade ? '#fff' : '#f9fafb', color: isAddingShade ? '#111827' : '#667085' }}
-                      onChange={(e) => setEditingShade({ ...editingShade, code: e.target.value })}
-                      placeholder={isAddingShade ? '请输入色号名称，如：A3.5' : ''}
+                      onChange={(e) => setEditingShade({ ...editingShade, code: e.target.value.toUpperCase() })}
+                      placeholder="如 A4、BL1 等"
+                      style={!isAddingShade ? { background: '#f9fafb', color: '#667085' } : {}}
                     />
+                    {isAddingShade && <span className="field-hint">请输入色号名称，保存后不可修改</span>}
                   </label>
                   <label className="wide">
                     <span>文字说明</span>
@@ -3379,13 +3443,13 @@ function App() {
                 <div className="shade-preview-empty">
                   <Palette size={48} style={{ color: '#d0d5dd' }} />
                   <p>点击左侧色号卡片查看详情</p>
-                  <p className="hint">或点击「新增色号」按钮添加自定义色号</p>
+                  <p className="hint">或点击「编辑」按钮修改说明内容，或点击「新增色号」添加自定义色号</p>
                 </div>
               )}
               {editingShade && (
                 <>
                   <button className="primary" type="button" onClick={saveShade}>
-                    <Save size={18} />{isAddingShade ? '确认新增' : '保存修改'}
+                    <Save size={18} />{isAddingShade ? '保存新增' : '保存修改'}
                   </button>
                   <button type="button" className="secondary" onClick={cancelEditShade}>
                     取消
@@ -3400,82 +3464,49 @@ function App() {
                   <Palette size={18} />
                   <h2>色号列表</h2>
                 </div>
-                <button type="button" className="primary small" onClick={addNewShade}>
-                  <Plus size={14} />新增色号
+                <button type="button" className="primary small" onClick={startAddShade}>
+                  <Plus size={16} />新增色号
                 </button>
               </div>
 
-              <p className="hint" style={{ marginTop: '8px', marginBottom: '12px' }}>
-                提示：拖拽色号卡片可调整排序顺序
-              </p>
-
               <div className="shade-cards">
-                {shadeLibrary.map((shade, index) => {
-                  const usageCount = getShadeUsageCount(shade.code);
-                  return (
-                    <article
-                      className={'shade-card ' + (draggedShadeCode === shade.code ? 'shade-card-dragging' : '')}
-                      key={shade.code}
-                      draggable
-                      onDragStart={() => handleShadeDragStart(shade.code)}
-                      onDragOver={(e) => handleShadeDragOver(e, shade.code)}
-                      onDragEnd={handleShadeDragEnd}
-                    >
-                      <div className="shade-card-header">
-                        <div className="shade-drag-handle" title="拖拽排序">
-                          <GripVertical size={16} />
-                        </div>
-                        <div className={'shade-swatch shade-' + (shade.code.charAt(0).match(/[a-zA-Z]/) ? shade.code.charAt(0).toLowerCase() : 'custom')}>
-                          <span>{shade.code}</span>
-                        </div>
+                {[...shadeLibrary].sort((a, b) => a.order - b.order).map((shade, idx, arr) => (
+                  <article
+                    className={'shade-card' + (shade.isBuiltIn ? ' built-in' : ' custom')}
+                    key={shade.code}
+                  >
+                    <div className="shade-card-header">
+                      <div className={'shade-swatch shade-' + (shade.code.charAt(0).match(/[a-d]/i) ? shade.code.charAt(0).toLowerCase() : 'default')}>
+                        <span>{shade.code}</span>
                       </div>
-                      <div className="shade-card-body">
+                    </div>
+                    <div className="shade-card-body">
+                      <div className="shade-card-title">
                         <h3>{shade.code}</h3>
-                        <p className="shade-desc">{shade.description || '暂无说明'}</p>
-                        {usageCount > 0 && (
-                          <p className="shade-usage">
-                            <FileText size={12} />
-                            已使用 {usageCount} 次
-                          </p>
-                        )}
+                        {shade.isBuiltIn && <span className="shade-badge built-in-badge">内置</span>}
+                        {!shade.isBuiltIn && <span className="shade-badge custom-badge">自定义</span>}
                       </div>
-                      <div className="shade-card-footer">
-                        <button
-                          type="button"
-                          className="icon-btn"
-                          onClick={() => moveShade(shade.code, 'up')}
-                          disabled={index === 0}
-                          title="上移"
-                        >
-                          <ChevronLeft size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-btn"
-                          onClick={() => moveShade(shade.code, 'down')}
-                          disabled={index === shadeLibrary.length - 1}
-                          title="下移"
-                        >
-                          <ChevronRight size={14} />
-                        </button>
-                        <button type="button" onClick={() => editShade(shade)}>
-                          <Edit3 size={14} />编辑
-                        </button>
-                        <button type="button" onClick={() => setShadeDetailModal(shade)}>
-                          <Info size={14} />详情
-                        </button>
-                        <button
-                          type="button"
-                          className="danger-btn"
-                          onClick={() => deleteShade(shade.code)}
-                          title="删除色号"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })}
+                      <p className="shade-desc">{shade.description || '暂无说明'}</p>
+                    </div>
+                    <div className="shade-card-footer">
+                      <button type="button" className="icon-btn" onClick={() => moveShadeUp(shade.code)} disabled={idx === 0} title="上移">
+                        <ArrowUp size={14} />
+                      </button>
+                      <button type="button" className="icon-btn" onClick={() => moveShadeDown(shade.code)} disabled={idx === arr.length - 1} title="下移">
+                        <ArrowDown size={14} />
+                      </button>
+                      <button type="button" onClick={() => editShade(shade)}>
+                        <Edit3 size={14} />编辑
+                      </button>
+                      <button type="button" onClick={() => setShadeDetailModal(shade)}>
+                        <Info size={14} />详情
+                      </button>
+                      <button type="button" className="danger-btn" onClick={() => deleteShade(shade.code)} title="删除色号">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </article>
+                ))}
               </div>
             </section>
           </section>
@@ -3569,36 +3600,36 @@ function App() {
                   <p>{`牙位 ${selectedTodayFollowUp.tooth} · ${selectedTodayFollowUp.shade}`}</p>
                   <p>{selectedTodayFollowUp.photoNote}</p>
 
-                  <div className="shade-detail-card">
-                    <div className="shade-detail-header">
-                      <div className={'shade-swatch-sm shade-' + (selectedTodayFollowUp.shade?.charAt(0).match(/[a-zA-Z]/) ? selectedTodayFollowUp.shade.charAt(0).toLowerCase() : 'custom')}>
-                        <span>{selectedTodayFollowUp.shade}</span>
+                  {selectedTodayFollowUp.shade && (
+                    <div className="shade-detail-card">
+                      <div className="shade-detail-header">
+                        <div className={'shade-swatch-sm ' + getShadeSwatchClass(selectedTodayFollowUp.shade)}>
+                          <span>{selectedTodayFollowUp.shade}</span>
+                        </div>
+                        <div>
+                          <h4>色号 {selectedTodayFollowUp.shade} 说明</h4>
+                          {getShadeInfo(selectedTodayFollowUp.shade) ? (
+                            <button
+                              type="button"
+                              className="link-btn"
+                              onClick={() => setShadeDetailModal(getShadeInfo(selectedTodayFollowUp.shade))}
+                            >
+                              查看完整说明
+                            </button>
+                          ) : (
+                            <span className="shade-deleted-hint">（该色号已从样本库移除，仅保留历史记录）</span>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <h4>色号 {selectedTodayFollowUp.shade}</h4>
-                        {getShadeInfo(selectedTodayFollowUp.shade) ? (
-                          <button
-                            type="button"
-                            className="link-btn"
-                            onClick={() => setShadeDetailModal(getShadeInfo(selectedTodayFollowUp.shade))}
-                          >
-                            查看完整说明
-                          </button>
-                        ) : (
-                          <span className="shade-archived-hint">
-                            <AlertCircle size={12} /> 该色号已从色号库移除
-                          </span>
-                        )}
-                      </div>
+                      {getShadeInfo(selectedTodayFollowUp.shade) && (
+                        <div className="shade-detail-content">
+                          <p><strong>文字说明：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.description}</p>
+                          <p><strong>适用场景：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.scenario}</p>
+                          <p><strong>注意事项：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.notes}</p>
+                        </div>
+                      )}
                     </div>
-                    {getShadeInfo(selectedTodayFollowUp.shade) && (
-                      <div className="shade-detail-content">
-                        <p><strong>文字说明：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.description}</p>
-                        <p><strong>适用场景：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.scenario}</p>
-                        <p><strong>注意事项：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.notes}</p>
-                      </div>
-                    )}
-                  </div>
+                  )}
 
                   <div className="timeline">
                     {(selectedTodayFollowUp.timeline || []).map((step, index) => (
@@ -4312,28 +4343,34 @@ function App() {
                     />
                   </label>
 
-                  {getShadeInfo(boardSelectedRecord.shade) && (
+                  {boardSelectedRecord.shade && (
                     <div className="shade-detail-card">
                       <div className="shade-detail-header">
-                        <div className={'shade-swatch-sm shade-' + boardSelectedRecord.shade.charAt(0).toLowerCase()}>
+                        <div className={'shade-swatch-sm ' + getShadeSwatchClass(boardSelectedRecord.shade)}>
                           <span>{boardSelectedRecord.shade}</span>
                         </div>
                         <div>
                           <h4>色号 {boardSelectedRecord.shade} 说明</h4>
-                          <button
-                            type="button"
-                            className="link-btn"
-                            onClick={() => setShadeDetailModal(getShadeInfo(boardSelectedRecord.shade))}
-                          >
-                            查看完整说明
-                          </button>
+                          {getShadeInfo(boardSelectedRecord.shade) ? (
+                            <button
+                              type="button"
+                              className="link-btn"
+                              onClick={() => setShadeDetailModal(getShadeInfo(boardSelectedRecord.shade))}
+                            >
+                              查看完整说明
+                            </button>
+                          ) : (
+                            <span className="shade-deleted-hint">（该色号已从样本库移除，仅保留历史记录）</span>
+                          )}
                         </div>
                       </div>
-                      <div className="shade-detail-content">
-                        <p><strong>文字说明：</strong>{getShadeInfo(boardSelectedRecord.shade)?.description}</p>
-                        <p><strong>适用场景：</strong>{getShadeInfo(boardSelectedRecord.shade)?.scenario}</p>
-                        <p><strong>注意事项：</strong>{getShadeInfo(boardSelectedRecord.shade)?.notes}</p>
-                      </div>
+                      {getShadeInfo(boardSelectedRecord.shade) && (
+                        <div className="shade-detail-content">
+                          <p><strong>文字说明：</strong>{getShadeInfo(boardSelectedRecord.shade)?.description}</p>
+                          <p><strong>适用场景：</strong>{getShadeInfo(boardSelectedRecord.shade)?.scenario}</p>
+                          <p><strong>注意事项：</strong>{getShadeInfo(boardSelectedRecord.shade)?.notes}</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -5285,7 +5322,7 @@ function App() {
                       value={collabForm.shade}
                       onChange={(e) => setCollabForm({ ...collabForm, shade: e.target.value })}
                     >
-                      {appConfig.fields.find(f => f.key === 'shade').options.map(opt => (
+                      {getShadeOptions().map(opt => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
@@ -5679,7 +5716,7 @@ function App() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="panel-title" style={{ marginBottom: 0 }}>
-                <div className={'shade-swatch-sm shade-' + shadeDetailModal.code.charAt(0).toLowerCase()}>
+                <div className={'shade-swatch-sm shade-' + (shadeDetailModal.code && shadeDetailModal.code.charAt(0).match(/[a-d]/i) ? shadeDetailModal.code.charAt(0).toLowerCase() : 'default')}>
                   <span>{shadeDetailModal.code}</span>
                 </div>
                 <h2>色号 {shadeDetailModal.code} 详情</h2>
@@ -5701,6 +5738,60 @@ function App() {
                 <h4><AlertCircle size={16} />注意事项</h4>
                 <p>{shadeDetailModal.notes || '暂无备注'}</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteShadeConfirm && (
+        <div className="modal-overlay" onClick={cancelDeleteShade}>
+          <div className="modal-content modal-small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="panel-title" style={{ marginBottom: 0 }}>
+                <AlertTriangle size={20} style={{ color: '#dc2626' }} />
+                <h2>删除色号确认</h2>
+              </div>
+              <button className="modal-close" onClick={cancelDeleteShade}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="delete-warning">
+                <div className="warning-icon">
+                  <AlertOctagon size={40} style={{ color: '#dc2626' }} />
+                </div>
+                <div className="warning-content">
+                  <p className="warning-title">确定要删除色号 <strong>{deleteShadeConfirm.code}</strong> 吗？</p>
+                  {deleteShadeConfirm.usedByCount > 0 && (
+                    <div className="warning-alert">
+                      <AlertTriangle size={16} />
+                      <span>该色号目前被 <strong>{deleteShadeConfirm.usedByCount}</strong> 条比色记录使用。删除后：</span>
+                    </div>
+                  )}
+                  <ul className="warning-list">
+                    {deleteShadeConfirm.usedByCount > 0 && (
+                      <li>历史记录中的色号文本会被保留，不会影响已保存的记录</li>
+                    )}
+                    {deleteShadeConfirm.usedByCount > 0 && (
+                      <li>色号选择器和列表中将不再显示该色号</li>
+                    )}
+                    {deleteShadeConfirm.usedByCount > 0 && (
+                      <li>查看旧记录时，色号详情可能无法显示完整说明</li>
+                    )}
+                    {deleteShadeConfirm.usedByCount === 0 && (
+                      <li>该色号将从色号库中永久移除</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="secondary" onClick={cancelDeleteShade}>
+                取消
+              </button>
+              <button type="button" className="danger" onClick={() => confirmDeleteShade(deleteShadeConfirm.code)}>
+                <Trash2 size={16} />确认删除
+              </button>
             </div>
           </div>
         </div>
