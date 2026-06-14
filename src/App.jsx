@@ -840,6 +840,18 @@ function App() {
     persistCollabTimeline(next);
   }
 
+  function addCollabTimelineEntries(entries) {
+    if (!entries.length) return;
+    const newEntries = entries.map(entry => ({
+      id: uid(),
+      at: new Date().toISOString(),
+      ...entry
+    }));
+    const next = [...newEntries, ...collabTimeline];
+    setCollabTimeline(next);
+    persistCollabTimeline(next);
+  }
+
   function switchDevice(deviceId) {
     setCurrentDeviceId(deviceId);
     persistCurrentDevice(deviceId);
@@ -1063,7 +1075,7 @@ function App() {
     persistRecords(mergedRecords);
     persistPatients(mergedPatients);
 
-    timelineEntries.forEach(entry => addCollabTimelineEntry(entry));
+    addCollabTimelineEntries(timelineEntries);
 
     const summaryMsg = [
       `导入来源：${sourceDeviceName}`,
