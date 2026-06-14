@@ -805,7 +805,7 @@ function App() {
   const [shadeLibrary, setShadeLibrary] = useState(loadShadeLibrary);
   const [photoProcesses, setPhotoProcesses] = useState(loadPhotoProcesses);
   const [form, setForm] = useState(appConfig.defaultValues);
-  const [filters, setFilters] = useState({ query: '', status: '全部' });
+  const [filters, setFilters] = useState({ query: '', status: '全部', tooth: '全部', shade: '全部', followUpStatus: '全部' });
   const [selected, setSelected] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientForm, setPatientForm] = useState(appConfig.patientDefaultValues);
@@ -1876,6 +1876,9 @@ function App() {
     return records
       .filter((item) => !filters.query || (item.patient || '').includes(filters.query))
       .filter((item) => filters.status === '全部' || item.status === filters.status)
+      .filter((item) => filters.tooth === '全部' || item.tooth === filters.tooth)
+      .filter((item) => filters.shade === '全部' || item.shade === filters.shade)
+      .filter((item) => filters.followUpStatus === '全部' || getFollowUpStatus(item.followUp).key === filters.followUpStatus)
       .sort((a, b) => {
         const aDate = a[appConfig.dateKey] || a.createdAt || '';
         const bDate = b[appConfig.dateKey] || b.createdAt || '';
@@ -1889,11 +1892,11 @@ function App() {
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }, [patients, patientQuery]);
 
-  const metrics = [
-    { label: "总记录", value: records.length },
-    { label: "待处理", value: records.filter((item) => item.status !== '已完成修复').length },
-    { label: "今日复诊", value: records.filter((item) => item.followUp === today).length },
-  ];
+  const metrics = useMemo(() => [
+    { label: "总记录", value: filteredRecords.length },
+    { label: "待处理", value: filteredRecords.filter((item) => item.status !== '已完成修复').length },
+    { label: "今日复诊", value: filteredRecords.filter((item) => item.followUp === today).length },
+  ], [filteredRecords, today]);
 
   const patientMetrics = [
     { label: "患者总数", value: patients.length },
@@ -2369,6 +2372,22 @@ function App() {
                 <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
                   <option>全部</option>
                   {appConfig.statuses.map((status) => <option key={status}>{status}</option>)}
+                </select>
+                <select value={filters.tooth} onChange={(event) => setFilters({ ...filters, tooth: event.target.value })}>
+                  <option value="全部">全部牙位</option>
+                  {appConfig.fields.find(f => f.key === 'tooth').options.map((tooth) => <option key={tooth}>{tooth}</option>)}
+                </select>
+                <select value={filters.shade} onChange={(event) => setFilters({ ...filters, shade: event.target.value })}>
+                  <option value="全部">全部色号</option>
+                  {appConfig.fields.find(f => f.key === 'shade').options.map((shade) => <option key={shade}>{shade}</option>)}
+                </select>
+                <select value={filters.followUpStatus} onChange={(event) => setFilters({ ...filters, followUpStatus: event.target.value })}>
+                  <option value="全部">全部复诊状态</option>
+                  <option value="none">未排期</option>
+                  <option value="overdue">逾期</option>
+                  <option value="today">今日</option>
+                  <option value="soon">即将到期</option>
+                  <option value="normal">已排期</option>
                 </select>
               </div>
 
