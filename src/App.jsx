@@ -1488,19 +1488,68 @@ function App() {
     setSelected(nextRecord);
   }
 
+  function getStatusOrder(status) {
+    const idx = appConfig.statuses.indexOf(status);
+    return idx === -1 ? 999 : idx;
+  }
+
+  function getTransitionInfo(record, targetStatus) {
+    if (!record || !targetStatus) return { disabled: true, title: '—', showBlockedIcon: false, showOptionalIcon: false };
+    const currentStatus = record.status;
+    if (currentStatus === targetStatus) {
+      return { disabled: true, title: '当前状态', showBlockedIcon: false, showOptionalIcon: false };
+    }
+    const currentOrder = getStatusOrder(currentStatus);
+    const targetOrder = getStatusOrder(targetStatus);
+    const isForward = targetOrder > currentOrder;
+    if (!isForward) {
+      return { disabled: false, title: `回退至「${targetStatus}」`, showBlockedIcon: false, showOptionalIcon: false };
+    }
+    const criticalMissing = getCriticalMissingQcItems(record.id, currentStatus);
+    const allMissing = getMissingQcItems(record.id, currentStatus);
+    if (criticalMissing.length > 0) {
+      return {
+        disabled: true,
+        title: `当前阶段关键步骤未完成: ${criticalMissing.map((m) => m.label).join('、')}`,
+        showBlockedIcon: true,
+        showOptionalIcon: false
+      };
+    }
+    if (allMissing.length > 0) {
+      return {
+        disabled: false,
+        title: `非关键步骤未完成（可确认跳过）: ${allMissing.map((m) => m.label).join('、')}`,
+        showBlockedIcon: false,
+        showOptionalIcon: true
+      };
+    }
+    return { disabled: false, title: `推进至「${targetStatus}」`, showBlockedIcon: false, showOptionalIcon: false };
+  }
+
   function updateStatus(id, status) {
     const record = records.find((r) => r.id === id);
     if (!record) return;
-    const criticalMissing = getCriticalMissingQcItems(id, status);
-    const allMissing = getMissingQcItems(id, status);
+    const currentStatus = record.status;
+    const currentOrder = getStatusOrder(currentStatus);
+    const targetOrder = getStatusOrder(status);
+    const isForward = targetOrder > currentOrder;
+
+    let criticalMissing = [];
+    let allMissing = [];
+
+    if (isForward) {
+      criticalMissing = getCriticalMissingQcItems(id, currentStatus);
+      allMissing = getMissingQcItems(id, currentStatus);
+    }
+
     if (criticalMissing.length > 0) {
       const labels = criticalMissing.map((m) => m.label).join('、');
-      alert(`无法切换至「${status}」：以下关键检查项尚未完成\n\n${labels}\n\n缺少关键步骤不能直接标记完成，请先完成这些检查项。`);
+      alert(`无法从「${currentStatus}」推进至「${status}」：当前阶段以下关键检查项尚未完成\n\n${labels}\n\n缺少关键步骤不能推进，请先完成这些检查项。`);
       return;
     }
     if (allMissing.length > 0 && criticalMissing.length === 0) {
       const labels = allMissing.map((m) => m.label).join('、');
-      const confirmed = window.confirm(`切换至「${status}」时，以下非关键检查项尚未完成：\n\n${labels}\n\n是否仍然继续？`);
+      const confirmed = window.confirm(`从「${currentStatus}」推进至「${status}」时，当前阶段以下非关键检查项尚未完成：\n\n${labels}\n\n是否仍然继续？（跳过的步骤可稍后补做，但请知晓未做的是当前阶段内的工作内容）`);
       if (!confirmed) return;
     }
     const next = records.map((item) => item.id === id ? {
@@ -1511,8 +1560,18 @@ function App() {
       timeline: [...(item.timeline || []), { status, at: today, by: '操作员' }]
     } : item);
     persistRecords(next);
-    if (selected?.id === id) setSelected(next.find((item) => item.id === id));
-    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
+    const updatedRecord = next.find((item) => item.id === id);
+    if (selected?.id === id) setSelected(updatedRecord);
+    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(updatedRecord);
+    if (selectedQcRecord?.recordId === id || selectedQcRecord?.record?.id === id) {
+      const qc = getQcByRecordId(id) || ensureQcForRecord(id);
+      setSelectedQcRecord({
+        record: updatedRecord,
+        qc,
+        progress: getQcProgress(id, status),
+        missing: getMissingQcItems(id, status)
+      });
+    }
   }
 
   function updateFollowUpDate(id, newDate) {
@@ -1609,6 +1668,23 @@ function App() {
     return newQc;
   }
 
+  function refreshSelectedQcRecord(recordId, qcOverride) {
+    if (!selectedQcRecord) return;
+    const matchByRecord = selectedQcRecord.record?.id === recordId || selectedQcRecord.recordId === recordId;
+    const matchByQc = selectedQcRecord.qc?.id && qcOverride && selectedQcRecord.qc.id === qcOverride.id;
+    if (matchByRecord || matchByQc) {
+      const record = records.find((r) => r.id === recordId) || selectedQcRecord.record;
+      const qc = qcOverride || getQcByRecordId(recordId) || selectedQcRecord.qc;
+      if (!record || !qc) return;
+      setSelectedQcRecord({
+        record,
+        qc,
+        progress: getQcProgress(recordId, record.status),
+        missing: getMissingQcItems(recordId, record.status)
+      });
+    }
+  }
+
   function toggleQcItem(recordId, itemKey, remark) {
     let qc = getQcByRecordId(recordId);
     if (!qc) {
@@ -1632,9 +1708,7 @@ function App() {
       next.unshift(updated);
     }
     persistQcRecords(next);
-    if (selectedQcRecord?.id === updated.id) {
-      setSelectedQcRecord(updated);
-    }
+    refreshSelectedQcRecord(recordId, updated);
     return updated;
   }
 
@@ -1659,9 +1733,7 @@ function App() {
       next.unshift(updated);
     }
     persistQcRecords(next);
-    if (selectedQcRecord?.id === updated.id) {
-      setSelectedQcRecord(updated);
-    }
+    refreshSelectedQcRecord(recordId, updated);
     return updated;
   }
 
