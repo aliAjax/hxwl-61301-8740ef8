@@ -601,10 +601,11 @@ function normalizeQcItems(items, checkItems) {
       normalized[ci.key] = {
         checked: !!items[ci.key].checked,
         remark: items[ci.key].remark || '',
-        checkedAt: items[ci.key].checkedAt || null
+        checkedAt: items[ci.key].checkedAt || null,
+        isNew: !!items[ci.key].isNew
       };
     } else {
-      normalized[ci.key] = { checked: false, remark: '', checkedAt: null };
+      normalized[ci.key] = { checked: false, remark: '', checkedAt: null, isNew: true };
     }
   });
   return normalized;
@@ -888,9 +889,22 @@ function App() {
     localStorage.setItem(appConfig.qcCheckItemConfigStorage, JSON.stringify(next));
     const migrated = qcRecords.map((qc) => ({
       ...qc,
-      items: normalizeQcItems(qc.items, next)
+      items: normalizeQcItems(qc.items, next),
+      updatedAt: new Date().toISOString()
     }));
     persistQcRecords(migrated);
+    if (selectedQcRecord?.recordId) {
+      const updatedQc = migrated.find((q) => q.recordId === selectedQcRecord.recordId);
+      const record = records.find((r) => r.id === selectedQcRecord.recordId);
+      if (updatedQc && record) {
+        setSelectedQcRecord({
+          record,
+          qc: updatedQc,
+          progress: getQcProgress(record.id, record.status),
+          missing: getMissingQcItems(record.id, record.status)
+        });
+      }
+    }
   }
 
   function saveQcItemConfig(item) {
@@ -1668,6 +1682,21 @@ function App() {
     return newQc;
   }
 
+  function markQcItemsAsSeen(recordId) {
+    let qc = getQcByRecordId(recordId);
+    if (!qc) return null;
+    const hasNewItems = Object.values(qc.items).some((item) => item.isNew);
+    if (!hasNewItems) return qc;
+    const updatedItems = {};
+    Object.keys(qc.items).forEach((key) => {
+      updatedItems[key] = { ...qc.items[key], isNew: false };
+    });
+    const updated = { ...qc, items: updatedItems, updatedAt: new Date().toISOString() };
+    const next = qcRecords.map((q) => (q.id === updated.id ? updated : q));
+    persistQcRecords(next);
+    return updated;
+  }
+
   function refreshSelectedQcRecord(recordId, qcOverride) {
     if (!selectedQcRecord) return;
     const matchByRecord = selectedQcRecord.record?.id === recordId || selectedQcRecord.recordId === recordId;
@@ -1698,7 +1727,8 @@ function App() {
         [itemKey]: {
           checked: isChecked,
           remark: remark !== undefined ? remark : (qc.items[itemKey]?.remark || ''),
-          checkedAt: isChecked ? new Date().toISOString() : null
+          checkedAt: isChecked ? new Date().toISOString() : null,
+          isNew: false
         }
       },
       updatedAt: new Date().toISOString()
@@ -1723,7 +1753,8 @@ function App() {
         ...qc.items,
         [itemKey]: {
           ...qc.items[itemKey],
-          remark
+          remark,
+          isNew: false
         }
       },
       updatedAt: new Date().toISOString()
@@ -1741,7 +1772,11 @@ function App() {
     const qc = getQcByRecordId(recordId);
     return qcCheckItems
       .filter((ci) => ci.requiredFor.includes(targetStatus))
-      .filter((ci) => !qc?.items[ci.key]?.checked);
+      .filter((ci) => {
+        const item = qc?.items[ci.key];
+        if (item?.isNew) return false;
+        return !item?.checked;
+      });
   }
 
   function getCurrentStatusMissingQcItems(recordId) {
@@ -1767,7 +1802,11 @@ function App() {
     const qc = getQcByRecordId(recordId);
     return qcCheckItems
       .filter((ci) => ci.requiredFor.includes(targetStatus) && ci.critical)
-      .filter((ci) => !qc?.items[ci.key]?.checked);
+      .filter((ci) => {
+        const item = qc?.items[ci.key];
+        if (item?.isNew) return false;
+        return !item?.checked;
+      });
   }
 
   function getTodoItemsForStatus(recordId, status) {
@@ -2021,7 +2060,7 @@ function App() {
       { label: '待完善', value: incomplete },
       { label: '未开始', value: notStarted }
     ];
-  }, [records, qcRecords]);
+  }, [records, qcRecords, qcCheckItems]);
 
   const filteredQcRecords = useMemo(() => {
     let items = records.map((r) => ({
@@ -2034,7 +2073,7 @@ function App() {
       items = items.filter((w) => w.record.status === qcFilter);
     }
     return items.sort((a, b) => a.progress - b.progress || String(a.record.patient).localeCompare(String(b.record.patient)));
-  }, [records, qcRecords, qcFilter]);
+  }, [records, qcRecords, qcFilter, qcCheckItems]);
 
   const next14Days = useMemo(() => getNext14Days(), [today]);
 
@@ -4064,7 +4103,11 @@ function App() {
                         className={'record qc-record ' + (progress === 100 ? 'qc-complete' : progress > 0 ? 'qc-inprogress' : 'qc-notstarted') + ' ' + (selectedQcRecord?.recordId === record.id ? 'selected' : '')}
                         key={record.id}
                         onClick={() => {
-                          setSelectedQcRecord({ record, qc: qc || ensureQcForRecord(record.id), progress, missing });
+                          const currentQc = qc || ensureQcForRecord(record.id);
+                          const updatedQc = markQcItemsAsSeen(record.id) || currentQc;
+                          const newProgress = getQcProgress(record.id, record.status);
+                          const newMissing = getMissingQcItems(record.id, record.status);
+                          setSelectedQcRecord({ record, qc: updatedQc, progress: newProgress, missing: newMissing });
                           setSelected(record);
                         }}
                       >
