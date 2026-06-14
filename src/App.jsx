@@ -837,6 +837,14 @@ function App() {
   const [qcCheckItems, setQcCheckItems] = useState(loadQcCheckItemConfig);
   const [editingQcItem, setEditingQcItem] = useState(null);
   const [showQcConfig, setShowQcConfig] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState(null);
+  const [editRecordForm, setEditRecordForm] = useState({
+    patient: '',
+    tooth: '',
+    shade: '',
+    photoNote: '',
+    followUp: ''
+  });
 
   const [currentDeviceId, setCurrentDeviceId] = useState(loadCurrentDevice);
   const [collabTimeline, setCollabTimeline] = useState(loadCollabTimeline);
@@ -1601,6 +1609,82 @@ function App() {
     persistRecords(next);
     if (selected?.id === id) setSelected(next.find((item) => item.id === id));
     if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
+  }
+
+  function startEditRecord(record) {
+    setEditingRecordId(record.id);
+    setEditRecordForm({
+      patient: record.patient || '',
+      tooth: record.tooth || '',
+      shade: record.shade || '',
+      photoNote: record.photoNote || '',
+      followUp: record.followUp || ''
+    });
+  }
+
+  function cancelEditRecord() {
+    setEditingRecordId(null);
+    setEditRecordForm({
+      patient: '',
+      tooth: '',
+      shade: '',
+      photoNote: '',
+      followUp: ''
+    });
+  }
+
+  function saveRecordEdit() {
+    const record = records.find((r) => r.id === editingRecordId);
+    if (!record) return;
+
+    const changes = [];
+    if (editRecordForm.patient !== record.patient) {
+      changes.push(`患者姓名: ${record.patient || '无'} → ${editRecordForm.patient || '无'}`);
+    }
+    if (editRecordForm.tooth !== record.tooth) {
+      changes.push(`牙位: ${record.tooth || '无'} → ${editRecordForm.tooth || '无'}`);
+    }
+    if (editRecordForm.shade !== record.shade) {
+      changes.push(`色号: ${record.shade || '无'} → ${editRecordForm.shade || '无'}`);
+    }
+    if (editRecordForm.photoNote !== record.photoNote) {
+      changes.push(`拍照备注已更新`);
+    }
+    if (editRecordForm.followUp !== record.followUp) {
+      changes.push(`复诊日期: ${record.followUp || '未排期'} → ${editRecordForm.followUp || '未排期'}`);
+    }
+
+    if (changes.length === 0) {
+      cancelEditRecord();
+      return;
+    }
+
+    const timelineEntry = `编辑记录: ${changes.join('；')}`;
+    const next = records.map((item) => item.id === editingRecordId ? {
+      ...item,
+      patient: editRecordForm.patient,
+      tooth: editRecordForm.tooth,
+      shade: editRecordForm.shade,
+      photoNote: editRecordForm.photoNote,
+      followUp: editRecordForm.followUp,
+      lastModified: new Date().toISOString(),
+      version: (item.version || 1) + 1,
+      timeline: [...(item.timeline || []), { status: timelineEntry, at: today, by: '编辑修改' }]
+    } : item);
+    persistRecords(next);
+    const updatedRecord = next.find((item) => item.id === editingRecordId);
+    if (selected?.id === editingRecordId) setSelected(updatedRecord);
+    if (boardSelectedRecord?.id === editingRecordId) setBoardSelectedRecord(updatedRecord);
+    if (selectedQcRecord?.recordId === editingRecordId || selectedQcRecord?.record?.id === editingRecordId) {
+      const qc = getQcByRecordId(editingRecordId) || ensureQcForRecord(editingRecordId);
+      setSelectedQcRecord({
+        record: updatedRecord,
+        qc,
+        progress: getQcProgressByQc(qc, updatedRecord.status),
+        missing: getMissingQcItemsByQc(qc, updatedRecord.status)
+      });
+    }
+    cancelEditRecord();
   }
 
   function handleDragStart(e, recordId) {
@@ -2488,29 +2572,157 @@ function App() {
               <div className="panel-title">
                 <CheckCircle2 size={18} />
                 <h2>详情</h2>
+                {selected && !editingRecordId && (
+                  <button
+                    type="button"
+                    className="link-btn"
+                    style={{ marginLeft: 'auto' }}
+                    onClick={() => startEditRecord(selected)}
+                  >
+                    <Edit3 size={14} /> 编辑
+                  </button>
+                )}
+                {selected && editingRecordId === selected.id && (
+                  <span style={{ marginLeft: 'auto', color: 'var(--accent)', fontSize: '12px', fontWeight: '600' }}>
+                    编辑模式
+                  </span>
+                )}
               </div>
               {selected ? (
                 <div className="detail">
-                  <h3>{selected.patient}</h3>
-                  <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
-                  <p>{selected.photoNote}</p>
+                  {editingRecordId === selected.id ? (
+                    <div className="edit-form-container">
+                      <div className="form-grid" style={{ gridTemplateColumns: '1fr', gap: '12px' }}>
+                        <label className="wide">
+                          <span>患者姓名</span>
+                          <input
+                            type="text"
+                            value={editRecordForm.patient}
+                            onChange={(e) => setEditRecordForm({ ...editRecordForm, patient: e.target.value })}
+                            placeholder="请输入患者姓名"
+                            required
+                          />
+                        </label>
+                        <label className="wide">
+                          <span>牙位</span>
+                          <select
+                            value={editRecordForm.tooth}
+                            onChange={(e) => setEditRecordForm({ ...editRecordForm, tooth: e.target.value })}
+                          >
+                            {appConfig.fields.find(f => f.key === 'tooth').options.map((tooth) => (
+                              <option key={tooth}>{tooth}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="wide">
+                          <span>色号</span>
+                          <select
+                            value={editRecordForm.shade}
+                            onChange={(e) => setEditRecordForm({ ...editRecordForm, shade: e.target.value })}
+                          >
+                            {appConfig.fields.find(f => f.key === 'shade').options.map((shade) => (
+                              <option key={shade}>{shade}</option>
+                            ))}
+                          </select>
+                          <div className="shade-picker" style={{ marginTop: '8px' }}>
+                            {appConfig.fields.find(f => f.key === 'shade').options.map((option) => {
+                              const shadeInfo = getShadeInfo(option);
+                              return (
+                                <div
+                                  key={option}
+                                  className={'shade-picker-item ' + (editRecordForm.shade === option ? 'active' : '')}
+                                  onClick={() => {
+                                    setEditRecordForm({ ...editRecordForm, shade: option });
+                                  }}
+                                >
+                                  <div className={'shade-swatch-mini shade-' + option.charAt(0).toLowerCase()}>
+                                    <span>{option}</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="shade-info-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShadeDetailModal(shadeInfo || { code: option });
+                                    }}
+                                    title="查看色号说明"
+                                  >
+                                    <Info size={12} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </label>
+                        <label className="wide">
+                          <span>拍照备注</span>
+                          <textarea
+                            value={editRecordForm.photoNote}
+                            onChange={(e) => setEditRecordForm({ ...editRecordForm, photoNote: e.target.value })}
+                            placeholder="如：自然光下正面照，颈部略深"
+                            rows={3}
+                          />
+                        </label>
+                        <label className="wide">
+                          <span>复诊日期</span>
+                          <input
+                            type="date"
+                            value={editRecordForm.followUp}
+                            onChange={(e) => setEditRecordForm({ ...editRecordForm, followUp: e.target.value })}
+                          />
+                        </label>
+                      </div>
+                      <div className="detail-actions" style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          className="primary"
+                          onClick={saveRecordEdit}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Save size={14} /> 保存修改
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={cancelEditRecord}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <X size={14} /> 取消编辑
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h3>{selected.patient}</h3>
+                      <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
+                      <p>{selected.photoNote}</p>
+                      {selected.followUp && (
+                        <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
+                          <CalendarCheck size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
+                          复诊日期：{selected.followUp}
+                        </p>
+                      )}
+                    </>
+                  )}
 
-                  <div className="detail-actions" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                    <button
-                      className="primary"
-                      type="button"
-                      onClick={() => startPhotoProcess(selected.id)}
-                    >
-                      <Camera size={16} />
-                      {getPhotoProcessByRecordId(selected.id) ? '继续拍照流程' : '开始拍照流程'}
-                    </button>
-                    {getPhotoProcessByRecordId(selected.id) && (
-                      <p className="photo-process-start-hint">
-                        <CheckCircle2 size={14} />
-                        进度：{getPhotoProcessProgress(getPhotoProcessByRecordId(selected.id))}%
-                      </p>
-                    )}
-                  </div>
+                  {!editingRecordId && (
+                    <>
+                      <div className="detail-actions" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                        <button
+                          className="primary"
+                          type="button"
+                          onClick={() => startPhotoProcess(selected.id)}
+                        >
+                          <Camera size={16} />
+                          {getPhotoProcessByRecordId(selected.id) ? '继续拍照流程' : '开始拍照流程'}
+                        </button>
+                        {getPhotoProcessByRecordId(selected.id) && (
+                          <p className="photo-process-start-hint">
+                            <CheckCircle2 size={14} />
+                            进度：{getPhotoProcessProgress(getPhotoProcessByRecordId(selected.id))}%
+                          </p>
+                        )}
+                      </div>
 
                   {getPhotoProcessByRecordId(selected.id) && (
                     <>
@@ -2735,11 +2947,13 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="timeline">
-                    {(selected.timeline || []).map((step, index) => (
-                      <span key={index}>{step.at} · {step.status} · {step.by}</span>
-                    ))}
-                  </div>
+                      <div className="timeline">
+                        {(selected.timeline || []).map((step, index) => (
+                          <span key={index}>{step.at} · {step.status} · {step.by}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <p className="empty">点击任意记录查看详情和状态流转。</p>
