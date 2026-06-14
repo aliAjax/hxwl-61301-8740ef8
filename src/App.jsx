@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, Monitor, Merge } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -14,10 +14,17 @@ const appConfig = {
   "shadeLibraryStorage": "hxwl-61301-shade-library",
   "photoProcessStorage": "hxwl-61301-photo-process",
   "deliveryOrderStorage": "hxwl-61301-delivery-orders",
+  "qcStorage": "hxwl-61301-qc",
   "collabStorage": "hxwl-61301-collab",
   "collabTimelineStorage": "hxwl-61301-collab-timeline",
-  "collabDeviceStorage": "hxwl-61301-collab-device",
   "accent": "#0f766e",
+  "devices": [
+    { "id": "tablet-1", "name": "诊室A平板", "room": "1号诊室", "color": "#0f766e" },
+    { "id": "tablet-2", "name": "诊室B平板", "room": "2号诊室", "color": "#7c3aed" },
+    { "id": "tablet-3", "name": "诊室C平板", "room": "3号诊室", "color": "#2563eb" },
+    { "id": "tablet-4", "name": "前台Pad", "room": "前台", "color": "#db2777" }
+  ],
+  "defaultDeviceId": "tablet-1",
   "deliveryOrderStatuses": [
     "待发送",
     "已发送",
@@ -89,7 +96,10 @@ const appConfig = {
       "shade": "A2",
       "photoNote": "自然光下正面照，颈部略深",
       "followUp": "2026-06-13",
-      "status": "待修复"
+      "status": "待修复",
+      "deviceId": "tablet-1",
+      "lastModified": "2026-06-13T09:15:00.000Z",
+      "version": 1
     },
     {
       "id": "zhou-hang-21",
@@ -98,7 +108,10 @@ const appConfig = {
       "shade": "B1",
       "photoNote": "临时冠试戴后复拍",
       "followUp": "2026-06-13",
-      "status": "制作中"
+      "status": "制作中",
+      "deviceId": "tablet-1",
+      "lastModified": "2026-06-13T10:30:00.000Z",
+      "version": 2
     },
     {
       "id": "chen-cheng-36",
@@ -107,7 +120,10 @@ const appConfig = {
       "shade": "A3",
       "photoNote": "后牙咬合面补充照",
       "followUp": "2026-06-14",
-      "status": "已完成修复"
+      "status": "已完成修复",
+      "deviceId": "tablet-1",
+      "lastModified": "2026-06-13T14:00:00.000Z",
+      "version": 1
     }
   ],
   "patientSeed": [
@@ -292,7 +308,51 @@ const appConfig = {
       "sentAt": "2026-06-13T10:30:00.000Z",
       "receivedAt": null
     }
-  ]
+  ],
+  "qcCheckItems": [
+    {
+      "key": "initialShade",
+      "label": "初次比色",
+      "icon": "Palette",
+      "requiredFor": ["待修复", "制作中", "已完成修复"],
+      "description": "完成患者牙位比色，确认色号选择准确"
+    },
+    {
+      "key": "photoConfirm",
+      "label": "照片确认",
+      "icon": "Camera",
+      "requiredFor": ["待修复", "制作中", "已完成修复"],
+      "description": "完成拍照流程，确认照片质量符合比色要求"
+    },
+    {
+      "key": "labHandover",
+      "label": "技工所交接",
+      "icon": "ArrowLeftRight",
+      "requiredFor": ["制作中", "已完成修复"],
+      "description": "完成与技工所的交接单发送与确认回收"
+    },
+    {
+      "key": "tryOnFeedback",
+      "label": "试戴反馈",
+      "icon": "Stethoscope",
+      "requiredFor": ["已完成修复"],
+      "description": "患者试戴修复体，记录反馈意见与调整需求"
+    },
+    {
+      "key": "finalRetake",
+      "label": "最终复拍",
+      "icon": "CheckCircle2",
+      "requiredFor": ["已完成修复"],
+      "description": "完成修复后复拍，存档比对照片确认修复效果"
+    }
+  ],
+  "qcDefaultItemValues": {
+    "initialShade": { "checked": false, "remark": "", "checkedAt": null },
+    "photoConfirm": { "checked": false, "remark": "", "checkedAt": null },
+    "labHandover": { "checked": false, "remark": "", "checkedAt": null },
+    "tryOnFeedback": { "checked": false, "remark": "", "checkedAt": null },
+    "finalRetake": { "checked": false, "remark": "", "checkedAt": null }
+  }
 };
 
 function getLocalDateString(d = new Date()) {
@@ -355,8 +415,95 @@ function withIds(items) {
   return items.map((item) => ({
     id: item.id || uid(),
     timeline: item.timeline || [{ status: item.status, at: today, by: '系统' }],
+    deviceId: item.deviceId || appConfig.defaultDeviceId,
+    lastModified: item.lastModified || new Date().toISOString(),
+    version: item.version || 1,
     ...item
   }));
+}
+
+function loadCurrentDevice() {
+  const raw = localStorage.getItem(appConfig.collabStorage);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed.currentDeviceId || appConfig.defaultDeviceId;
+    } catch {
+      return appConfig.defaultDeviceId;
+    }
+  }
+  return appConfig.defaultDeviceId;
+}
+
+function loadCollabTimeline() {
+  const raw = localStorage.getItem(appConfig.collabTimelineStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function persistCurrentDevice(deviceId) {
+  localStorage.setItem(appConfig.collabStorage, JSON.stringify({ currentDeviceId: deviceId }));
+}
+
+function persistCollabTimeline(timeline) {
+  localStorage.setItem(appConfig.collabTimelineStorage, JSON.stringify(timeline));
+}
+
+function getDeviceInfo(deviceId) {
+  return appConfig.devices.find(d => d.id === deviceId) || { id: deviceId, name: deviceId, room: '未知', color: '#6b7280' };
+}
+
+function formatDateTime(isoStr) {
+  try {
+    const d = new Date(isoStr);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day} ${h}:${min}`;
+  } catch {
+    return isoStr;
+  }
+}
+
+function detectConflicts(localRecords, importRecords) {
+  const conflicts = [];
+  const added = [];
+  const conflictKeys = new Set();
+
+  importRecords.forEach(importRec => {
+    const matchLocal = localRecords.find(lr =>
+      lr.patient === importRec.patient && lr.tooth === importRec.tooth
+    );
+    const key = `${importRec.patient}-${importRec.tooth}`;
+
+    if (matchLocal) {
+      const isSameVersion = matchLocal.version === importRec.version &&
+        matchLocal.lastModified === importRec.lastModified;
+      if (!isSameVersion && !conflictKeys.has(key)) {
+        conflictKeys.add(key);
+        conflicts.push({
+          key,
+          patient: importRec.patient,
+          tooth: importRec.tooth,
+          local: matchLocal,
+          import: importRec,
+          resolution: null
+        });
+      }
+    } else {
+      added.push(importRec);
+    }
+  });
+
+  return { conflicts, added };
 }
 
 function loadRecords() {
@@ -423,34 +570,40 @@ function loadDeliveryOrders() {
   return appConfig.deliveryOrderSeed;
 }
 
-function loadCollabRecords() {
-  const raw = localStorage.getItem(appConfig.collabStorage);
+function normalizeQcItems(items) {
+  const normalized = {};
+  appConfig.qcCheckItems.forEach((ci) => {
+    if (items && items[ci.key] && typeof items[ci.key] === 'object') {
+      normalized[ci.key] = {
+        checked: !!items[ci.key].checked,
+        remark: items[ci.key].remark || '',
+        checkedAt: items[ci.key].checkedAt || null
+      };
+    } else {
+      normalized[ci.key] = { checked: false, remark: '', checkedAt: null };
+    }
+  });
+  return normalized;
+}
+
+function loadQcRecords() {
+  const raw = localStorage.getItem(appConfig.qcStorage);
   if (raw) {
-    try { return JSON.parse(raw); } catch { return []; }
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((qc) => ({
+        id: qc.id || uid(),
+        recordId: qc.recordId || '',
+        items: normalizeQcItems(qc.items),
+        createdAt: qc.createdAt || new Date().toISOString(),
+        updatedAt: qc.updatedAt || new Date().toISOString()
+      }));
+    } catch {
+      return [];
+    }
   }
   return [];
-}
-
-function loadCollabTimeline() {
-  const raw = localStorage.getItem(appConfig.collabTimelineStorage);
-  if (raw) {
-    try { return JSON.parse(raw); } catch { return []; }
-  }
-  return [];
-}
-
-function loadCollabDevice() {
-  const raw = localStorage.getItem(appConfig.collabDeviceStorage);
-  if (raw) {
-    try { return JSON.parse(raw); } catch { return null; }
-  }
-  return null;
-}
-
-function generateDeviceId() {
-  const prefix = 'ROOM';
-  const num = String(Math.floor(Math.random() * 90 + 10));
-  return `${prefix}-${num}-${uid().slice(0, 4).toUpperCase()}`;
 }
 
 function generateOrderNo() {
@@ -627,14 +780,24 @@ function App() {
   const [boardFilterStatus, setBoardFilterStatus] = useState('全部');
   const [importPreview, setImportPreview] = useState(null);
   const [importFileName, setImportFileName] = useState('');
-  const [collabDevice, setCollabDevice] = useState(loadCollabDevice);
-  const [collabRecords, setCollabRecords] = useState(loadCollabRecords);
+  const [qcRecords, setQcRecords] = useState(loadQcRecords);
+  const [selectedQcRecord, setSelectedQcRecord] = useState(null);
+  const [qcFilter, setQcFilter] = useState('全部');
+
+  const [currentDeviceId, setCurrentDeviceId] = useState(loadCurrentDevice);
   const [collabTimeline, setCollabTimeline] = useState(loadCollabTimeline);
-  const [collabImportData, setCollabImportData] = useState(null);
+  const [collabConflicts, setCollabConflicts] = useState(null);
+  const [collabImportPreview, setCollabImportPreview] = useState(null);
   const [collabImportFileName, setCollabImportFileName] = useState('');
-  const [collabConflicts, setCollabConflicts] = useState([]);
-  const [collabConflictResolutions, setCollabConflictResolutions] = useState({});
-  const [collabForm, setCollabForm] = useState({ patient: '', tooth: '11', shade: 'A2', photoNote: '', followUp: '' });
+  const [collabSimulateDevice, setCollabSimulateDevice] = useState('tablet-2');
+  const [collabForm, setCollabForm] = useState({
+    patient: '林雨',
+    tooth: '11',
+    shade: 'A2',
+    photoNote: '',
+    followUp: '',
+    status: '待修复'
+  });
 
   function persistRecords(next) {
     setRecords(next);
@@ -661,19 +824,307 @@ function App() {
     localStorage.setItem(appConfig.deliveryOrderStorage, JSON.stringify(next));
   }
 
-  function persistCollabDevice(next) {
-    setCollabDevice(next);
-    localStorage.setItem(appConfig.collabDeviceStorage, JSON.stringify(next));
+  function persistQcRecords(next) {
+    setQcRecords(next);
+    localStorage.setItem(appConfig.qcStorage, JSON.stringify(next));
   }
 
-  function persistCollabRecords(next) {
-    setCollabRecords(next);
-    localStorage.setItem(appConfig.collabStorage, JSON.stringify(next));
-  }
-
-  function persistCollabTimeline(next) {
+  function addCollabTimelineEntry(entry) {
+    const newEntry = {
+      id: uid(),
+      at: new Date().toISOString(),
+      ...entry
+    };
+    const next = [newEntry, ...collabTimeline];
     setCollabTimeline(next);
-    localStorage.setItem(appConfig.collabTimelineStorage, JSON.stringify(next));
+    persistCollabTimeline(next);
+  }
+
+  function switchDevice(deviceId) {
+    setCurrentDeviceId(deviceId);
+    persistCurrentDevice(deviceId);
+    addCollabTimelineEntry({
+      type: 'device-switch',
+      deviceId,
+      title: '切换设备',
+      detail: `切换至 ${getDeviceInfo(deviceId).name}（${getDeviceInfo(deviceId).room}）`
+    });
+  }
+
+  function exportCollabData() {
+    const exportObj = {
+      version: '2.0',
+      exportedAt: new Date().toISOString(),
+      sourceDeviceId: currentDeviceId,
+      sourceDeviceName: getDeviceInfo(currentDeviceId).name,
+      records: records.map(r => ({ ...r })),
+      patients: patients.map(p => ({ ...p })),
+      meta: {
+        recordCount: records.length,
+        patientCount: patients.length,
+      }
+    };
+    const jsonStr = JSON.stringify(exportObj, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const deviceName = getDeviceInfo(currentDeviceId).name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+    const dateStr = getLocalDateString().replace(/-/g, '');
+    a.download = `collab-${deviceName}-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    addCollabTimelineEntry({
+      type: 'export',
+      deviceId: currentDeviceId,
+      title: '导出设备数据',
+      detail: `从 ${getDeviceInfo(currentDeviceId).name} 导出 ${records.length} 条记录`
+    });
+  }
+
+  function analyzeCollabImport(importData) {
+    const importRecords = importData.records || [];
+    const importPatients = importData.patients || [];
+    const sourceDeviceId = importData.sourceDeviceId || 'unknown';
+    const sourceDeviceName = importData.sourceDeviceName || '未知设备';
+
+    const { conflicts, added } = detectConflicts(records, importRecords);
+
+    const existingPatientIds = new Set(patients.map(p => p.id));
+    const newPatients = importPatients.filter(p => !existingPatientIds.has(p.id));
+
+    return {
+      sourceDeviceId,
+      sourceDeviceName,
+      exportedAt: importData.exportedAt,
+      totalRecords: importRecords.length,
+      totalPatients: importPatients.length,
+      conflicts,
+      addedRecords: added,
+      newPatients,
+      importData
+    };
+  }
+
+  function handleCollabImportFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setCollabImportFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result;
+        if (typeof content !== 'string') throw new Error('文件格式错误');
+        const data = JSON.parse(content);
+        if (!data.records) {
+          throw new Error('未找到有效的记录数据');
+        }
+        const analysis = analyzeCollabImport(data);
+        setCollabImportPreview(analysis);
+        if (analysis.conflicts.length > 0) {
+          setCollabConflicts(analysis.conflicts.map(c => ({ ...c, resolution: 'keepLocal' })));
+        } else {
+          setCollabConflicts(null);
+        }
+      } catch (err) {
+        alert('导入失败：' + (err.message || '文件格式错误'));
+        cancelCollabImport();
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  function setConflictResolution(key, resolution) {
+    if (!collabConflicts) return;
+    setCollabConflicts(collabConflicts.map(c =>
+      c.key === key ? { ...c, resolution } : c
+    ));
+  }
+
+  function confirmCollabImport() {
+    if (!collabImportPreview) return;
+    const { importData, sourceDeviceId, sourceDeviceName } = collabImportPreview;
+
+    let mergedRecords = [...records];
+    let mergedPatients = [...patients];
+    const timelineEntries = [];
+
+    if (collabConflicts && collabConflicts.length > 0) {
+      const unresolved = collabConflicts.filter(c => !c.resolution);
+      if (unresolved.length > 0) {
+        alert('请为所有冲突选择处理方式！');
+        return;
+      }
+
+      collabConflicts.forEach(conflict => {
+        const { local, import: imp, resolution, patient, tooth } = conflict;
+        const now = new Date().toISOString();
+
+        if (resolution === 'keepLocal') {
+          timelineEntries.push({
+            type: 'conflict-resolve-keep',
+            deviceId: sourceDeviceId,
+            title: '冲突处理：保留本地',
+            detail: `${patient} - ${tooth} 牙位，保留本地版本（v${local.version}），忽略导入版本（v${imp.version}）`
+          });
+          mergedRecords = mergedRecords.map(r => r.id === local.id ? {
+            ...r,
+            timeline: [...(r.timeline || []), {
+              status: `冲突处理：保留本地，忽略${sourceDeviceName}导入`,
+              at: today,
+              by: '冲突合并'
+            }]
+          } : r);
+        } else if (resolution === 'useImport') {
+          timelineEntries.push({
+            type: 'conflict-resolve-import',
+            deviceId: sourceDeviceId,
+            title: '冲突处理：采用导入',
+            detail: `${patient} - ${tooth} 牙位，采用${sourceDeviceName}版本（v${imp.version}），覆盖本地版本（v${local.version}）`
+          });
+          const importedRecord = {
+            ...imp,
+            id: local.id,
+            lastModified: now,
+            version: Math.max(local.version || 1, imp.version || 1) + 1,
+            timeline: [
+              ...(local.timeline || []),
+              ...(imp.timeline || []).slice(-2),
+              {
+                status: `从${sourceDeviceName}合并，覆盖本地数据`,
+                at: today,
+                by: '冲突合并'
+              }
+            ]
+          };
+          mergedRecords = mergedRecords.map(r => r.id === local.id ? importedRecord : r);
+        } else if (resolution === 'makeCopy') {
+          timelineEntries.push({
+            type: 'conflict-resolve-copy',
+            deviceId: sourceDeviceId,
+            title: '冲突处理：生成副本',
+            detail: `${patient} - ${tooth} 牙位，保留本地版本（v${local.version}）并新增${sourceDeviceName}版本（v${imp.version}）作为副本`
+          });
+          const copyRecord = {
+            ...imp,
+            id: uid(),
+            lastModified: now,
+            version: 1,
+            timeline: [
+              ...(imp.timeline || []),
+              {
+                status: `从${sourceDeviceName}合并，作为副本保存`,
+                at: today,
+                by: '冲突合并'
+              }
+            ]
+          };
+          mergedRecords.unshift(copyRecord);
+        }
+      });
+    }
+
+    if (collabImportPreview.addedRecords && collabImportPreview.addedRecords.length > 0) {
+      const now = new Date().toISOString();
+      collabImportPreview.addedRecords.forEach(ar => {
+        mergedRecords.unshift({
+          ...ar,
+          id: uid(),
+          lastModified: now,
+          version: 1,
+          timeline: [
+            ...(ar.timeline || []),
+            { status: `从${sourceDeviceName}导入新增记录`, at: today, by: '数据合并' }
+          ]
+        });
+      });
+      timelineEntries.push({
+        type: 'import-added',
+        deviceId: sourceDeviceId,
+        title: '导入新增记录',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.addedRecords.length} 条新记录`
+      });
+    }
+
+    if (collabImportPreview.newPatients && collabImportPreview.newPatients.length > 0) {
+      mergedPatients = [...mergedPatients, ...collabImportPreview.newPatients];
+      timelineEntries.push({
+        type: 'import-patients',
+        deviceId: sourceDeviceId,
+        title: '导入新增患者',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newPatients.length} 位新患者档案`
+      });
+    }
+
+    persistRecords(mergedRecords);
+    persistPatients(mergedPatients);
+
+    timelineEntries.forEach(entry => addCollabTimelineEntry(entry));
+
+    const summaryMsg = [
+      `导入来源：${sourceDeviceName}`,
+      `新增记录：${collabImportPreview.addedRecords?.length || 0} 条`,
+      `冲突记录：${collabConflicts?.length || 0} 条`,
+      collabConflicts ? ` - 保留本地：${collabConflicts.filter(c => c.resolution === 'keepLocal').length} 条` : '',
+      collabConflicts ? ` - 采用导入：${collabConflicts.filter(c => c.resolution === 'useImport').length} 条` : '',
+      collabConflicts ? ` - 生成副本：${collabConflicts.filter(c => c.resolution === 'makeCopy').length} 条` : '',
+      `新增患者：${collabImportPreview.newPatients?.length || 0} 位`
+    ].filter(Boolean).join('\n');
+    alert(summaryMsg);
+
+    cancelCollabImport();
+  }
+
+  function cancelCollabImport() {
+    setCollabImportPreview(null);
+    setCollabImportFileName('');
+    setCollabConflicts(null);
+  }
+
+  function simulateAddRecord() {
+    const now = new Date().toISOString();
+    const simulatedRecord = {
+      id: uid(),
+      ...collabForm,
+      status: collabForm.status || appConfig.primaryStatus,
+      createdAt: now,
+      deviceId: collabSimulateDevice,
+      lastModified: now,
+      version: 1,
+      timeline: [{ status: collabForm.status || appConfig.primaryStatus, at: today, by: getDeviceInfo(collabSimulateDevice).name }]
+    };
+    const simulatedData = {
+      version: '2.0',
+      exportedAt: now,
+      sourceDeviceId: collabSimulateDevice,
+      sourceDeviceName: getDeviceInfo(collabSimulateDevice).name,
+      records: [simulatedRecord],
+      patients: [],
+      meta: {
+        recordCount: 1,
+        patientCount: 0
+      }
+    };
+
+    const analysis = analyzeCollabImport(simulatedData);
+    setCollabImportPreview(analysis);
+    if (analysis.conflicts.length > 0) {
+      setCollabConflicts(analysis.conflicts.map(c => ({ ...c, resolution: 'keepLocal' })));
+    } else {
+      setCollabConflicts(null);
+    }
+    setCollabImportFileName(`模拟-${getDeviceInfo(collabSimulateDevice).name}-1条记录.json`);
+
+    addCollabTimelineEntry({
+      type: 'simulate',
+      deviceId: collabSimulateDevice,
+      title: '模拟设备录入',
+      detail: `模拟${getDeviceInfo(collabSimulateDevice).name}录入：${collabForm.patient} ${collabForm.tooth} 牙位，色号${collabForm.shade}`
+    });
   }
 
   function exportData() {
@@ -902,11 +1353,15 @@ function App() {
 
   function addRecord(event) {
     event.preventDefault();
+    const now = new Date().toISOString();
     const nextRecord = {
       id: uid(),
       ...form,
       status: form.status || appConfig.primaryStatus,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      deviceId: currentDeviceId,
+      lastModified: now,
+      version: 1,
       timeline: [{ status: form.status || appConfig.primaryStatus, at: today, by: '录入' }]
     };
 
@@ -935,9 +1390,19 @@ function App() {
   }
 
   function updateStatus(id, status) {
+    const record = records.find((r) => r.id === id);
+    if (!record) return;
+    const missing = getMissingQcItems(id, status);
+    if (missing.length > 0) {
+      const labels = missing.map((m) => m.label).join('、');
+      alert(`无法切换至「${status}」：以下质控检查项尚未完成\n\n${labels}\n\n请先完成这些检查项后再变更状态。`);
+      return;
+    }
     const next = records.map((item) => item.id === id ? {
       ...item,
       status,
+      lastModified: new Date().toISOString(),
+      version: (item.version || 1) + 1,
       timeline: [...(item.timeline || []), { status, at: today, by: '操作员' }]
     } : item);
     persistRecords(next);
@@ -952,6 +1417,8 @@ function App() {
     const next = records.map((item) => item.id === id ? {
       ...item,
       followUp: newDate,
+      lastModified: new Date().toISOString(),
+      version: (item.version || 1) + 1,
       timeline: [...(item.timeline || []), { status: `复诊日期调整: ${oldDate} → ${newDate}`, at: today, by: '排期调整' }]
     } : item);
     persistRecords(next);
@@ -995,14 +1462,122 @@ function App() {
     if (nextPhotoProcesses.length !== photoProcesses.length) {
       persistPhotoProcesses(nextPhotoProcesses);
     }
+    const nextQcRecords = qcRecords.filter((qc) => qc.recordId !== id);
+    if (nextQcRecords.length !== qcRecords.length) {
+      persistQcRecords(nextQcRecords);
+    }
     if (selected?.id === id) setSelected(null);
     if (selectedPhotoProcess?.recordId === id) setSelectedPhotoProcess(null);
+    if (selectedQcRecord?.recordId === id) setSelectedQcRecord(null);
   }
 
   function duplicateRecord(item) {
-    const copied = { ...item, id: uid(), status: appConfig.primaryStatus, timeline: [{ status: appConfig.primaryStatus, at: today, by: '复制' }] };
+    const now = new Date().toISOString();
+    const copied = {
+      ...item,
+      id: uid(),
+      status: appConfig.primaryStatus,
+      deviceId: currentDeviceId,
+      lastModified: now,
+      version: 1,
+      timeline: [{ status: appConfig.primaryStatus, at: today, by: '复制' }]
+    };
     persistRecords([copied, ...records]);
     setSelected(copied);
+  }
+
+  function getQcByRecordId(recordId) {
+    return qcRecords.find((qc) => qc.recordId === recordId) || null;
+  }
+
+  function ensureQcForRecord(recordId) {
+    const existing = getQcByRecordId(recordId);
+    if (existing) return existing;
+    const newQc = {
+      id: uid(),
+      recordId,
+      items: normalizeQcItems(null),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    persistQcRecords([newQc, ...qcRecords]);
+    return newQc;
+  }
+
+  function toggleQcItem(recordId, itemKey, remark) {
+    let qc = getQcByRecordId(recordId);
+    if (!qc) {
+      qc = ensureQcForRecord(recordId);
+    }
+    const isChecked = !qc.items[itemKey]?.checked;
+    const updated = {
+      ...qc,
+      items: {
+        ...qc.items,
+        [itemKey]: {
+          checked: isChecked,
+          remark: remark !== undefined ? remark : (qc.items[itemKey]?.remark || ''),
+          checkedAt: isChecked ? new Date().toISOString() : null
+        }
+      },
+      updatedAt: new Date().toISOString()
+    };
+    const next = qcRecords.map((q) => (q.id === updated.id ? updated : q));
+    if (!qcRecords.find((q) => q.id === updated.id)) {
+      next.unshift(updated);
+    }
+    persistQcRecords(next);
+    if (selectedQcRecord?.id === updated.id) {
+      setSelectedQcRecord(updated);
+    }
+    return updated;
+  }
+
+  function updateQcRemark(recordId, itemKey, remark) {
+    let qc = getQcByRecordId(recordId);
+    if (!qc) {
+      qc = ensureQcForRecord(recordId);
+    }
+    const updated = {
+      ...qc,
+      items: {
+        ...qc.items,
+        [itemKey]: {
+          ...qc.items[itemKey],
+          remark
+        }
+      },
+      updatedAt: new Date().toISOString()
+    };
+    const next = qcRecords.map((q) => (q.id === updated.id ? updated : q));
+    if (!qcRecords.find((q) => q.id === updated.id)) {
+      next.unshift(updated);
+    }
+    persistQcRecords(next);
+    if (selectedQcRecord?.id === updated.id) {
+      setSelectedQcRecord(updated);
+    }
+    return updated;
+  }
+
+  function getMissingQcItems(recordId, targetStatus) {
+    const qc = getQcByRecordId(recordId);
+    return appConfig.qcCheckItems
+      .filter((ci) => ci.requiredFor.includes(targetStatus))
+      .filter((ci) => !qc?.items[ci.key]?.checked);
+  }
+
+  function getQcProgress(recordId, status) {
+    const qc = getQcByRecordId(recordId);
+    const required = appConfig.qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+    if (required.length === 0) return 100;
+    const done = required.filter((ci) => qc?.items[ci.key]?.checked).length;
+    return Math.round((done / required.length) * 100);
+  }
+
+  function getQcIcon(iconName) {
+    const icons = { Palette, Camera, ArrowLeftRight, Stethoscope, CheckCircle2 };
+    return icons[iconName] || ClipboardList;
   }
 
   function addPatient(event) {
@@ -1196,248 +1771,6 @@ function App() {
     if (selectedDeliveryOrder?.id === id) setSelectedDeliveryOrder(null);
   }
 
-  function registerDevice(name) {
-    const device = { id: generateDeviceId(), name: name || '未命名诊室', registeredAt: new Date().toISOString() };
-    persistCollabDevice(device);
-    addCollabTimelineEntry('设备注册', `诊室 ${device.name} (${device.id}) 已注册`);
-    return device;
-  }
-
-  function addCollabRecord(event) {
-    event.preventDefault();
-    if (!collabDevice) return;
-    if (!collabForm.patient) { alert('请输入患者姓名'); return; }
-    const version = 1;
-    const now = new Date().toISOString();
-    const newRecord = {
-      id: uid(),
-      ...collabForm,
-      status: '待修复',
-      deviceId: collabDevice.id,
-      deviceName: collabDevice.name,
-      version,
-      lastModifiedAt: now,
-      createdAt: now,
-      timeline: [{ status: '待修复', at: today, by: `诊室 ${collabDevice.name}` }]
-    };
-    const next = [newRecord, ...collabRecords];
-    persistCollabRecords(next);
-    addCollabTimelineEntry('新增记录', `${collabForm.patient} 牙位${collabForm.tooth} 比色${collabForm.shade}，来源：${collabDevice.name}`);
-    setCollabForm({ patient: '', tooth: '11', shade: 'A2', photoNote: '', followUp: '' });
-  }
-
-  function updateCollabRecordStatus(id, status) {
-    const next = collabRecords.map((r) => {
-      if (r.id === id) {
-        return {
-          ...r,
-          status,
-          version: r.version + 1,
-          lastModifiedAt: new Date().toISOString(),
-          timeline: [...(r.timeline || []), { status, at: today, by: `诊室 ${collabDevice?.name || '未知'}` }]
-        };
-      }
-      return r;
-    });
-    persistCollabRecords(next);
-  }
-
-  function removeCollabRecord(id) {
-    const record = collabRecords.find((r) => r.id === id);
-    const next = collabRecords.filter((r) => r.id !== id);
-    persistCollabRecords(next);
-    if (record) {
-      addCollabTimelineEntry('删除记录', `${record.patient} 牙位${record.tooth} 记录已删除`);
-    }
-  }
-
-  function addCollabTimelineEntry(type, detail) {
-    const entry = {
-      id: uid(),
-      type,
-      detail,
-      at: new Date().toISOString(),
-      deviceId: collabDevice?.id || '',
-      deviceName: collabDevice?.name || ''
-    };
-    const next = [entry, ...collabTimeline];
-    persistCollabTimeline(next);
-  }
-
-  function exportCollabData() {
-    if (!collabDevice) { alert('请先注册诊室设备'); return; }
-    const exportObj = {
-      type: 'collab-export',
-      version: '1.0',
-      exportedAt: new Date().toISOString(),
-      device: collabDevice,
-      records: collabRecords.filter((r) => r.deviceId === collabDevice.id)
-    };
-    const jsonStr = JSON.stringify(exportObj, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `collab-${collabDevice.id}-${getLocalDateString().replace(/-/g, '')}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    addCollabTimelineEntry('导出数据', `本诊室数据已导出，含 ${exportObj.records.length} 条记录`);
-  }
-
-  function handleCollabImportFile(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setCollabImportFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result;
-        if (typeof content !== 'string') throw new Error('文件格式错误');
-        const data = JSON.parse(content);
-        if (data.type !== 'collab-export' || !data.device || !data.records) {
-          throw new Error('非本系统协作导出文件');
-        }
-        if (data.device.id === collabDevice?.id) {
-          throw new Error('不能导入本设备导出的数据');
-        }
-        const conflicts = detectCollabConflicts(data.records);
-        setCollabImportData(data);
-        setCollabConflicts(conflicts);
-        const defaultResolutions = {};
-        conflicts.forEach((c) => { defaultResolutions[c.localRecord.id] = 'keepLocal'; });
-        setCollabConflictResolutions(defaultResolutions);
-      } catch (err) {
-        alert('导入失败：' + (err.message || '文件格式错误'));
-        setCollabImportData(null);
-        setCollabImportFileName('');
-        setCollabConflicts([]);
-        setCollabConflictResolutions({});
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  }
-
-  function detectCollabConflicts(importRecords) {
-    const conflicts = [];
-    importRecords.forEach((ir) => {
-      const localMatch = collabRecords.find(
-        (lr) => lr.patient === ir.patient && lr.tooth === ir.tooth
-      );
-      if (localMatch) {
-        const localNewer = localMatch.lastModifiedAt > ir.lastModifiedAt;
-        const sameVersion = localMatch.version === ir.version && localMatch.lastModifiedAt === ir.lastModifiedAt;
-        if (!sameVersion) {
-          conflicts.push({
-            localRecord: localMatch,
-            importRecord: ir,
-            localNewer
-          });
-        }
-      }
-    });
-    return conflicts;
-  }
-
-  function setConflictResolution(localRecordId, resolution) {
-    setCollabConflictResolutions((prev) => ({ ...prev, [localRecordId]: resolution }));
-  }
-
-  function executeCollabMerge() {
-    if (!collabImportData) return;
-    const importRecords = collabImportData.records || [];
-    const sourceDevice = collabImportData.device;
-    let nextRecords = [...collabRecords];
-    const timelineEntries = [];
-
-    const nonConflictImports = importRecords.filter((ir) => {
-      return !collabConflicts.some((c) => c.importRecord.id === ir.id);
-    });
-
-    nonConflictImports.forEach((ir) => {
-      nextRecords.push({ ...ir });
-      timelineEntries.push({ type: '无冲突导入', detail: `${ir.patient} 牙位${ir.tooth} 比色${ir.shade}，来源：${ir.deviceName || sourceDevice.name}` });
-    });
-
-    collabConflicts.forEach((conflict) => {
-      const resolution = collabConflictResolutions[conflict.localRecord.id] || 'keepLocal';
-      const lr = conflict.localRecord;
-      const ir = conflict.importRecord;
-
-      if (resolution === 'keepLocal') {
-        timelineEntries.push({
-          type: '冲突-保留本地',
-          detail: `${lr.patient} 牙位${lr.tooth}：本地版本(v${lr.version}) 优先，忽略导入版本(v${ir.version}，来源：${ir.deviceName || sourceDevice.name})`
-        });
-      } else if (resolution === 'useImport') {
-        nextRecords = nextRecords.map((r) => r.id === lr.id ? {
-          ...ir,
-          id: lr.id,
-          version: lr.version + 1,
-          lastModifiedAt: new Date().toISOString(),
-          timeline: [...(lr.timeline || []), { status: `冲突覆盖: 比色${ir.shade}`, at: today, by: `合并自 ${ir.deviceName || sourceDevice.name}` }]
-        } : r);
-        timelineEntries.push({
-          type: '冲突-采用导入',
-          detail: `${lr.patient} 牙位${lr.tooth}：采用导入版本(v${ir.version}，来源：${ir.deviceName || sourceDevice.name}) 替换本地(v${lr.version})`
-        });
-      } else if (resolution === 'duplicate') {
-        const dupRecord = {
-          ...ir,
-          id: uid(),
-          version: 1,
-          lastModifiedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          status: lr.status,
-          timeline: [{ status: lr.status, at: today, by: `副本：冲突自 ${ir.deviceName || sourceDevice.name}` }]
-        };
-        nextRecords = [dupRecord, ...nextRecords];
-        timelineEntries.push({
-          type: '冲突-生成副本',
-          detail: `${lr.patient} 牙位${lr.tooth}：本地(v${lr.version}) 与导入(v${ir.version}，来源：${ir.deviceName || sourceDevice.name}) 均保留，导入版本生成为新副本`
-        });
-      }
-    });
-
-    const conflictCount = collabConflicts.length;
-    const keptLocal = Object.values(collabConflictResolutions).filter((r) => r === 'keepLocal').length;
-    const usedImport = Object.values(collabConflictResolutions).filter((r) => r === 'useImport').length;
-    const duplicated = Object.values(collabConflictResolutions).filter((r) => r === 'duplicate').length;
-
-    persistCollabRecords(nextRecords);
-
-    const now = new Date().toISOString();
-    const newTimelineEntries = [
-      {
-        id: uid(),
-        type: '合并完成',
-        detail: `导入 ${importRecords.length} 条记录，冲突 ${conflictCount} 条（保留本地${keptLocal}，采用导入${usedImport}，生成副本${duplicated}）`,
-        at: now,
-        deviceId: collabDevice?.id || '',
-        deviceName: collabDevice?.name || ''
-      },
-      ...timelineEntries.map((te) => ({
-        id: uid(),
-        ...te,
-        at: now,
-        deviceId: collabDevice?.id || '',
-        deviceName: collabDevice?.name || ''
-      }))
-    ];
-    persistCollabTimeline([...newTimelineEntries, ...collabTimeline]);
-
-    cancelCollabImport();
-  }
-
-  function cancelCollabImport() {
-    setCollabImportData(null);
-    setCollabImportFileName('');
-    setCollabConflicts([]);
-    setCollabConflictResolutions({});
-  }
-
   const filteredPhotoProcesses = useMemo(() => {
     let processes = [...photoProcesses];
     if (photoProcessFilter === 'completed') {
@@ -1468,18 +1801,37 @@ function App() {
     return orders.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }, [deliveryOrders, deliveryOrderFilter]);
 
-  const collabMetrics = useMemo(() => {
-    const total = collabRecords.length;
-    const localCount = collabRecords.filter((r) => r.deviceId === collabDevice?.id).length;
-    const importedCount = total - localCount;
-    const devices = new Set(collabRecords.map((r) => r.deviceId));
+  const qcMetrics = useMemo(() => {
+    const withQc = records.map((r) => ({
+      record: r,
+      qc: getQcByRecordId(r.id),
+      progress: getQcProgress(r.id, r.status),
+      missing: getMissingQcItems(r.id, r.status)
+    }));
+    const total = records.length;
+    const completed = withQc.filter((w) => w.progress === 100).length;
+    const incomplete = withQc.filter((w) => w.progress > 0 && w.progress < 100).length;
+    const notStarted = withQc.filter((w) => w.progress === 0).length;
     return [
-      { label: '协作记录', value: total },
-      { label: '本诊室录入', value: localCount },
-      { label: '外诊室导入', value: importedCount },
-      { label: '来源诊室数', value: devices.size }
+      { label: '质控总览', value: total },
+      { label: '已达标', value: completed },
+      { label: '待完善', value: incomplete },
+      { label: '未开始', value: notStarted }
     ];
-  }, [collabRecords, collabDevice]);
+  }, [records, qcRecords]);
+
+  const filteredQcRecords = useMemo(() => {
+    let items = records.map((r) => ({
+      record: r,
+      qc: getQcByRecordId(r.id),
+      progress: getQcProgress(r.id, r.status),
+      missing: getMissingQcItems(r.id, r.status)
+    }));
+    if (qcFilter !== '全部') {
+      items = items.filter((w) => w.record.status === qcFilter);
+    }
+    return items.sort((a, b) => a.progress - b.progress || String(a.record.patient).localeCompare(String(b.record.patient)));
+  }, [records, qcRecords, qcFilter]);
 
   const next14Days = useMemo(() => getNext14Days(), [today]);
 
@@ -1604,14 +1956,23 @@ function App() {
           数据管理
         </button>
         <button
-          className={'tab ' + (activeTab === 'collab' ? 'active' : '')}
-          onClick={() => setActiveTab('collab')}
+          className={'tab ' + (activeTab === 'qualityControl' ? 'active' : '')}
+          onClick={() => setActiveTab('qualityControl')}
         >
-          <Monitor size={16} />
-          多诊室离线协作
-          {collabConflicts.length > 0 && (
-            <span className="tab-badge">{collabConflicts.length}</span>
+          <ShieldCheck size={16} />
+          牙色复诊闭环质控
+          {records.filter((r) => getMissingQcItems(r.id, r.status).length > 0).length > 0 && (
+            <span className="tab-badge">
+              {records.filter((r) => getMissingQcItems(r.id, r.status).length > 0).length}
+            </span>
           )}
+        </button>
+        <button
+          className={'tab ' + (activeTab === 'multiClinicCollab' ? 'active' : '')}
+          onClick={() => setActiveTab('multiClinicCollab')}
+        >
+          <GitMerge size={16} />
+          多诊室离线协作
         </button>
       </div>
 
@@ -3267,6 +3628,322 @@ function App() {
         </div>
       )}
 
+      {activeTab === 'qualityControl' && (
+        <>
+          <section className="metrics" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+            {qcMetrics.map((metric) => (
+              <article className={'metric ' + (metric.label === '待完善' && metric.value > 0 ? 'metric-qc-incomplete' : '')} key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </article>
+            ))}
+          </section>
+
+          <section className="workspace">
+            <section className="panel list-panel">
+              <div className="toolbar">
+                <div className="panel-title" style={{ marginBottom: 0, flex: 1 }}>
+                  <ShieldCheck size={18} />
+                  <h2>质控检查清单</h2>
+                </div>
+                <select value={qcFilter} onChange={(e) => setQcFilter(e.target.value)}>
+                  <option value="全部">全部状态</option>
+                  {appConfig.statuses.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="qc-legend">
+                {appConfig.statuses.map((status) => {
+                  const items = appConfig.qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+                  return (
+                    <div key={status} className="qc-legend-item">
+                      <span className={'status ' + statusClass(status)}>{status}</span>
+                      <span className="qc-legend-label">需完成: {items.map((i) => i.label).join('、')}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {filteredQcRecords.length > 0 ? (
+                <div className="records">
+                  {filteredQcRecords.map(({ record, qc, progress, missing }) => (
+                    <article
+                      className={'record qc-record ' + (progress === 100 ? 'qc-complete' : progress > 0 ? 'qc-inprogress' : 'qc-notstarted') + ' ' + (selectedQcRecord?.recordId === record.id ? 'selected' : '')}
+                      key={record.id}
+                      onClick={() => {
+                        setSelectedQcRecord({ record, qc: qc || ensureQcForRecord(record.id), progress, missing });
+                        setSelected(record);
+                      }}
+                    >
+                      <div className="record-head">
+                        <div>
+                          <h3>{record.patient}</h3>
+                          <p>{`牙位 ${record.tooth} · ${record.shade}`}</p>
+                        </div>
+                        <span className={'status ' + statusClass(record.status)}>{record.status}</span>
+                      </div>
+
+                      <div className="qc-progress-bar" style={{ marginTop: '10px' }}>
+                        {appConfig.qcCheckItems.map((ci) => {
+                          const isRequired = ci.requiredFor.includes(record.status);
+                          const isChecked = qc?.items[ci.key]?.checked;
+                          if (!isRequired) return null;
+                          return (
+                            <div
+                              key={ci.key}
+                              className={'qc-progress-dot ' + (isChecked ? 'done' : 'pending')}
+                              title={ci.label}
+                            />
+                          );
+                        })}
+                      </div>
+
+                      <p className="record-detail" style={{ marginTop: '8px' }}>
+                        质控进度：{progress}%
+                        {missing.length > 0 && (
+                          <span className="qc-missing-tag">
+                            <ShieldAlert size={12} /> 缺: {missing.map((m) => m.label).join('、')}
+                          </span>
+                        )}
+                      </p>
+
+                      <div className="actions" onClick={(e) => e.stopPropagation()}>
+                        {appConfig.qcCheckItems.filter((ci) => ci.requiredFor.includes(record.status)).map((ci) => {
+                          const isChecked = qc?.items[ci.key]?.checked;
+                          return (
+                            <button
+                              key={ci.key}
+                              type="button"
+                              className={isChecked ? 'qc-item-done' : ''}
+                              onClick={() => toggleQcItem(record.id, ci.key)}
+                            >
+                              {isChecked ? <CheckCheck size={14} /> : <Square size={14} />}
+                              {ci.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <ShieldCheck size={48} style={{ color: '#d0d5dd' }} />
+                  <h3>暂无质控记录</h3>
+                  <p className="empty">在比色记录中添加记录后，质控检查会自动关联。</p>
+                </div>
+              )}
+            </section>
+
+            <aside className="panel detail-panel">
+              <div className="panel-title">
+                <ShieldCheck size={18} />
+                <h2>质控详情</h2>
+              </div>
+              {selectedQcRecord ? (
+                <div className="detail">
+                  <div className="qc-detail-header">
+                    <div>
+                      <h3>{selectedQcRecord.record.patient}</h3>
+                      <p>{`牙位 ${selectedQcRecord.record.tooth} · ${selectedQcRecord.record.shade}`}</p>
+                    </div>
+                    <span className={'status ' + statusClass(selectedQcRecord.record.status)}>
+                      {selectedQcRecord.record.status}
+                    </span>
+                  </div>
+
+                  <div className="qc-detail-progress">
+                    <div className="qc-progress-ring">
+                      <svg viewBox="0 0 36 36" className="qc-ring-svg">
+                        <path
+                          className="qc-ring-bg"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path
+                          className="qc-ring-fill"
+                          strokeDasharray={`${selectedQcRecord.progress}, 100`}
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                      </svg>
+                      <span className="qc-ring-text">{selectedQcRecord.progress}%</span>
+                    </div>
+                    <div className="qc-progress-summary">
+                      <strong>当前状态质控进度</strong>
+                      <p>
+                        {selectedQcRecord.progress === 100
+                          ? '所有必检项已完成，可切换至下一状态'
+                          : `还需完成 ${selectedQcRecord.missing.length} 项检查`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="detail-section-divider">
+                    <ClipboardList size={16} />
+                    检查项清单（当前状态：{selectedQcRecord.record.status}）
+                  </div>
+
+                  <div className="photo-checklist">
+                    {appConfig.qcCheckItems.map((ci) => {
+                      const isRequired = ci.requiredFor.includes(selectedQcRecord.record.status);
+                      const isChecked = selectedQcRecord.qc?.items[ci.key]?.checked;
+                      const remark = selectedQcRecord.qc?.items[ci.key]?.remark || '';
+                      const checkedAt = selectedQcRecord.qc?.items[ci.key]?.checkedAt;
+                      const QcIcon = getQcIcon(ci.icon);
+
+                      if (!isRequired && !isChecked) {
+                        return (
+                          <div key={ci.key} className="checklist-item qc-item-irrelevant">
+                            <div className="checklist-icon"><Square size={20} /></div>
+                            <div className="checklist-content">
+                              <div className="checklist-header">
+                                <QcIcon size={16} />
+                                <strong>{ci.label}</strong>
+                                <span className="qc-irrelevant-badge">当前状态无需</span>
+                              </div>
+                              <p className="checklist-empty">在更后续的状态中需要完成</p>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={ci.key} className={'checklist-item ' + (isChecked ? 'checked' : '') + (!isRequired ? ' qc-item-optional' : '')}>
+                          <div className="checklist-icon">
+                            {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
+                          </div>
+                          <div className="checklist-content">
+                            <div className="checklist-header">
+                              <QcIcon size={16} />
+                              <strong>{ci.label}</strong>
+                              {isChecked && <span className="checklist-badge">已确认</span>}
+                              {!isRequired && isChecked && <span className="qc-optional-badge">可选</span>}
+                              {isRequired && !isChecked && <span className="qc-required-badge">必检</span>}
+                            </div>
+                            <p className="qc-item-desc">{ci.description}</p>
+                            {isChecked && checkedAt && (
+                              <span className="checklist-env">
+                                <Clock size={12} /> 确认于 {new Date(checkedAt).toLocaleString('zh-CN')}
+                              </span>
+                            )}
+                            <div className="qc-remark-row" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="text"
+                                placeholder="添加备注..."
+                                value={remark}
+                                onChange={(e) => {
+                                  const updated = updateQcRemark(selectedQcRecord.record.id, ci.key, e.target.value);
+                                  setSelectedQcRecord({
+                                    ...selectedQcRecord,
+                                    qc: updated,
+                                    missing: getMissingQcItems(updated.recordId, selectedQcRecord.record.status)
+                                  });
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className={isChecked ? 'qc-toggle-btn qc-toggle-uncheck' : 'qc-toggle-btn qc-toggle-check'}
+                                onClick={() => {
+                                  const updated = toggleQcItem(selectedQcRecord.record.id, ci.key);
+                                  const newMissing = getMissingQcItems(updated.recordId, selectedQcRecord.record.status);
+                                  const newProgress = getQcProgress(updated.recordId, selectedQcRecord.record.status);
+                                  setSelectedQcRecord({
+                                    ...selectedQcRecord,
+                                    qc: updated,
+                                    progress: newProgress,
+                                    missing: newMissing
+                                  });
+                                }}
+                              >
+                                {isChecked ? <><X size={14} />撤销</> : <><CheckCheck size={14} />确认</>}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="checklist-summary">
+                    {selectedQcRecord.progress === 100 ? (
+                      <p className="checklist-complete">✓ 当前状态所有必检项已达标</p>
+                    ) : (
+                      <p className="checklist-progress">
+                        缺少关键步骤：{selectedQcRecord.missing.map((m) => m.label).join('、')}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="detail-actions">
+                    <p className="hint">状态流转（需满足质控条件）：</p>
+                    <div className="actions">
+                      {appConfig.statuses.map((status) => {
+                        const missingForTarget = getMissingQcItems(selectedQcRecord.record.id, status);
+                        const canTransition = missingForTarget.length === 0;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateStatus(selectedQcRecord.record.id, status)}
+                            disabled={selectedQcRecord.record.status === status}
+                            title={canTransition ? `切换至${status}` : `需先完成: ${missingForTarget.map((m) => m.label).join('、')}`}
+                          >
+                            {status}
+                            {!canTransition && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state" style={{ padding: '40px 20px' }}>
+                  <ShieldCheck size={48} style={{ color: '#d0d5dd' }} />
+                  <p className="empty">点击左侧任意记录查看质控详情和检查项。</p>
+                  <p className="hint">不同修复状态下需要完成的检查项不同，缺少关键步骤无法直接标记完成。</p>
+                </div>
+              )}
+            </aside>
+          </section>
+
+          <section className="insights">
+            <div className="panel">
+              <div className="panel-title">
+                <ClipboardList size={18} />
+                <h2>质控规则说明</h2>
+              </div>
+              <div className="qc-rules-grid">
+                {appConfig.statuses.map((status) => {
+                  const items = appConfig.qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+                  const count = records.filter((r) => r.status === status).length;
+                  const doneCount = records.filter((r) => r.status === status && getQcProgress(r.id, status) === 100).length;
+                  return (
+                    <div key={status} className="qc-rule-card">
+                      <div className="qc-rule-header">
+                        <span className={'status ' + statusClass(status)}>{status}</span>
+                        <span className="qc-rule-count">{doneCount}/{count} 达标</span>
+                      </div>
+                      <div className="qc-rule-items">
+                        {items.map((ci) => {
+                          const QcIcon = getQcIcon(ci.icon);
+                          return (
+                            <div key={ci.key} className="qc-rule-item">
+                              <QcIcon size={14} />
+                              <span>{ci.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
       {activeTab === 'dataManagement' && (
         <section className="workspace data-management">
           <div className="panel form-panel data-panel">
@@ -3414,286 +4091,495 @@ function App() {
         </section>
       )}
 
-      {activeTab === 'collab' && (
-        <section className="workspace collab-workspace">
-          <div className="panel form-panel">
-            <div className="panel-title">
-              <Monitor size={18} />
-              <h2>诊室设备</h2>
-            </div>
-            {!collabDevice ? (
-              <div className="collab-device-register">
-                <p className="collab-hint">首次使用需注册当前诊室设备，注册后设备标识将绑定在本浏览器中，用于多诊室协作时识别数据来源。</p>
-                <form className="collab-register-form" onSubmit={(e) => { e.preventDefault(); registerDevice(e.target.deviceName.value); }}>
-                  <div className="field">
-                    <label>诊室名称</label>
-                    <input name="deviceName" placeholder="例如：1号诊室" required />
-                  </div>
-                  <button type="submit" className="primary">
-                    <Monitor size={16} />注册设备
+      {activeTab === 'multiClinicCollab' && (
+        <section className="workspace collab-workspace" style={{ gridTemplateColumns: '420px minmax(0, 1fr)', gap: '18px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div className="panel data-panel">
+              <div className="panel-title">
+                <Tablet size={18} />
+                <h2>当前设备</h2>
+              </div>
+              <p className="data-description">
+                选择当前使用的诊室设备，所有新录入的记录将标记为该设备来源。
+              </p>
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {appConfig.devices.map(device => (
+                  <button
+                    key={device.id}
+                    type="button"
+                    onClick={() => switchDevice(device.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: currentDeviceId === device.id
+                        ? `2px solid ${device.color}`
+                        : '2px solid #e5e7eb',
+                      background: currentDeviceId === device.id ? '#f0fdfa' : '#fff',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: device.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      flexShrink: 0
+                    }}>
+                      <Tablet size={20} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#111827' }}>{device.name}</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{device.room}</div>
+                    </div>
+                    {currentDeviceId === device.id && (
+                      <CheckCircle2 size={18} style={{ color: device.color }} />
+                    )}
                   </button>
-                </form>
-              </div>
-            ) : (
-              <div className="collab-device-info">
-                <div className="collab-device-card">
-                  <div className="collab-device-id">
-                    <Monitor size={24} style={{ color: 'var(--accent)' }} />
-                    <div>
-                      <strong>{collabDevice.name}</strong>
-                      <span className="collab-device-code">{collabDevice.id}</span>
-                    </div>
-                  </div>
-                  <span className="collab-device-since">注册于 {new Date(collabDevice.registeredAt).toLocaleString('zh-CN')}</span>
-                </div>
-                <div className="collab-form-section">
-                  <h3><Plus size={16} />录入牙色记录</h3>
-                  <form className="collab-add-form" onSubmit={addCollabRecord}>
-                    <div className="collab-form-grid">
-                      <div className="field">
-                        <label>患者姓名</label>
-                        <input value={collabForm.patient} onChange={(e) => setCollabForm({ ...collabForm, patient: e.target.value })} placeholder="林雨" required />
-                      </div>
-                      <div className="field">
-                        <label>牙位</label>
-                        <select value={collabForm.tooth} onChange={(e) => setCollabForm({ ...collabForm, tooth: e.target.value })}>
-                          {["11","12","13","14","15","16","17","18","21","22","23","24","25","26","27","28","31","32","33","34","35","36","37","38","41","42","43","44","45","46","47","48"].map((t) => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                      </div>
-                      <div className="field">
-                        <label>比色结果</label>
-                        <select value={collabForm.shade} onChange={(e) => setCollabForm({ ...collabForm, shade: e.target.value })}>
-                          {["A1","A2","A3","B1","B2","C1","D2"].map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div className="field">
-                        <label>复诊日期</label>
-                        <input type="date" value={collabForm.followUp} onChange={(e) => setCollabForm({ ...collabForm, followUp: e.target.value })} />
-                      </div>
-                    </div>
-                    <div className="field">
-                      <label>拍照备注</label>
-                      <textarea value={collabForm.photoNote} onChange={(e) => setCollabForm({ ...collabForm, photoNote: e.target.value })} placeholder="自然光下正面照，颈部略深" rows={2} />
-                    </div>
-                    <button type="submit" className="primary"><Plus size={16} />添加记录</button>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="panel list-panel">
-            <div className="panel-title">
-              <Layers size={18} />
-              <h2>协作记录</h2>
-            </div>
-            <section className="metrics collab-metrics">
-              {collabMetrics.map((m) => (
-                <article className="metric" key={m.label}>
-                  <span>{m.label}</span>
-                  <strong>{m.value}</strong>
-                </article>
-              ))}
-            </section>
-            {collabRecords.length === 0 ? (
-              <p className="empty">暂无协作记录，请先注册设备并录入数据</p>
-            ) : (
-              <ul className="item-list collab-item-list">
-                {collabRecords.map((r) => (
-                  <li key={r.id} className={'item-card collab-item' + (r.deviceId === collabDevice?.id ? ' collab-local' : ' collab-remote')}>
-                    <div className="collab-item-header">
-                      <strong className="collab-item-patient">{r.patient}</strong>
-                      <span className={'collab-device-badge ' + (r.deviceId === collabDevice?.id ? 'badge-local' : 'badge-remote')}>
-                        {r.deviceName || r.deviceId}
-                      </span>
-                    </div>
-                    <div className="collab-item-meta">
-                      <span>牙位 {r.tooth}</span>
-                      <span>比色 {r.shade}</span>
-                      <span className={'status-pill ' + statusClass(r.status)}>{r.status}</span>
-                    </div>
-                    {r.photoNote && <p className="collab-item-note">{r.photoNote}</p>}
-                    <div className="collab-item-footer">
-                      <span className="collab-version">v{r.version}</span>
-                      <span className="collab-modified">{new Date(r.lastModifiedAt).toLocaleString('zh-CN')}</span>
-                      {r.deviceId === collabDevice?.id && (
-                        <div className="collab-item-actions">
-                          {r.status !== '制作中' && <button className="btn-icon" title="标记为制作中" onClick={() => updateCollabRecordStatus(r.id, '制作中')}><RotateCcw size={14} /></button>}
-                          {r.status !== '已完成修复' && <button className="btn-icon" title="标记为已完成修复" onClick={() => updateCollabRecordStatus(r.id, '已完成修复')}><CheckCircle2 size={14} /></button>}
-                          <button className="btn-icon" title="删除" onClick={() => removeCollabRecord(r.id)}><Trash2 size={14} /></button>
-                        </div>
-                      )}
-                    </div>
-                  </li>
                 ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="panel form-panel collab-transfer-panel">
-            <div className="panel-title">
-              <Merge size={18} />
-              <h2>导入导出</h2>
+              </div>
             </div>
-            {!collabDevice ? (
-              <p className="collab-hint">请先注册诊室设备后再使用导入导出功能</p>
-            ) : (
-              <>
-                <div className="collab-transfer-section">
-                  <h4><Download size={16} />导出本诊室数据</h4>
-                  <p className="collab-hint">将本诊室录入的记录导出为 JSON 文件，供其他诊室设备导入合并。</p>
-                  <button className="primary" type="button" onClick={exportCollabData}>
-                    <Download size={16} />导出协作数据
-                  </button>
+
+            <div className="panel data-panel">
+              <div className="panel-title">
+                <Zap size={18} />
+                <h2>模拟其他设备录入</h2>
+              </div>
+              <p className="data-description">
+                模拟从其他诊室平板导入数据，用于测试离线协作合并流程。
+              </p>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <label>
+                  <span>选择模拟设备</span>
+                  <select
+                    value={collabSimulateDevice}
+                    onChange={(e) => setCollabSimulateDevice(e.target.value)}
+                  >
+                    {appConfig.devices.filter(d => d.id !== currentDeviceId).map(d => (
+                      <option key={d.id} value={d.id}>{d.name}（{d.room}）</option>
+                    ))}
+                  </select>
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label>
+                    <span>患者姓名</span>
+                    <input
+                      type="text"
+                      value={collabForm.patient}
+                      onChange={(e) => setCollabForm({ ...collabForm, patient: e.target.value })}
+                      placeholder="林雨"
+                    />
+                  </label>
+                  <label>
+                    <span>牙位</span>
+                    <select
+                      value={collabForm.tooth}
+                      onChange={(e) => setCollabForm({ ...collabForm, tooth: e.target.value })}
+                    >
+                      {appConfig.fields.find(f => f.key === 'tooth').options.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>比色结果</span>
+                    <select
+                      value={collabForm.shade}
+                      onChange={(e) => setCollabForm({ ...collabForm, shade: e.target.value })}
+                    >
+                      {appConfig.fields.find(f => f.key === 'shade').options.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>状态</span>
+                    <select
+                      value={collabForm.status}
+                      onChange={(e) => setCollabForm({ ...collabForm, status: e.target.value })}
+                    >
+                      {appConfig.statuses.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-                <div className="collab-transfer-section">
-                  <h4><HardDriveUpload size={16} />导入其他诊室数据</h4>
-                  <p className="collab-hint">选择其他诊室导出的 JSON 文件，系统将自动检测同一患者同一牙位的冲突记录。</p>
-                  {!collabImportData ? (
-                    <div className="collab-import-area">
-                      <label className="import-label">
-                        <Upload size={32} style={{ color: '#9ca3af' }} />
-                        <span>选择其他诊室导出的 JSON 文件</span>
-                        <p className="hint">仅支持由本模块导出的协作数据文件</p>
-                        <input type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={handleCollabImportFile} />
-                      </label>
-                      {collabImportFileName && <p className="import-filename">已选择：{collabImportFileName}</p>}
-                    </div>
-                  ) : (
-                    <div className="collab-import-result">
-                      <div className="import-preview-header">
-                        <CheckCircle2 size={20} style={{ color: 'var(--accent)' }} />
-                        <h3>文件解析成功</h3>
-                      </div>
-                      <div className="collab-import-source">
-                        <Monitor size={18} />
-                        <div>
-                          <strong>来源诊室：{collabImportData.device.name}</strong>
-                          <span>设备ID：{collabImportData.device.id}</span>
-                        </div>
-                      </div>
-                      <div className="collab-import-stats">
-                        <div className="data-stat-item">
-                          <ClipboardList size={20} />
-                          <div>
-                            <strong>{collabImportData.records.length}</strong>
-                            <span>导入记录</span>
-                          </div>
-                        </div>
-                        <div className="data-stat-item">
-                          <AlertTriangle size={20} style={{ color: '#d97706' }} />
-                          <div>
-                            <strong>{collabConflicts.length}</strong>
-                            <span>冲突记录</span>
-                          </div>
-                        </div>
-                        <div className="data-stat-item">
-                          <CheckCircle2 size={20} style={{ color: '#059669' }} />
-                          <div>
-                            <strong>{collabImportData.records.length - collabConflicts.length}</strong>
-                            <span>无冲突</span>
-                          </div>
-                        </div>
-                      </div>
-                      {collabConflicts.length > 0 && (
-                        <div className="collab-conflicts">
-                          <div className="collab-conflicts-header">
-                            <AlertOctagon size={18} />
-                            <h3>冲突记录处理（{collabConflicts.length} 条）</h3>
-                          </div>
-                          <p className="collab-hint">以下记录与本地数据存在同一患者同一牙位冲突，请逐条选择处理方式。</p>
-                          <ul className="collab-conflict-list">
-                            {collabConflicts.map((c, idx) => (
-                              <li key={c.localRecord.id} className="collab-conflict-item">
-                                <div className="conflict-patient-info">
-                                  <strong>{c.localRecord.patient}</strong>
-                                  <span>牙位 {c.localRecord.tooth}</span>
-                                </div>
-                                <div className="conflict-compare">
-                                  <div className="conflict-side conflict-local">
-                                    <span className="conflict-side-label">本地版本</span>
-                                    <span>比色 {c.localRecord.shade}</span>
-                                    <span>v{c.localRecord.version}</span>
-                                    <span className="conflict-time">{new Date(c.localRecord.lastModifiedAt).toLocaleString('zh-CN')}</span>
-                                  </div>
-                                  <div className="conflict-vs">VS</div>
-                                  <div className="conflict-side conflict-import">
-                                    <span className="conflict-side-label">导入版本</span>
-                                    <span>比色 {c.importRecord.shade}</span>
-                                    <span>v{c.importRecord.version}</span>
-                                    <span className="conflict-time">{new Date(c.importRecord.lastModifiedAt).toLocaleString('zh-CN')}</span>
-                                  </div>
-                                </div>
-                                <div className="conflict-resolution">
-                                  <label className={'conflict-option' + (collabConflictResolutions[c.localRecord.id] === 'keepLocal' ? ' selected' : '')}>
-                                    <input type="radio" name={`conflict-${idx}`} checked={collabConflictResolutions[c.localRecord.id] === 'keepLocal'} onChange={() => setConflictResolution(c.localRecord.id, 'keepLocal')} />
-                                    <div className="conflict-option-content">
-                                      <strong>保留本地</strong>
-                                      <span>忽略导入，保持本地数据不变</span>
-                                    </div>
-                                  </label>
-                                  <label className={'conflict-option' + (collabConflictResolutions[c.localRecord.id] === 'useImport' ? ' selected' : '')}>
-                                    <input type="radio" name={`conflict-${idx}`} checked={collabConflictResolutions[c.localRecord.id] === 'useImport'} onChange={() => setConflictResolution(c.localRecord.id, 'useImport')} />
-                                    <div className="conflict-option-content">
-                                      <strong>采用导入</strong>
-                                      <span>用导入版本替换本地记录</span>
-                                    </div>
-                                  </label>
-                                  <label className={'conflict-option' + (collabConflictResolutions[c.localRecord.id] === 'duplicate' ? ' selected' : '')}>
-                                    <input type="radio" name={`conflict-${idx}`} checked={collabConflictResolutions[c.localRecord.id] === 'duplicate'} onChange={() => setConflictResolution(c.localRecord.id, 'duplicate')} />
-                                    <div className="conflict-option-content">
-                                      <strong>生成副本</strong>
-                                      <span>同时保留两份，导入版本创建新记录</span>
-                                    </div>
-                                  </label>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      <div className="import-actions">
-                        <button type="button" className="secondary" onClick={cancelCollabImport}><X size={16} />取消</button>
-                        <button type="button" className="primary" onClick={executeCollabMerge}><Merge size={16} />确认合并</button>
-                      </div>
-                    </div>
+                <label>
+                  <span>拍照备注</span>
+                  <textarea
+                    value={collabForm.photoNote}
+                    onChange={(e) => setCollabForm({ ...collabForm, photoNote: e.target.value })}
+                    placeholder="请输入拍照备注"
+                  />
+                </label>
+                <label>
+                  <span>复诊日期</span>
+                  <input
+                    type="date"
+                    value={collabForm.followUp}
+                    onChange={(e) => setCollabForm({ ...collabForm, followUp: e.target.value })}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={simulateAddRecord}
+                  style={{ marginTop: '4px' }}
+                >
+                  <RefreshCw size={16} />模拟导入该设备数据
+                </button>
+              </div>
+            </div>
+
+            <div className="panel data-panel">
+              <div className="panel-title">
+                <Download size={18} />
+                <h2>导出本设备数据</h2>
+              </div>
+              <p className="data-description">
+                将当前设备的所有记录和患者档案导出为 JSON 文件，用于导入其他设备。
+              </p>
+              <div className="data-stats">
+                <div className="data-stat-item">
+                  <ClipboardList size={20} />
+                  <div>
+                    <strong>{records.length}</strong>
+                    <span>牙色记录</span>
+                  </div>
+                </div>
+                <div className="data-stat-item">
+                  <Users size={20} />
+                  <div>
+                    <strong>{patients.length}</strong>
+                    <span>患者档案</span>
+                  </div>
+                </div>
+              </div>
+              <button type="button" className="primary" onClick={exportCollabData}>
+                <Download size={18} />导出 {getDeviceInfo(currentDeviceId).name} 数据
+              </button>
+            </div>
+
+            <div className="panel data-panel">
+              <div className="panel-title">
+                <HardDriveUpload size={18} />
+                <h2>导入其他设备数据</h2>
+              </div>
+              <p className="data-description">
+                选择从其他诊室平板导出的 JSON 文件，系统将自动检测冲突并提供处理方式。
+              </p>
+              {!collabImportPreview ? (
+                <div className="collab-import-area">
+                  <label className="import-label">
+                    <Upload size={32} style={{ color: '#9ca3af' }} />
+                    <span>点击选择 JSON 文件或拖拽到此处</span>
+                    <p className="hint">仅支持由本系统多诊室协作功能导出的数据文件</p>
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      style={{ display: 'none' }}
+                      onChange={handleCollabImportFile}
+                    />
+                  </label>
+                  {collabImportFileName && (
+                    <p className="import-filename">已选择：{collabImportFileName}</p>
                   )}
                 </div>
-              </>
-            )}
+              ) : (
+                <div className="collab-import-result">
+                  <div className="collab-import-source">
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '10px',
+                      background: getDeviceInfo(collabImportPreview.sourceDeviceId).color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      flexShrink: 0
+                    }}>
+                      <Tablet size={22} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <strong>{collabImportPreview.sourceDeviceName}</strong>
+                      <span>
+                        {getDeviceInfo(collabImportPreview.sourceDeviceId).room}
+                        {collabImportPreview.exportedAt && ` · 导出时间 ${formatDateTime(collabImportPreview.exportedAt)}`}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="collab-import-stats">
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <ClipboardList size={20} />
+                      <div>
+                        <strong>{collabImportPreview.totalRecords}</strong>
+                        <span>记录总数</span>
+                      </div>
+                    </div>
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <Plus size={20} />
+                      <div>
+                        <strong style={{ color: '#059669' }}>{collabImportPreview.addedRecords?.length || 0}</strong>
+                        <span>新增记录</span>
+                      </div>
+                    </div>
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <AlertTriangle size={20} />
+                      <div>
+                        <strong style={{ color: '#dc2626' }}>{collabImportPreview.conflicts?.length || 0}</strong>
+                        <span>冲突记录</span>
+                      </div>
+                    </div>
+                  </div>
+                  {(!collabConflicts || collabConflicts.length === 0) ? (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button type="button" className="secondary" onClick={cancelCollabImport}>
+                        <X size={16} />取消
+                      </button>
+                      <button type="button" className="primary" onClick={confirmCollabImport}>
+                        <CheckCircle2 size={16} />确认导入
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="panel list-panel collab-timeline-panel">
-            <div className="panel-title">
-              <Clock size={18} />
-              <h2>协作时间线</h2>
-            </div>
-            {collabTimeline.length === 0 ? (
-              <p className="empty">暂无协作时间线记录</p>
-            ) : (
-              <ul className="collab-timeline-list">
-                {collabTimeline.map((entry) => (
-                  <li key={entry.id} className={'collab-timeline-entry collab-tl-' + entry.type.replace(/[^\w]/g, '-').toLowerCase()}>
-                    <div className="collab-tl-icon">
-                      {entry.type.includes('冲突') ? <AlertOctagon size={14} /> :
-                       entry.type === '合并完成' ? <Merge size={14} /> :
-                       entry.type === '设备注册' ? <Monitor size={14} /> :
-                       entry.type.includes('导出') ? <Download size={14} /> :
-                       entry.type.includes('导入') ? <HardDriveUpload size={14} /> :
-                       <Clock size={14} />}
-                    </div>
-                    <div className="collab-tl-content">
-                      <div className="collab-tl-header">
-                        <span className="collab-tl-type">{entry.type}</span>
-                        {entry.deviceName && <span className="collab-tl-device">{entry.deviceName}</span>}
-                      </div>
-                      <p className="collab-tl-detail">{entry.detail}</p>
-                      <span className="collab-tl-time">{new Date(entry.at).toLocaleString('zh-CN')}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {collabConflicts && collabConflicts.length > 0 && (
+              <div className="panel data-panel collab-conflicts">
+                <div className="collab-conflicts-header">
+                  <AlertTriangle size={20} />
+                  <h3>检测到 {collabConflicts.length} 条冲突记录，请选择处理方式</h3>
+                </div>
+                <ul className="collab-conflict-list">
+                  {collabConflicts.map(conflict => {
+                    const localInfo = getDeviceInfo(conflict.local.deviceId);
+                    const importInfo = getDeviceInfo(conflict.import.deviceId);
+                    return (
+                      <li key={conflict.key} className="collab-conflict-item">
+                        <div className="conflict-patient-info">
+                          <Users size={18} style={{ color: 'var(--accent)' }} />
+                          <strong>{conflict.patient}</strong>
+                          <span>· 牙位 {conflict.tooth}</span>
+                        </div>
+                        <div className="conflict-compare">
+                          <div className="conflict-side conflict-local">
+                            <div className="conflict-side-label" style={{ color: localInfo.color }}>
+                              本地版本 · {localInfo.name}
+                            </div>
+                            <div><strong style={{ fontSize: '16px' }}>{conflict.local.shade}</strong> · {conflict.local.status}</div>
+                            <div style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px' }}>
+                              {conflict.local.photoNote || '无备注'}
+                            </div>
+                            <div className="conflict-time">
+                              v{conflict.local.version} · {formatDateTime(conflict.local.lastModified)}
+                            </div>
+                          </div>
+                          <div className="conflict-vs">VS</div>
+                          <div className="conflict-side conflict-import">
+                            <div className="conflict-side-label" style={{ color: importInfo.color }}>
+                              导入版本 · {importInfo.name}
+                            </div>
+                            <div><strong style={{ fontSize: '16px' }}>{conflict.import.shade}</strong> · {conflict.import.status}</div>
+                            <div style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px' }}>
+                              {conflict.import.photoNote || '无备注'}
+                            </div>
+                            <div className="conflict-time">
+                              v{conflict.import.version} · {formatDateTime(conflict.import.lastModified)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="conflict-resolution">
+                          <label
+                            className={`conflict-option ${conflict.resolution === 'keepLocal' ? 'selected' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name={`resolution-${conflict.key}`}
+                              checked={conflict.resolution === 'keepLocal'}
+                              onChange={() => setConflictResolution(conflict.key, 'keepLocal')}
+                            />
+                            <div className="conflict-option-content">
+                              <strong>保留本地</strong>
+                              <span>保留当前设备的数据，忽略导入版本</span>
+                            </div>
+                          </label>
+                          <label
+                            className={`conflict-option ${conflict.resolution === 'useImport' ? 'selected' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name={`resolution-${conflict.key}`}
+                              checked={conflict.resolution === 'useImport'}
+                              onChange={() => setConflictResolution(conflict.key, 'useImport')}
+                            />
+                            <div className="conflict-option-content">
+                              <strong>采用导入</strong>
+                              <span>用导入的数据覆盖当前本地版本</span>
+                            </div>
+                          </label>
+                          <label
+                            className={`conflict-option ${conflict.resolution === 'makeCopy' ? 'selected' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name={`resolution-${conflict.key}`}
+                              checked={conflict.resolution === 'makeCopy'}
+                              onChange={() => setConflictResolution(conflict.key, 'makeCopy')}
+                            />
+                            <div className="conflict-option-content">
+                              <strong>生成副本</strong>
+                              <span>两者都保留，导入数据作为副本新增</span>
+                            </div>
+                          </label>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="import-actions" style={{ marginTop: '16px' }}>
+                  <button type="button" className="secondary" onClick={cancelCollabImport}>
+                    <X size={16} />取消导入
+                  </button>
+                  <button type="button" className="primary" onClick={confirmCollabImport}>
+                    <GitMerge size={16} />确认合并 ({collabConflicts.length} 条冲突)
+                  </button>
+                </div>
+              </div>
             )}
+
+            <div className="panel data-panel collab-timeline-panel">
+              <div className="panel-title">
+                <History size={18} />
+                <h2>协作操作时间线</h2>
+              </div>
+              {collabTimeline.length === 0 ? (
+                <div className="shade-preview-empty">
+                  <History size={32} style={{ opacity: 0.3 }} />
+                  <p>暂无协作操作记录</p>
+                  <p className="hint" style={{ marginTop: '4px', fontSize: '13px' }}>
+                    切换设备、导入导出、处理冲突等操作会记录在此
+                  </p>
+                </div>
+              ) : (
+                <ul className="collab-timeline-list">
+                  {collabTimeline.slice(0, 50).map(entry => {
+                    const device = getDeviceInfo(entry.deviceId);
+                    const IconForType = () => {
+                      switch (entry.type) {
+                        case 'device-switch': return <RefreshCw size={14} />;
+                        case 'export': return <Download size={14} />;
+                        case 'import-added':
+                        case 'import-patients': return <Plus size={14} />;
+                        case 'conflict-resolve-keep': return <ShieldCheck size={14} />;
+                        case 'conflict-resolve-import': return <ArrowLeftRight size={14} />;
+                        case 'conflict-resolve-copy': return <Copy size={14} />;
+                        case 'simulate': return <Zap size={14} />;
+                        default: return <Clock size={14} />;
+                      }
+                    };
+                    const typeClass = entry.type?.includes('conflict') ? ' conflict-entry' : '';
+                    return (
+                      <li key={entry.id} className={`collab-timeline-entry${typeClass}`}>
+                        <div className="collab-tl-icon" style={{
+                          background: entry.type?.includes('conflict')
+                            ? '#fef2f2' : device.color ? `${device.color}15` : '#f3f4f6',
+                          color: entry.type?.includes('conflict') ? '#dc2626' : (device.color || '#6b7280')
+                        }}>
+                          <IconForType />
+                        </div>
+                        <div className="collab-tl-content">
+                          <div className="collab-tl-header">
+                            <span className="collab-tl-type">{entry.title}</span>
+                            {entry.deviceId && (
+                              <span className="collab-tl-device" style={{
+                                background: `${device.color}15`,
+                                color: device.color
+                              }}>
+                                {device.name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="collab-tl-detail">{entry.detail}</div>
+                          <div className="collab-tl-time">{formatDateTime(entry.at)}</div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            <div className="panel data-panel">
+              <div className="panel-title">
+                <Layers size={18} />
+                <h2>记录设备来源一览</h2>
+              </div>
+              <p className="data-description">
+                查看当前所有记录的设备来源、最后修改时间和版本号信息。
+              </p>
+              <div className="records" style={{ maxHeight: '380px' }}>
+                {records.length === 0 ? (
+                  <p className="empty">暂无记录</p>
+                ) : (
+                  records.map(record => {
+                    const device = getDeviceInfo(record.deviceId);
+                    return (
+                      <div key={record.id} className="record">
+                        <div className="record-head">
+                          <div>
+                            <h3>{record.patient}</h3>
+                            <p>牙位 {record.tooth} · 色号 {record.shade}</p>
+                          </div>
+                          <span className={`status ${statusClass(record.status)}`}>{record.status}</span>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginTop: '10px',
+                          paddingTop: '10px',
+                          borderTop: '1px solid #f3f4f6',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '3px 8px',
+                            background: `${device.color}15`,
+                            color: device.color,
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '700'
+                          }}>
+                            <Tablet size={12} />
+                            {device.name}
+                          </span>
+                          <span style={{ color: '#9ca3af', fontSize: '11px', fontWeight: '600' }}>
+                            v{record.version || 1}
+                          </span>
+                          <span style={{ color: '#9ca3af', fontSize: '11px', marginLeft: 'auto' }}>
+                            {formatDateTime(record.lastModified)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         </section>
       )}
