@@ -3621,3 +3621,123 @@ select.with-icon {
   }
 }
 
+.patient-detail-panel .detail {
+  max-height: 720px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.patient-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.patient-history-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.patient-history-item:hover {
+  border-color: var(--accent);
+  background: #f0fdfa;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.08);
+}
+
+.patient-history-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.patient-history-tooth-shade {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-tooth {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.shade-swatch-tiny {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 10px;
+  color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.shade-swatch-tiny span {
+  background: rgba(255, 255, 255, .75);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.patient-history-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.history-followup,
+.history-photo-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.history-followup svg,
+.history-photo-progress svg {
+  color: #6b7280;
+}
+
+.patient-history-progress-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.patient-history-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  padding-top: 8px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.patient-history-item:hover .patient-history-action {
+  color: #0d9488;
+}
+
+@media (max-width: 620px) {
+  .patient-history-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+

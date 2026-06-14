@@ -2122,6 +2122,22 @@ function App() {
     return boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === boardFilterStatus);
   }, [boardRecords, boardFilterStatus]);
 
+  const patientShadeRecords = useMemo(() => {
+    if (!selectedPatient) return [];
+    return records
+      .filter((r) => r.patient === selectedPatient.name)
+      .sort((a, b) => {
+        const aDate = a.followUp || a.createdAt || a.lastModified || '';
+        const bDate = b.followUp || b.createdAt || b.lastModified || '';
+        return String(bDate).localeCompare(String(aDate));
+      });
+  }, [records, selectedPatient]);
+
+  function handleViewShadeRecord(record) {
+    setSelected(record);
+    setActiveTab('records');
+  }
+
   return (
     <main className="shell" style={{ '--accent': appConfig.accent }}>
       <section className="hero">
@@ -2873,7 +2889,7 @@ function App() {
               </div>
             </div>
 
-            <aside className="panel detail-panel">
+            <aside className="panel detail-panel patient-detail-panel">
               <div className="panel-title">
                 <CheckCircle2 size={18} />
                 <h2>患者详情</h2>
@@ -2900,6 +2916,70 @@ function App() {
                   <div className="timeline">
                     <span>创建时间: {new Date(selectedPatient.createdAt).toLocaleDateString('zh-CN')}</span>
                   </div>
+
+                  <div className="detail-section-divider">
+                    <History size={16} />
+                    历史比色记录
+                  </div>
+
+                  {patientShadeRecords.length > 0 ? (
+                    <div className="patient-history-list">
+                      {patientShadeRecords.map((record) => {
+                        const photoProcess = getPhotoProcessByRecordId(record.id);
+                        const photoProgress = getPhotoProcessProgress(photoProcess);
+                        return (
+                          <div
+                            key={record.id}
+                            className="patient-history-item"
+                            onClick={() => handleViewShadeRecord(record)}
+                          >
+                            <div className="patient-history-main">
+                              <div className="patient-history-tooth-shade">
+                                <span className="history-tooth">牙位 {record.tooth}</span>
+                                <span className="history-shade">
+                                  <span className={'shade-swatch-tiny shade-' + (record.shade?.charAt(0).toLowerCase() || 'a')}>
+                                    {record.shade}
+                                  </span>
+                                </span>
+                              </div>
+                              <span className={'status ' + statusClass(record.status)} style={{ fontSize: '12px', padding: '2px 8px' }}>
+                                {record.status}
+                              </span>
+                            </div>
+                            <div className="patient-history-meta">
+                              <span className="history-followup">
+                                <CalendarDays size={12} />
+                                {record.followUp || '未排期'}
+                              </span>
+                              <span className="history-photo-progress">
+                                <Camera size={12} />
+                                拍照 {photoProgress}%
+                              </span>
+                            </div>
+                            <div className="patient-history-progress-bar">
+                              {appConfig.photoSteps.map((step) => (
+                                <div
+                                  key={step.key}
+                                  className={'qc-progress-dot ' + (photoProcess?.steps[step.key]?.confirmed ? 'done' : 'pending')}
+                                  style={{ width: '100%' }}
+                                  title={step.label}
+                                />
+                              ))}
+                            </div>
+                            <div className="patient-history-action">
+                              <span>查看详情</span>
+                              <ChevronRight size={14} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="empty-state" style={{ padding: '24px 12px' }}>
+                      <ClipboardList size={32} style={{ color: '#d0d5dd' }} />
+                      <p className="empty" style={{ marginTop: '8px' }}>暂无历史比色记录</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="empty">点击任意患者查看详细信息。</p>
