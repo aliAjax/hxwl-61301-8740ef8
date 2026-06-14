@@ -601,11 +601,10 @@ function normalizeQcItems(items, checkItems) {
       normalized[ci.key] = {
         checked: !!items[ci.key].checked,
         remark: items[ci.key].remark || '',
-        checkedAt: items[ci.key].checkedAt || null,
-        isNew: !!items[ci.key].isNew
+        checkedAt: items[ci.key].checkedAt || null
       };
     } else {
-      normalized[ci.key] = { checked: false, remark: '', checkedAt: null, isNew: true };
+      normalized[ci.key] = { checked: false, remark: '', checkedAt: null };
     }
   });
   return normalized;
@@ -900,8 +899,8 @@ function App() {
         setSelectedQcRecord({
           record,
           qc: updatedQc,
-          progress: getQcProgress(record.id, record.status),
-          missing: getMissingQcItems(record.id, record.status)
+          progress: getQcProgressByQc(updatedQc, record.status),
+          missing: getMissingQcItemsByQc(updatedQc, record.status)
         });
       }
     }
@@ -1582,8 +1581,8 @@ function App() {
       setSelectedQcRecord({
         record: updatedRecord,
         qc,
-        progress: getQcProgress(id, status),
-        missing: getMissingQcItems(id, status)
+        progress: getQcProgressByQc(qc, status),
+        missing: getMissingQcItemsByQc(qc, status)
       });
     }
   }
@@ -1697,6 +1696,25 @@ function App() {
     return updated;
   }
 
+  function getMissingQcItemsByQc(qc, targetStatus) {
+    return qcCheckItems
+      .filter((ci) => ci.requiredFor.includes(targetStatus))
+      .filter((ci) => !qc?.items[ci.key]?.checked);
+  }
+
+  function getCriticalMissingQcItemsByQc(qc, targetStatus) {
+    return qcCheckItems
+      .filter((ci) => ci.requiredFor.includes(targetStatus) && ci.critical)
+      .filter((ci) => !qc?.items[ci.key]?.checked);
+  }
+
+  function getQcProgressByQc(qc, status) {
+    const required = qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+    if (required.length === 0) return 100;
+    const done = required.filter((ci) => qc?.items[ci.key]?.checked).length;
+    return Math.round((done / required.length) * 100);
+  }
+
   function refreshSelectedQcRecord(recordId, qcOverride) {
     if (!selectedQcRecord) return;
     const matchByRecord = selectedQcRecord.record?.id === recordId || selectedQcRecord.recordId === recordId;
@@ -1708,8 +1726,8 @@ function App() {
       setSelectedQcRecord({
         record,
         qc,
-        progress: getQcProgress(recordId, record.status),
-        missing: getMissingQcItems(recordId, record.status)
+        progress: getQcProgressByQc(qc, record.status),
+        missing: getMissingQcItemsByQc(qc, record.status)
       });
     }
   }
@@ -1727,8 +1745,7 @@ function App() {
         [itemKey]: {
           checked: isChecked,
           remark: remark !== undefined ? remark : (qc.items[itemKey]?.remark || ''),
-          checkedAt: isChecked ? new Date().toISOString() : null,
-          isNew: false
+          checkedAt: isChecked ? new Date().toISOString() : null
         }
       },
       updatedAt: new Date().toISOString()
@@ -1753,8 +1770,7 @@ function App() {
         ...qc.items,
         [itemKey]: {
           ...qc.items[itemKey],
-          remark,
-          isNew: false
+          remark
         }
       },
       updatedAt: new Date().toISOString()
@@ -1770,13 +1786,7 @@ function App() {
 
   function getMissingQcItems(recordId, targetStatus) {
     const qc = getQcByRecordId(recordId);
-    return qcCheckItems
-      .filter((ci) => ci.requiredFor.includes(targetStatus))
-      .filter((ci) => {
-        const item = qc?.items[ci.key];
-        if (item?.isNew) return false;
-        return !item?.checked;
-      });
+    return getMissingQcItemsByQc(qc, targetStatus);
   }
 
   function getCurrentStatusMissingQcItems(recordId) {
@@ -1787,10 +1797,7 @@ function App() {
 
   function getQcProgress(recordId, status) {
     const qc = getQcByRecordId(recordId);
-    const required = qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
-    if (required.length === 0) return 100;
-    const done = required.filter((ci) => qc?.items[ci.key]?.checked).length;
-    return Math.round((done / required.length) * 100);
+    return getQcProgressByQc(qc, status);
   }
 
   function getQcIcon(iconName) {
@@ -1800,13 +1807,7 @@ function App() {
 
   function getCriticalMissingQcItems(recordId, targetStatus) {
     const qc = getQcByRecordId(recordId);
-    return qcCheckItems
-      .filter((ci) => ci.requiredFor.includes(targetStatus) && ci.critical)
-      .filter((ci) => {
-        const item = qc?.items[ci.key];
-        if (item?.isNew) return false;
-        return !item?.checked;
-      });
+    return getCriticalMissingQcItemsByQc(qc, targetStatus);
   }
 
   function getTodoItemsForStatus(recordId, status) {
@@ -2408,19 +2409,18 @@ function App() {
                     {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
                     <div className="actions" onClick={(event) => event.stopPropagation()}>
                       {appConfig.statuses.map((status) => {
-                        const missing = getMissingQcItems(item.id, status);
-                        const canTransition = missing.length === 0;
-                        const isCurrent = item.status === status;
+                        const transition = getTransitionInfo(item, status);
                         return (
                           <button
                             key={status}
                             type="button"
                             onClick={() => updateStatus(item.id, status)}
-                            disabled={isCurrent || !canTransition}
-                            title={isCurrent ? '当前状态' : canTransition ? `切换至${status}` : `需先完成: ${missing.map((m) => m.label).join('、')}`}
+                            disabled={transition.disabled}
+                            title={transition.title}
                           >
                             {status}
-                            {!isCurrent && !canTransition && <ShieldAlert size={10} style={{ marginLeft: 2 }} />}
+                            {transition.showBlockedIcon && <ShieldAlert size={10} style={{ marginLeft: 2 }} />}
+                            {transition.showOptionalIcon && <ShieldAlert size={10} style={{ marginLeft: 2 }} />}
                           </button>
                         );
                       })}
@@ -2682,19 +2682,18 @@ function App() {
                     <p className="hint">状态流转（缺少关键步骤不能直接标记完成）：</p>
                     <div className="actions">
                       {appConfig.statuses.map((status) => {
-                        const missingForTarget = getMissingQcItems(selected.id, status);
-                        const canTransition = missingForTarget.length === 0;
-                        const isCurrent = selected.status === status;
+                        const transition = getTransitionInfo(selected, status);
                         return (
                           <button
                             key={status}
                             type="button"
                             onClick={() => updateStatus(selected.id, status)}
-                            disabled={isCurrent || !canTransition}
-                            title={isCurrent ? '当前状态' : canTransition ? `切换至${status}` : `需先完成: ${missingForTarget.map((m) => m.label).join('、')}`}
+                            disabled={transition.disabled}
+                            title={transition.title}
                           >
                             {status}
-                            {!isCurrent && !canTransition && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                            {transition.showBlockedIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                            {transition.showOptionalIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
                           </button>
                         );
                       })}
@@ -3057,8 +3056,8 @@ function App() {
                           type="button"
                           className="quick-action-btn"
                           onClick={() => updateStatus(item.id, '制作中')}
-                          disabled={item.status === '制作中' || getMissingQcItems(item.id, '制作中').length > 0}
-                          title={item.status === '制作中' ? '当前状态' : getMissingQcItems(item.id, '制作中').length > 0 ? `需先完成: ${getMissingQcItems(item.id, '制作中').map(m => m.label).join('、')}` : '切换至制作中'}
+                          disabled={getTransitionInfo(item, '制作中').disabled}
+                          title={getTransitionInfo(item, '制作中').title}
                         >
                           <RotateCcw size={14} />
                           制作中
@@ -3067,8 +3066,8 @@ function App() {
                           type="button"
                           className="quick-action-btn primary-action"
                           onClick={() => updateStatus(item.id, '已完成修复')}
-                          disabled={item.status === '已完成修复' || getMissingQcItems(item.id, '已完成修复').length > 0}
-                          title={item.status === '已完成修复' ? '当前状态' : getMissingQcItems(item.id, '已完成修复').length > 0 ? `需先完成: ${getMissingQcItems(item.id, '已完成修复').map(m => m.label).join('、')}` : '切换至已完成修复'}
+                          disabled={getTransitionInfo(item, '已完成修复').disabled}
+                          title={getTransitionInfo(item, '已完成修复').title}
                         >
                           <CheckCircle2 size={14} />
                           已完成
@@ -3133,19 +3132,18 @@ function App() {
                     <p className="hint">快速更新状态（需满足质控条件）：</p>
                     <div className="actions">
                       {appConfig.statuses.map((status) => {
-                        const missing = getMissingQcItems(selectedTodayFollowUp.id, status);
-                        const canTransition = missing.length === 0;
-                        const isCurrent = selectedTodayFollowUp.status === status;
+                        const transition = getTransitionInfo(selectedTodayFollowUp, status);
                         return (
                           <button
                             key={status}
                             type="button"
                             onClick={() => updateStatus(selectedTodayFollowUp.id, status)}
-                            disabled={isCurrent || !canTransition}
-                            title={isCurrent ? '当前状态' : canTransition ? `切换至${status}` : `需先完成: ${missing.map((m) => m.label).join('、')}`}
+                            disabled={transition.disabled}
+                            title={transition.title}
                           >
                             {status}
-                            {!isCurrent && !canTransition && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                            {transition.showBlockedIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                            {transition.showOptionalIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
                           </button>
                         );
                       })}
@@ -3871,19 +3869,18 @@ function App() {
                     <p className="hint">快速更新修复状态（需满足质控条件）：</p>
                     <div className="actions">
                       {appConfig.statuses.map((status) => {
-                        const missing = getMissingQcItems(boardSelectedRecord.id, status);
-                        const canTransition = missing.length === 0;
-                        const isCurrent = boardSelectedRecord.status === status;
+                        const transition = getTransitionInfo(boardSelectedRecord, status);
                         return (
                           <button
                             key={status}
                             type="button"
                             onClick={() => updateStatus(boardSelectedRecord.id, status)}
-                            disabled={isCurrent || !canTransition}
-                            title={isCurrent ? '当前状态' : canTransition ? `切换至${status}` : `需先完成: ${missing.map((m) => m.label).join('、')}`}
+                            disabled={transition.disabled}
+                            title={transition.title}
                           >
                             {status}
-                            {!isCurrent && !canTransition && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                            {transition.showBlockedIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                            {transition.showOptionalIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
                           </button>
                         );
                       })}
@@ -4439,7 +4436,8 @@ function App() {
                                   setSelectedQcRecord({
                                     ...selectedQcRecord,
                                     qc: updated,
-                                    missing: getMissingQcItems(updated.recordId, selectedQcRecord.record.status)
+                                    progress: getQcProgressByQc(updated, selectedQcRecord.record.status),
+                                    missing: getMissingQcItemsByQc(updated, selectedQcRecord.record.status)
                                   });
                                 }}
                               />
@@ -4448,13 +4446,11 @@ function App() {
                                 className={isChecked ? 'qc-toggle-btn qc-toggle-uncheck' : 'qc-toggle-btn qc-toggle-check'}
                                 onClick={() => {
                                   const updated = toggleQcItem(selectedQcRecord.record.id, ci.key);
-                                  const newMissing = getMissingQcItems(updated.recordId, selectedQcRecord.record.status);
-                                  const newProgress = getQcProgress(updated.recordId, selectedQcRecord.record.status);
                                   setSelectedQcRecord({
                                     ...selectedQcRecord,
                                     qc: updated,
-                                    progress: newProgress,
-                                    missing: newMissing
+                                    progress: getQcProgressByQc(updated, selectedQcRecord.record.status),
+                                    missing: getMissingQcItemsByQc(updated, selectedQcRecord.record.status)
                                   });
                                 }}
                               >
@@ -4493,27 +4489,18 @@ function App() {
                     <p className="hint">状态流转（关键步骤未完成不可跳过，非关键步骤可确认跳过）：</p>
                     <div className="actions">
                       {appConfig.statuses.map((status) => {
-                        const criticalMissing = getCriticalMissingQcItems(selectedQcRecord.record.id, status);
-                        const allMissing = getMissingQcItems(selectedQcRecord.record.id, status);
-                        const isBlocked = criticalMissing.length > 0;
-                        const hasOptionalMissing = criticalMissing.length === 0 && allMissing.length > 0;
-                        const isCurrent = selectedQcRecord.record.status === status;
+                        const transition = getTransitionInfo(selectedQcRecord.record, status);
                         return (
                           <button
                             key={status}
                             type="button"
                             onClick={() => updateStatus(selectedQcRecord.record.id, status)}
-                            disabled={isCurrent || isBlocked}
-                            title={
-                              isCurrent ? '当前状态' :
-                              isBlocked ? `关键步骤未完成: ${criticalMissing.map((m) => m.label).join('、')}` :
-                              hasOptionalMissing ? `非关键步骤未完成（可确认跳过）: ${allMissing.map((m) => m.label).join('、')}` :
-                              `切换至${status}`
-                            }
+                            disabled={transition.disabled}
+                            title={transition.title}
                           >
                             {status}
-                            {isBlocked && !isCurrent && <AlertOctagon size={12} style={{ marginLeft: 4 }} />}
-                            {hasOptionalMissing && !isCurrent && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                            {transition.showBlockedIcon && <AlertOctagon size={12} style={{ marginLeft: 4 }} />}
+                            {transition.showOptionalIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
                           </button>
                         );
                       })}
