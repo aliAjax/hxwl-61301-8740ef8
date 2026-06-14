@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge } from 'lucide-react';
 import './App.css';
 
@@ -845,6 +845,11 @@ function App() {
     photoNote: '',
     followUp: ''
   });
+
+  useEffect(() => {
+    setEditingRecordId(null);
+    setEditRecordForm({ patient: '', tooth: '', shade: '', photoNote: '', followUp: '' });
+  }, [selected]);
 
   const [currentDeviceId, setCurrentDeviceId] = useState(loadCurrentDevice);
   const [collabTimeline, setCollabTimeline] = useState(loadCollabTimeline);
