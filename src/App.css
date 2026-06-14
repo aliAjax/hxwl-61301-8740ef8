@@ -3041,6 +3041,31 @@ select.with-icon {
   align-items: center;
 }
 
+.record-qc-bar {
+  margin: 8px 0 4px 0;
+}
+
+.qc-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.qc-missing-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #b45309;
+  font-weight: 500;
+  margin-top: 4px;
+  padding: 3px 8px;
+  background: #fef3c7;
+  border-radius: 4px;
+}
+
 .qc-progress-dot {
   flex: 1;
   height: 8px;
@@ -3334,6 +3359,265 @@ select.with-icon {
   .qc-toggle-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+.qc-critical-badge {
+  padding: 2px 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid #fecaca;
+}
+
+.qc-optional-tag {
+  padding: 2px 8px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+}
+
+.qc-item-critical {
+  border-left: 3px solid #ef4444 !important;
+  background: #fef2f2 !important;
+}
+
+.qc-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.qc-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: all .15s;
+}
+
+.qc-todo-critical {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.qc-todo-optional {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.qc-todo-done {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.qc-todo-toggle {
+  background: none;
+  border: none;
+  color: #6b7280;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.qc-todo-done .qc-todo-toggle {
+  color: #059669;
+}
+
+.qc-todo-critical .qc-todo-toggle {
+  color: #b91c1c;
+}
+
+.qc-todo-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.qc-todo-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.qc-todo-done .qc-todo-label {
+  color: #059669;
+  text-decoration: line-through;
+}
+
+.qc-todo-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.qc-config-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+
+.qc-config-toggle:hover {
+  background: #f0fdfa;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.qc-config-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.qc-config-desc {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.qc-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.qc-config-item {
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.qc-config-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.qc-config-order {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.qc-config-key {
+  font-size: 12px;
+  color: #9ca3af;
+  font-family: 'SF Mono', monospace;
+}
+
+.qc-config-item-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.qc-config-item-desc {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.qc-config-status-toggles {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.qc-config-status-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.qc-config-status-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.qc-config-edit-form {
+  padding: 16px;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  background: #f0fdfa;
+}
+
+.qc-config-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.qc-config-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.qc-config-bottom-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+@media (max-width: 620px) {
+  .qc-config-status-toggles {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .qc-config-bottom-actions {
+    flex-direction: column;
+  }
+
+  .qc-todo-item {
+    flex-wrap: wrap;
   }
 }
 

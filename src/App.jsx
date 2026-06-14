@@ -14,6 +14,7 @@ const appConfig = {
   "shadeLibraryStorage": "hxwl-61301-shade-library",
   "photoProcessStorage": "hxwl-61301-photo-process",
   "deliveryOrderStorage": "hxwl-61301-delivery-orders",
+  "qcCheckItemConfigStorage": "hxwl-61301-qc-check-items",
   "qcStorage": "hxwl-61301-qc",
   "collabStorage": "hxwl-61301-collab",
   "collabTimelineStorage": "hxwl-61301-collab-timeline",
@@ -315,35 +316,45 @@ const appConfig = {
       "label": "初次比色",
       "icon": "Palette",
       "requiredFor": ["待修复", "制作中", "已完成修复"],
-      "description": "完成患者牙位比色，确认色号选择准确"
+      "description": "完成患者牙位比色，确认色号选择准确",
+      "order": 1,
+      "critical": true
     },
     {
       "key": "photoConfirm",
       "label": "照片确认",
       "icon": "Camera",
       "requiredFor": ["待修复", "制作中", "已完成修复"],
-      "description": "完成拍照流程，确认照片质量符合比色要求"
+      "description": "完成拍照流程，确认照片质量符合比色要求",
+      "order": 2,
+      "critical": true
     },
     {
       "key": "labHandover",
       "label": "技工所交接",
       "icon": "ArrowLeftRight",
       "requiredFor": ["制作中", "已完成修复"],
-      "description": "完成与技工所的交接单发送与确认回收"
+      "description": "完成与技工所的交接单发送与确认回收",
+      "order": 3,
+      "critical": true
     },
     {
       "key": "tryOnFeedback",
       "label": "试戴反馈",
       "icon": "Stethoscope",
       "requiredFor": ["已完成修复"],
-      "description": "患者试戴修复体，记录反馈意见与调整需求"
+      "description": "患者试戴修复体，记录反馈意见与调整需求",
+      "order": 4,
+      "critical": true
     },
     {
       "key": "finalRetake",
       "label": "最终复拍",
       "icon": "CheckCircle2",
       "requiredFor": ["已完成修复"],
-      "description": "完成修复后复拍，存档比对照片确认修复效果"
+      "description": "完成修复后复拍，存档比对照片确认修复效果",
+      "order": 5,
+      "critical": false
     }
   ],
   "qcDefaultItemValues": {
@@ -510,7 +521,19 @@ function loadRecords() {
   const raw = localStorage.getItem(appConfig.storage);
   if (raw) {
     try {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return withIds(parsed.map((item) => ({
+          patient: item.patient || '',
+          tooth: item.tooth || '',
+          shade: item.shade || '',
+          photoNote: item.photoNote || '',
+          followUp: item.followUp || '',
+          status: item.status || appConfig.primaryStatus,
+          ...item
+        })));
+      }
+      return withIds(appConfig.seed);
     } catch {
       return withIds(appConfig.seed);
     }
@@ -570,9 +593,10 @@ function loadDeliveryOrders() {
   return appConfig.deliveryOrderSeed;
 }
 
-function normalizeQcItems(items) {
+function normalizeQcItems(items, checkItems) {
+  const ciList = checkItems || appConfig.qcCheckItems;
   const normalized = {};
-  appConfig.qcCheckItems.forEach((ci) => {
+  ciList.forEach((ci) => {
     if (items && items[ci.key] && typeof items[ci.key] === 'object') {
       normalized[ci.key] = {
         checked: !!items[ci.key].checked,
@@ -586,7 +610,31 @@ function normalizeQcItems(items) {
   return normalized;
 }
 
-function loadQcRecords() {
+function loadQcCheckItemConfig() {
+  const raw = localStorage.getItem(appConfig.qcCheckItemConfigStorage);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((ci) => ({
+          key: ci.key || uid(),
+          label: ci.label || '',
+          icon: ci.icon || 'ClipboardList',
+          requiredFor: Array.isArray(ci.requiredFor) ? ci.requiredFor : [],
+          description: ci.description || '',
+          order: ci.order ?? 0,
+          critical: !!ci.critical
+        }));
+      }
+      return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
+    } catch {
+      return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
+    }
+  }
+  return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
+}
+
+function loadQcRecords(checkItems) {
   const raw = localStorage.getItem(appConfig.qcStorage);
   if (raw) {
     try {
@@ -595,7 +643,7 @@ function loadQcRecords() {
       return parsed.map((qc) => ({
         id: qc.id || uid(),
         recordId: qc.recordId || '',
-        items: normalizeQcItems(qc.items),
+        items: normalizeQcItems(qc.items, checkItems),
         createdAt: qc.createdAt || new Date().toISOString(),
         updatedAt: qc.updatedAt || new Date().toISOString()
       }));
@@ -780,9 +828,15 @@ function App() {
   const [boardFilterStatus, setBoardFilterStatus] = useState('全部');
   const [importPreview, setImportPreview] = useState(null);
   const [importFileName, setImportFileName] = useState('');
-  const [qcRecords, setQcRecords] = useState(loadQcRecords);
+  const [qcRecords, setQcRecords] = useState(() => {
+    const ci = loadQcCheckItemConfig();
+    return loadQcRecords(ci);
+  });
   const [selectedQcRecord, setSelectedQcRecord] = useState(null);
   const [qcFilter, setQcFilter] = useState('全部');
+  const [qcCheckItems, setQcCheckItems] = useState(loadQcCheckItemConfig);
+  const [editingQcItem, setEditingQcItem] = useState(null);
+  const [showQcConfig, setShowQcConfig] = useState(false);
 
   const [currentDeviceId, setCurrentDeviceId] = useState(loadCurrentDevice);
   const [collabTimeline, setCollabTimeline] = useState(loadCollabTimeline);
@@ -827,6 +881,39 @@ function App() {
   function persistQcRecords(next) {
     setQcRecords(next);
     localStorage.setItem(appConfig.qcStorage, JSON.stringify(next));
+  }
+
+  function persistQcCheckItems(next) {
+    setQcCheckItems(next);
+    localStorage.setItem(appConfig.qcCheckItemConfigStorage, JSON.stringify(next));
+    const migrated = qcRecords.map((qc) => ({
+      ...qc,
+      items: normalizeQcItems(qc.items, next)
+    }));
+    persistQcRecords(migrated);
+  }
+
+  function saveQcItemConfig(item) {
+    if (!item.key || !item.label) return;
+    const existing = qcCheckItems.find((ci) => ci.key === item.key);
+    let next;
+    if (existing) {
+      next = qcCheckItems.map((ci) => ci.key === item.key ? item : ci);
+    } else {
+      next = [...qcCheckItems, { ...item, order: item.order ?? (qcCheckItems.length + 1) }];
+    }
+    persistQcCheckItems(next);
+    setEditingQcItem(null);
+  }
+
+  function removeQcItemConfig(key) {
+    const next = qcCheckItems.filter((ci) => ci.key !== key);
+    persistQcCheckItems(next);
+  }
+
+  function resetQcItemConfig() {
+    const defaults = appConfig.qcCheckItems.map((ci) => ({ ...ci }));
+    persistQcCheckItems(defaults);
   }
 
   function addCollabTimelineEntry(entry) {
@@ -1404,11 +1491,17 @@ function App() {
   function updateStatus(id, status) {
     const record = records.find((r) => r.id === id);
     if (!record) return;
-    const missing = getMissingQcItems(id, status);
-    if (missing.length > 0) {
-      const labels = missing.map((m) => m.label).join('、');
-      alert(`无法切换至「${status}」：以下质控检查项尚未完成\n\n${labels}\n\n请先完成这些检查项后再变更状态。`);
+    const criticalMissing = getCriticalMissingQcItems(id, status);
+    const allMissing = getMissingQcItems(id, status);
+    if (criticalMissing.length > 0) {
+      const labels = criticalMissing.map((m) => m.label).join('、');
+      alert(`无法切换至「${status}」：以下关键检查项尚未完成\n\n${labels}\n\n缺少关键步骤不能直接标记完成，请先完成这些检查项。`);
       return;
+    }
+    if (allMissing.length > 0 && criticalMissing.length === 0) {
+      const labels = allMissing.map((m) => m.label).join('、');
+      const confirmed = window.confirm(`切换至「${status}」时，以下非关键检查项尚未完成：\n\n${labels}\n\n是否仍然继续？`);
+      if (!confirmed) return;
     }
     const next = records.map((item) => item.id === id ? {
       ...item,
@@ -1508,7 +1601,7 @@ function App() {
     const newQc = {
       id: uid(),
       recordId,
-      items: normalizeQcItems(null),
+      items: normalizeQcItems(null, qcCheckItems),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -1574,14 +1667,20 @@ function App() {
 
   function getMissingQcItems(recordId, targetStatus) {
     const qc = getQcByRecordId(recordId);
-    return appConfig.qcCheckItems
+    return qcCheckItems
       .filter((ci) => ci.requiredFor.includes(targetStatus))
       .filter((ci) => !qc?.items[ci.key]?.checked);
   }
 
+  function getCurrentStatusMissingQcItems(recordId) {
+    const record = getRecordById(recordId);
+    const status = record?.status || appConfig.primaryStatus;
+    return getMissingQcItems(recordId, status);
+  }
+
   function getQcProgress(recordId, status) {
     const qc = getQcByRecordId(recordId);
-    const required = appConfig.qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+    const required = qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
     if (required.length === 0) return 100;
     const done = required.filter((ci) => qc?.items[ci.key]?.checked).length;
     return Math.round((done / required.length) * 100);
@@ -1590,6 +1689,26 @@ function App() {
   function getQcIcon(iconName) {
     const icons = { Palette, Camera, ArrowLeftRight, Stethoscope, CheckCircle2 };
     return icons[iconName] || ClipboardList;
+  }
+
+  function getCriticalMissingQcItems(recordId, targetStatus) {
+    const qc = getQcByRecordId(recordId);
+    return qcCheckItems
+      .filter((ci) => ci.requiredFor.includes(targetStatus) && ci.critical)
+      .filter((ci) => !qc?.items[ci.key]?.checked);
+  }
+
+  function getTodoItemsForStatus(recordId, status) {
+    const qc = getQcByRecordId(recordId);
+    return qcCheckItems
+      .filter((ci) => ci.requiredFor.includes(status))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((ci) => ({
+        ...ci,
+        isChecked: !!qc?.items[ci.key]?.checked,
+        remark: qc?.items[ci.key]?.remark || '',
+        checkedAt: qc?.items[ci.key]?.checkedAt || null
+      }));
   }
 
   function addPatient(event) {
@@ -2152,11 +2271,48 @@ function App() {
                       <span className={'status ' + statusClass(item.status)}>{item.status}</span>
                     </div>
                     <p className="record-detail">{item.photoNote}</p>
+                    <div className="qc-progress-bar record-qc-bar">
+                      {qcCheckItems.filter((ci) => ci.requiredFor.includes(item.status)).map((ci) => {
+                        const qc = getQcByRecordId(item.id);
+                        const isChecked = qc?.items[ci.key]?.checked;
+                        return (
+                          <div
+                            key={ci.key}
+                            className={'qc-progress-dot ' + (isChecked ? 'done' : 'pending')}
+                            title={`${ci.label}${isChecked ? '（已完成）' : '（待完成）'}`}
+                          />
+                        );
+                      })}
+                      <span className="qc-progress-text">
+                        {getQcProgress(item.id, item.status)}%
+                      </span>
+                    </div>
+                    {getMissingQcItems(item.id, item.status).length > 0 && (
+                      <div className="qc-missing-inline">
+                        <ShieldAlert size={12} />
+                        待完成：{getMissingQcItems(item.id, item.status).slice(0, 2).map((m) => m.label).join('、')}
+                        {getMissingQcItems(item.id, item.status).length > 2 && ` 等${getMissingQcItems(item.id, item.status).length}项`}
+                      </div>
+                    )}
                     {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
                     <div className="actions" onClick={(event) => event.stopPropagation()}>
-                      {appConfig.statuses.map((status) => (
-                        <button key={status} type="button" onClick={() => updateStatus(item.id, status)}>{status}</button>
-                      ))}
+                      {appConfig.statuses.map((status) => {
+                        const missing = getMissingQcItems(item.id, status);
+                        const canTransition = missing.length === 0;
+                        const isCurrent = item.status === status;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateStatus(item.id, status)}
+                            disabled={isCurrent || !canTransition}
+                            title={isCurrent ? '当前状态' : canTransition ? `切换至${status}` : `需先完成: ${missing.map((m) => m.label).join('、')}`}
+                          >
+                            {status}
+                            {!isCurrent && !canTransition && <ShieldAlert size={10} style={{ marginLeft: 2 }} />}
+                          </button>
+                        );
+                      })}
                       <button type="button" onClick={() => duplicateRecord(item)}><RotateCcw size={14} />复制</button>
                       <button className="ghost-danger" type="button" onClick={() => removeRecord(item.id)}><Trash2 size={14} /></button>
                     </div>
@@ -2310,6 +2466,129 @@ function App() {
                       </button>
                     </div>
                   )}
+
+                  <div className="detail-section-divider">
+                    <ShieldCheck size={16} />
+                    质控检查（当前状态：{selected.status}）
+                  </div>
+                  <div className="qc-detail-progress record-detail-qc">
+                    <div className="qc-progress-ring">
+                      <svg viewBox="0 0 36 36" className="qc-ring-svg">
+                        <path
+                          className="qc-ring-bg"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path
+                          className="qc-ring-fill"
+                          strokeDasharray={`${getQcProgress(selected.id, selected.status)}, 100`}
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                      </svg>
+                      <span className="qc-ring-text">{getQcProgress(selected.id, selected.status)}%</span>
+                    </div>
+                    <div className="qc-progress-summary">
+                      <strong>质控进度</strong>
+                      <p>
+                        {getQcProgress(selected.id, selected.status) === 100
+                          ? '所有必检项已完成'
+                          : `还需完成 ${getMissingQcItems(selected.id, selected.status).length} 项检查`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="photo-checklist">
+                    {qcCheckItems.map((ci) => {
+                      const qc = getQcByRecordId(selected.id);
+                      const isRequired = ci.requiredFor.includes(selected.status);
+                      const isChecked = qc?.items[ci.key]?.checked;
+                      const remark = qc?.items[ci.key]?.remark || '';
+                      const checkedAt = qc?.items[ci.key]?.checkedAt;
+                      const QcIcon = getQcIcon(ci.icon);
+
+                      if (!isRequired && !isChecked) {
+                        return (
+                          <div key={ci.key} className="checklist-item qc-item-irrelevant">
+                            <div className="checklist-icon"><Square size={20} /></div>
+                            <div className="checklist-content">
+                              <div className="checklist-header">
+                                <QcIcon size={16} />
+                                <strong>{ci.label}</strong>
+                                <span className="qc-irrelevant-badge">当前状态无需</span>
+                              </div>
+                              <p className="checklist-empty">在更后续的状态中需要完成</p>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={ci.key} className={'checklist-item ' + (isChecked ? 'checked' : '') + (!isRequired ? ' qc-item-optional' : '')}>
+                          <div className="checklist-icon">
+                            {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
+                          </div>
+                          <div className="checklist-content">
+                            <div className="checklist-header">
+                              <QcIcon size={16} />
+                              <strong>{ci.label}</strong>
+                              {isChecked && <span className="checklist-badge">已确认</span>}
+                              {!isRequired && isChecked && <span className="qc-optional-badge">可选</span>}
+                              {isRequired && !isChecked && <span className="qc-required-badge">必检</span>}
+                            </div>
+                            <p className="qc-item-desc">{ci.description}</p>
+                            {isChecked && checkedAt && (
+                              <span className="checklist-env">
+                                <Clock size={12} /> 确认于 {new Date(checkedAt).toLocaleString('zh-CN')}
+                              </span>
+                            )}
+                            <div className="qc-remark-row" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="text"
+                                placeholder="添加备注..."
+                                value={remark}
+                                onChange={(e) => updateQcRemark(selected.id, ci.key, e.target.value)}
+                              />
+                              <button
+                                type="button"
+                                className={isChecked ? 'qc-toggle-btn qc-toggle-uncheck' : 'qc-toggle-btn qc-toggle-check'}
+                                onClick={() => toggleQcItem(selected.id, ci.key)}
+                              >
+                                {isChecked ? <><X size={14} />撤销</> : <><CheckCheck size={14} />确认</>}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {getMissingQcItems(selected.id, selected.status).length > 0 && (
+                    <div className="checklist-summary">
+                      <p className="checklist-progress">
+                        <ShieldAlert size={14} /> 缺少关键步骤：{getMissingQcItems(selected.id, selected.status).map((m) => m.label).join('、')}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="detail-actions" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                    <p className="hint">状态流转（缺少关键步骤不能直接标记完成）：</p>
+                    <div className="actions">
+                      {appConfig.statuses.map((status) => {
+                        const missingForTarget = getMissingQcItems(selected.id, status);
+                        const canTransition = missingForTarget.length === 0;
+                        const isCurrent = selected.status === status;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateStatus(selected.id, status)}
+                            disabled={isCurrent || !canTransition}
+                            title={isCurrent ? '当前状态' : canTransition ? `切换至${status}` : `需先完成: ${missingForTarget.map((m) => m.label).join('、')}`}
+                          >
+                            {status}
+                            {!isCurrent && !canTransition && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   <div className="timeline">
                     {(selected.timeline || []).map((step, index) => (
@@ -2667,7 +2946,8 @@ function App() {
                           type="button"
                           className="quick-action-btn"
                           onClick={() => updateStatus(item.id, '制作中')}
-                          disabled={item.status === '制作中'}
+                          disabled={item.status === '制作中' || getMissingQcItems(item.id, '制作中').length > 0}
+                          title={item.status === '制作中' ? '当前状态' : getMissingQcItems(item.id, '制作中').length > 0 ? `需先完成: ${getMissingQcItems(item.id, '制作中').map(m => m.label).join('、')}` : '切换至制作中'}
                         >
                           <RotateCcw size={14} />
                           制作中
@@ -2676,7 +2956,8 @@ function App() {
                           type="button"
                           className="quick-action-btn primary-action"
                           onClick={() => updateStatus(item.id, '已完成修复')}
-                          disabled={item.status === '已完成修复'}
+                          disabled={item.status === '已完成修复' || getMissingQcItems(item.id, '已完成修复').length > 0}
+                          title={item.status === '已完成修复' ? '当前状态' : getMissingQcItems(item.id, '已完成修复').length > 0 ? `需先完成: ${getMissingQcItems(item.id, '已完成修复').map(m => m.label).join('、')}` : '切换至已完成修复'}
                         >
                           <CheckCircle2 size={14} />
                           已完成
@@ -2738,18 +3019,25 @@ function App() {
                   </div>
 
                   <div className="detail-actions">
-                    <p className="hint">快速更新状态：</p>
+                    <p className="hint">快速更新状态（需满足质控条件）：</p>
                     <div className="actions">
-                      {appConfig.statuses.map((status) => (
-                        <button
-                          key={status}
-                          type="button"
-                          onClick={() => updateStatus(selectedTodayFollowUp.id, status)}
-                          disabled={selectedTodayFollowUp.status === status}
-                        >
-                          {status}
-                        </button>
-                      ))}
+                      {appConfig.statuses.map((status) => {
+                        const missing = getMissingQcItems(selectedTodayFollowUp.id, status);
+                        const canTransition = missing.length === 0;
+                        const isCurrent = selectedTodayFollowUp.status === status;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateStatus(selectedTodayFollowUp.id, status)}
+                            disabled={isCurrent || !canTransition}
+                            title={isCurrent ? '当前状态' : canTransition ? `切换至${status}` : `需先完成: ${missing.map((m) => m.label).join('、')}`}
+                          >
+                            {status}
+                            {!isCurrent && !canTransition && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -3469,18 +3757,25 @@ function App() {
                   </div>
 
                   <div className="detail-actions">
-                    <p className="hint">快速更新修复状态：</p>
+                    <p className="hint">快速更新修复状态（需满足质控条件）：</p>
                     <div className="actions">
-                      {appConfig.statuses.map((status) => (
-                        <button
-                          key={status}
-                          type="button"
-                          onClick={() => updateStatus(boardSelectedRecord.id, status)}
-                          disabled={boardSelectedRecord.status === status}
-                        >
-                          {status}
-                        </button>
-                      ))}
+                      {appConfig.statuses.map((status) => {
+                        const missing = getMissingQcItems(boardSelectedRecord.id, status);
+                        const canTransition = missing.length === 0;
+                        const isCurrent = boardSelectedRecord.status === status;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateStatus(boardSelectedRecord.id, status)}
+                            disabled={isCurrent || !canTransition}
+                            title={isCurrent ? '当前状态' : canTransition ? `切换至${status}` : `需先完成: ${missing.map((m) => m.label).join('、')}`}
+                          >
+                            {status}
+                            {!isCurrent && !canTransition && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -3668,11 +3963,19 @@ function App() {
 
               <div className="qc-legend">
                 {appConfig.statuses.map((status) => {
-                  const items = appConfig.qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+                  const items = qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+                  const criticalItems = items.filter((ci) => ci.critical);
                   return (
                     <div key={status} className="qc-legend-item">
                       <span className={'status ' + statusClass(status)}>{status}</span>
-                      <span className="qc-legend-label">需完成: {items.map((i) => i.label).join('、')}</span>
+                      <span className="qc-legend-label">
+                        必检: {criticalItems.map((i) => i.label).join('、')}
+                        {criticalItems.length < items.length && (
+                          <span style={{ color: '#9ca3af', marginLeft: '4px' }}>
+                            (+可选: {items.filter((i) => !i.critical).map((i) => i.label).join('、')})
+                          </span>
+                        )}
+                      </span>
                     </div>
                   );
                 })}
@@ -3680,65 +3983,81 @@ function App() {
 
               {filteredQcRecords.length > 0 ? (
                 <div className="records">
-                  {filteredQcRecords.map(({ record, qc, progress, missing }) => (
-                    <article
-                      className={'record qc-record ' + (progress === 100 ? 'qc-complete' : progress > 0 ? 'qc-inprogress' : 'qc-notstarted') + ' ' + (selectedQcRecord?.recordId === record.id ? 'selected' : '')}
-                      key={record.id}
-                      onClick={() => {
-                        setSelectedQcRecord({ record, qc: qc || ensureQcForRecord(record.id), progress, missing });
-                        setSelected(record);
-                      }}
-                    >
-                      <div className="record-head">
-                        <div>
-                          <h3>{record.patient}</h3>
-                          <p>{`牙位 ${record.tooth} · ${record.shade}`}</p>
+                  {filteredQcRecords.map(({ record, qc, progress, missing }) => {
+                    const todoItems = getTodoItemsForStatus(record.id, record.status);
+                    const criticalMissing = missing.filter((m) => m.critical);
+                    const optionalMissing = missing.filter((m) => !m.critical);
+                    return (
+                      <article
+                        className={'record qc-record ' + (progress === 100 ? 'qc-complete' : progress > 0 ? 'qc-inprogress' : 'qc-notstarted') + ' ' + (selectedQcRecord?.recordId === record.id ? 'selected' : '')}
+                        key={record.id}
+                        onClick={() => {
+                          setSelectedQcRecord({ record, qc: qc || ensureQcForRecord(record.id), progress, missing });
+                          setSelected(record);
+                        }}
+                      >
+                        <div className="record-head">
+                          <div>
+                            <h3>{record.patient}</h3>
+                            <p>{`牙位 ${record.tooth} · ${record.shade}`}</p>
+                          </div>
+                          <span className={'status ' + statusClass(record.status)}>{record.status}</span>
                         </div>
-                        <span className={'status ' + statusClass(record.status)}>{record.status}</span>
-                      </div>
 
-                      <div className="qc-progress-bar" style={{ marginTop: '10px' }}>
-                        {appConfig.qcCheckItems.map((ci) => {
-                          const isRequired = ci.requiredFor.includes(record.status);
-                          const isChecked = qc?.items[ci.key]?.checked;
-                          if (!isRequired) return null;
-                          return (
+                        <div className="qc-progress-bar" style={{ marginTop: '10px' }}>
+                          {todoItems.map((ci) => (
                             <div
                               key={ci.key}
-                              className={'qc-progress-dot ' + (isChecked ? 'done' : 'pending')}
-                              title={ci.label}
+                              className={'qc-progress-dot ' + (ci.isChecked ? 'done' : 'pending')}
+                              title={`${ci.label}${ci.critical ? ' ★关键' : ''}${ci.isChecked ? '（已完成）' : '（待完成）'}`}
                             />
-                          );
-                        })}
-                      </div>
+                          ))}
+                        </div>
 
-                      <p className="record-detail" style={{ marginTop: '8px' }}>
-                        质控进度：{progress}%
-                        {missing.length > 0 && (
-                          <span className="qc-missing-tag">
-                            <ShieldAlert size={12} /> 缺: {missing.map((m) => m.label).join('、')}
-                          </span>
-                        )}
-                      </p>
+                        <p className="record-detail" style={{ marginTop: '8px' }}>
+                          质控进度：{progress}%
+                          {criticalMissing.length > 0 && (
+                            <span className="qc-missing-tag">
+                              <AlertOctagon size={12} /> 关键缺: {criticalMissing.map((m) => m.label).join('、')}
+                            </span>
+                          )}
+                          {optionalMissing.length > 0 && criticalMissing.length === 0 && (
+                            <span className="qc-missing-inline" style={{ marginLeft: '4px' }}>
+                              <ShieldAlert size={12} /> 可选缺: {optionalMissing.map((m) => m.label).join('、')}
+                            </span>
+                          )}
+                        </p>
 
-                      <div className="actions" onClick={(e) => e.stopPropagation()}>
-                        {appConfig.qcCheckItems.filter((ci) => ci.requiredFor.includes(record.status)).map((ci) => {
-                          const isChecked = qc?.items[ci.key]?.checked;
-                          return (
-                            <button
+                        <div className="qc-todo-list" onClick={(e) => e.stopPropagation()}>
+                          {todoItems.map((ci) => (
+                            <div
                               key={ci.key}
-                              type="button"
-                              className={isChecked ? 'qc-item-done' : ''}
-                              onClick={() => toggleQcItem(record.id, ci.key)}
+                              className={'qc-todo-item ' + (ci.isChecked ? 'qc-todo-done' : ci.critical ? 'qc-todo-critical' : 'qc-todo-optional')}
                             >
-                              {isChecked ? <CheckCheck size={14} /> : <Square size={14} />}
-                              {ci.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </article>
-                  ))}
+                              <button
+                                type="button"
+                                className="qc-todo-toggle"
+                                onClick={() => toggleQcItem(record.id, ci.key)}
+                                title={ci.isChecked ? '撤销' : '确认'}
+                              >
+                                {ci.isChecked ? <CheckCheck size={16} /> : <Square size={16} />}
+                              </button>
+                              <div className="qc-todo-content">
+                                <span className="qc-todo-label">{ci.label}</span>
+                                {ci.critical && !ci.isChecked && <span className="qc-critical-badge">关键</span>}
+                                {!ci.critical && <span className="qc-optional-tag">可选</span>}
+                                {ci.isChecked && ci.checkedAt && (
+                                  <span className="qc-todo-time">
+                                    <Clock size={10} /> {new Date(ci.checkedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="empty-state">
@@ -3753,8 +4072,163 @@ function App() {
               <div className="panel-title">
                 <ShieldCheck size={18} />
                 <h2>质控详情</h2>
+                <button
+                  type="button"
+                  className="qc-config-toggle"
+                  onClick={() => setShowQcConfig(!showQcConfig)}
+                  title={showQcConfig ? '关闭配置' : '检查项配置'}
+                >
+                  {showQcConfig ? <X size={14} /> : <Layers size={14} />}
+                  {showQcConfig ? '关闭配置' : '配置检查项'}
+                </button>
               </div>
-              {selectedQcRecord ? (
+
+              {showQcConfig ? (
+                <div className="qc-config-panel">
+                  <div className="qc-config-header">
+                    <p className="qc-config-desc">配置质控检查项：添加、编辑或删除检查项，调整每个状态下所需的检查项及关键性。</p>
+                  </div>
+
+                  <div className="qc-config-list">
+                    {qcCheckItems.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((ci, idx) => (
+                      <div key={ci.key} className="qc-config-item">
+                        <div className="qc-config-item-header">
+                          <span className="qc-config-order">{idx + 1}</span>
+                          <strong>{ci.label}</strong>
+                          <span className="qc-config-key">({ci.key})</span>
+                          {ci.critical && <span className="qc-critical-badge">关键</span>}
+                          {!ci.critical && <span className="qc-optional-tag">可选</span>}
+                          <div className="qc-config-item-actions">
+                            <button type="button" className="btn-icon" onClick={() => setEditingQcItem({ ...ci })} title="编辑">
+                              <Edit3 size={14} />
+                            </button>
+                            <button type="button" className="btn-icon" onClick={() => removeQcItemConfig(ci.key)} title="删除">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="qc-config-item-desc">{ci.description}</p>
+                        <div className="qc-config-status-toggles">
+                          {appConfig.statuses.map((status) => {
+                            const isActive = ci.requiredFor.includes(status);
+                            return (
+                              <label key={status} className="qc-config-status-label">
+                                <input
+                                  type="checkbox"
+                                  checked={isActive}
+                                  onChange={(e) => {
+                                    const updated = {
+                                      ...ci,
+                                      requiredFor: e.target.checked
+                                        ? [...ci.requiredFor, status]
+                                        : ci.requiredFor.filter((s) => s !== status)
+                                    };
+                                    saveQcItemConfig(updated);
+                                  }}
+                                />
+                                <span className={'status ' + statusClass(status)} style={{ fontSize: '11px', padding: '2px 6px' }}>
+                                  {status}
+                                </span>
+                              </label>
+                            );
+                          })}
+                          <label className="qc-config-status-label">
+                            <input
+                              type="checkbox"
+                              checked={ci.critical}
+                              onChange={(e) => {
+                                saveQcItemConfig({ ...ci, critical: e.target.checked });
+                              }}
+                            />
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: ci.critical ? '#b91c1c' : '#6b7280' }}>关键项</span>
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {editingQcItem && (
+                    <div className="qc-config-edit-form">
+                      <div className="qc-config-edit-header">
+                        <strong>{editingQcItem.key && qcCheckItems.find((c) => c.key === editingQcItem.key) ? '编辑检查项' : '新增检查项'}</strong>
+                        <button type="button" className="btn-icon" onClick={() => setEditingQcItem(null)}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <div className="form-grid">
+                        <label>
+                          <span>检查项键名（英文）</span>
+                          <input
+                            type="text"
+                            value={editingQcItem.key || ''}
+                            onChange={(e) => setEditingQcItem({ ...editingQcItem, key: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
+                            placeholder="如：initialShade"
+                            disabled={!!qcCheckItems.find((c) => c.key === editingQcItem.key)}
+                          />
+                        </label>
+                        <label>
+                          <span>显示名称</span>
+                          <input
+                            type="text"
+                            value={editingQcItem.label || ''}
+                            onChange={(e) => setEditingQcItem({ ...editingQcItem, label: e.target.value })}
+                            placeholder="如：初次比色"
+                          />
+                        </label>
+                        <label className="wide">
+                          <span>描述说明</span>
+                          <input
+                            type="text"
+                            value={editingQcItem.description || ''}
+                            onChange={(e) => setEditingQcItem({ ...editingQcItem, description: e.target.value })}
+                            placeholder="如：完成患者牙位比色，确认色号选择准确"
+                          />
+                        </label>
+                        <label>
+                          <span>图标</span>
+                          <select
+                            value={editingQcItem.icon || 'ClipboardList'}
+                            onChange={(e) => setEditingQcItem({ ...editingQcItem, icon: e.target.value })}
+                          >
+                            <option value="Palette">调色板</option>
+                            <option value="Camera">相机</option>
+                            <option value="ArrowLeftRight">交接</option>
+                            <option value="Stethoscope">听诊器</option>
+                            <option value="CheckCircle2">完成</option>
+                            <option value="ClipboardList">清单</option>
+                          </select>
+                        </label>
+                        <label>
+                          <span>排序号</span>
+                          <input
+                            type="number"
+                            value={editingQcItem.order ?? 1}
+                            onChange={(e) => setEditingQcItem({ ...editingQcItem, order: parseInt(e.target.value) || 1 })}
+                            min={1}
+                          />
+                        </label>
+                      </div>
+                      <div className="qc-config-edit-actions">
+                        <button type="button" className="primary" onClick={() => saveQcItemConfig(editingQcItem)}>
+                          <Save size={14} /> 保存
+                        </button>
+                        <button type="button" className="secondary" onClick={() => setEditingQcItem(null)}>
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="qc-config-bottom-actions">
+                    <button type="button" className="secondary" onClick={() => setEditingQcItem({ key: '', label: '', icon: 'ClipboardList', requiredFor: [], description: '', order: qcCheckItems.length + 1, critical: false })}>
+                      <Plus size={14} /> 新增检查项
+                    </button>
+                    <button type="button" className="secondary" onClick={resetQcItemConfig}>
+                      <RotateCcw size={14} /> 恢复默认配置
+                    </button>
+                  </div>
+                </div>
+              ) : selectedQcRecord ? (
                 <div className="detail">
                   <div className="qc-detail-header">
                     <div>
@@ -3793,11 +4267,11 @@ function App() {
 
                   <div className="detail-section-divider">
                     <ClipboardList size={16} />
-                    检查项清单（当前状态：{selectedQcRecord.record.status}）
+                    待办项清单（当前状态：{selectedQcRecord.record.status}）
                   </div>
 
                   <div className="photo-checklist">
-                    {appConfig.qcCheckItems.map((ci) => {
+                    {qcCheckItems.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((ci) => {
                       const isRequired = ci.requiredFor.includes(selectedQcRecord.record.status);
                       const isChecked = selectedQcRecord.qc?.items[ci.key]?.checked;
                       const remark = selectedQcRecord.qc?.items[ci.key]?.remark || '';
@@ -3821,7 +4295,7 @@ function App() {
                       }
 
                       return (
-                        <div key={ci.key} className={'checklist-item ' + (isChecked ? 'checked' : '') + (!isRequired ? ' qc-item-optional' : '')}>
+                        <div key={ci.key} className={'checklist-item ' + (isChecked ? 'checked' : '') + (!isRequired ? ' qc-item-optional' : '') + (ci.critical && !isChecked ? ' qc-item-critical' : '')}>
                           <div className="checklist-icon">
                             {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
                           </div>
@@ -3831,7 +4305,8 @@ function App() {
                               <strong>{ci.label}</strong>
                               {isChecked && <span className="checklist-badge">已确认</span>}
                               {!isRequired && isChecked && <span className="qc-optional-badge">可选</span>}
-                              {isRequired && !isChecked && <span className="qc-required-badge">必检</span>}
+                              {isRequired && !isChecked && ci.critical && <span className="qc-critical-badge">关键</span>}
+                              {isRequired && !isChecked && !ci.critical && <span className="qc-required-badge">必检</span>}
                             </div>
                             <p className="qc-item-desc">{ci.description}</p>
                             {isChecked && checkedAt && (
@@ -3881,28 +4356,49 @@ function App() {
                     {selectedQcRecord.progress === 100 ? (
                       <p className="checklist-complete">✓ 当前状态所有必检项已达标</p>
                     ) : (
-                      <p className="checklist-progress">
-                        缺少关键步骤：{selectedQcRecord.missing.map((m) => m.label).join('、')}
-                      </p>
+                      <>
+                        {getCriticalMissingQcItems(selectedQcRecord.record.id, selectedQcRecord.record.status).length > 0 && (
+                          <p className="checklist-progress" style={{ color: '#b91c1c' }}>
+                            <AlertOctagon size={14} /> 关键步骤缺失（不可跳过）：{getCriticalMissingQcItems(selectedQcRecord.record.id, selectedQcRecord.record.status).map((m) => m.label).join('、')}
+                          </p>
+                        )}
+                        {(() => {
+                          const nonCriticalMissing = selectedQcRecord.missing.filter((m) => !m.critical);
+                          return nonCriticalMissing.length > 0 && (
+                            <p className="checklist-progress" style={{ color: '#b45309', marginTop: '4px' }}>
+                              <ShieldAlert size={14} /> 非关键步骤缺失（可跳过）：{nonCriticalMissing.map((m) => m.label).join('、')}
+                            </p>
+                          );
+                        })()}
+                      </>
                     )}
                   </div>
 
                   <div className="detail-actions">
-                    <p className="hint">状态流转（需满足质控条件）：</p>
+                    <p className="hint">状态流转（关键步骤未完成不可跳过，非关键步骤可确认跳过）：</p>
                     <div className="actions">
                       {appConfig.statuses.map((status) => {
-                        const missingForTarget = getMissingQcItems(selectedQcRecord.record.id, status);
-                        const canTransition = missingForTarget.length === 0;
+                        const criticalMissing = getCriticalMissingQcItems(selectedQcRecord.record.id, status);
+                        const allMissing = getMissingQcItems(selectedQcRecord.record.id, status);
+                        const isBlocked = criticalMissing.length > 0;
+                        const hasOptionalMissing = criticalMissing.length === 0 && allMissing.length > 0;
+                        const isCurrent = selectedQcRecord.record.status === status;
                         return (
                           <button
                             key={status}
                             type="button"
                             onClick={() => updateStatus(selectedQcRecord.record.id, status)}
-                            disabled={selectedQcRecord.record.status === status}
-                            title={canTransition ? `切换至${status}` : `需先完成: ${missingForTarget.map((m) => m.label).join('、')}`}
+                            disabled={isCurrent || isBlocked}
+                            title={
+                              isCurrent ? '当前状态' :
+                              isBlocked ? `关键步骤未完成: ${criticalMissing.map((m) => m.label).join('、')}` :
+                              hasOptionalMissing ? `非关键步骤未完成（可确认跳过）: ${allMissing.map((m) => m.label).join('、')}` :
+                              `切换至${status}`
+                            }
                           >
                             {status}
-                            {!canTransition && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
+                            {isBlocked && !isCurrent && <AlertOctagon size={12} style={{ marginLeft: 4 }} />}
+                            {hasOptionalMissing && !isCurrent && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
                           </button>
                         );
                       })}
@@ -3913,7 +4409,7 @@ function App() {
                 <div className="empty-state" style={{ padding: '40px 20px' }}>
                   <ShieldCheck size={48} style={{ color: '#d0d5dd' }} />
                   <p className="empty">点击左侧任意记录查看质控详情和检查项。</p>
-                  <p className="hint">不同修复状态下需要完成的检查项不同，缺少关键步骤无法直接标记完成。</p>
+                  <p className="hint">不同修复状态下需要完成的检查项不同，关键步骤缺失时无法直接标记完成。</p>
                 </div>
               )}
             </aside>
@@ -3927,7 +4423,8 @@ function App() {
               </div>
               <div className="qc-rules-grid">
                 {appConfig.statuses.map((status) => {
-                  const items = appConfig.qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+                  const items = qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
+                  const criticalItems = items.filter((ci) => ci.critical);
                   const count = records.filter((r) => r.status === status).length;
                   const doneCount = records.filter((r) => r.status === status && getQcProgress(r.id, status) === 100).length;
                   return (
@@ -3943,6 +4440,7 @@ function App() {
                             <div key={ci.key} className="qc-rule-item">
                               <QcIcon size={14} />
                               <span>{ci.label}</span>
+                              {ci.critical && <span className="qc-critical-badge" style={{ marginLeft: '4px' }}>关键</span>}
                             </div>
                           );
                         })}
