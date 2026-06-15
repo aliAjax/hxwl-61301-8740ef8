@@ -1087,17 +1087,27 @@ function App() {
 
   function exportCollabData() {
     const exportObj = {
-      version: '2.1',
+      version: '3.0',
       exportedAt: new Date().toISOString(),
       sourceDeviceId: currentDeviceId,
       sourceDeviceName: getDeviceInfo(currentDeviceId).name,
       records: records.map(r => ({ ...r })),
       patients: patients.map(p => ({ ...p })),
       shadeLibrary: shadeLibrary.map(s => ({ ...s })),
+      photoProcesses: photoProcesses.map(pp => ({ ...pp })),
+      deliveryOrders: deliveryOrders.map(d => ({ ...d })),
+      qcCheckItems: qcCheckItems.map(ci => ({ ...ci })),
+      qcRecords: qcRecords.map(qc => ({ ...qc })),
+      collabTimeline: collabTimeline.map(t => ({ ...t })),
       meta: {
         recordCount: records.length,
         patientCount: patients.length,
         shadeCount: shadeLibrary.length,
+        photoProcessCount: photoProcesses.length,
+        deliveryOrderCount: deliveryOrders.length,
+        qcCheckItemCount: qcCheckItems.length,
+        qcRecordCount: qcRecords.length,
+        collabTimelineCount: collabTimeline.length,
       }
     };
     const jsonStr = JSON.stringify(exportObj, null, 2);
@@ -1107,7 +1117,7 @@ function App() {
     a.href = url;
     const deviceName = getDeviceInfo(currentDeviceId).name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
     const dateStr = getLocalDateString().replace(/-/g, '');
-    a.download = `collab-${deviceName}-${dateStr}.json`;
+    a.download = `collab-full-${deviceName}-${dateStr}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1115,8 +1125,8 @@ function App() {
     addCollabTimelineEntry({
       type: 'export',
       deviceId: currentDeviceId,
-      title: '导出设备数据',
-      detail: `从 ${getDeviceInfo(currentDeviceId).name} 导出 ${records.length} 条记录`
+      title: '导出完整备份',
+      detail: `从 ${getDeviceInfo(currentDeviceId).name} 导出完整备份（${records.length} 条记录、${patients.length} 位患者、${deliveryOrders.length} 份交接单）`
     });
   }
 
@@ -1124,6 +1134,11 @@ function App() {
     const importRecords = importData.records || [];
     const importPatients = importData.patients || [];
     const importShadeLibrary = importData.shadeLibrary || [];
+    const importPhotoProcesses = importData.photoProcesses || [];
+    const importDeliveryOrders = importData.deliveryOrders || [];
+    const importQcCheckItems = importData.qcCheckItems || [];
+    const importQcRecords = importData.qcRecords || [];
+    const importCollabTimeline = importData.collabTimeline || [];
     const sourceDeviceId = importData.sourceDeviceId || 'unknown';
     const sourceDeviceName = importData.sourceDeviceName || '未知设备';
 
@@ -1131,10 +1146,30 @@ function App() {
 
     const existingPatientIds = new Set(patients.map(p => p.id));
     const newPatients = importPatients.filter(p => !existingPatientIds.has(p.id));
+    const overwrittenPatients = importPatients.filter(p => existingPatientIds.has(p.id));
 
     const existingShadeCodes = new Set(shadeLibrary.map(s => s.code));
     const newShades = importShadeLibrary.filter(s => !existingShadeCodes.has(s.code));
     const existingImportShades = importShadeLibrary.filter(s => existingShadeCodes.has(s.code));
+
+    const existingPhotoProcessIds = new Set(photoProcesses.map(p => p.id));
+    const newPhotoProcesses = importPhotoProcesses.filter(p => !existingPhotoProcessIds.has(p.id));
+    const overwrittenPhotoProcesses = importPhotoProcesses.filter(p => existingPhotoProcessIds.has(p.id));
+
+    const existingDeliveryOrderIds = new Set(deliveryOrders.map(d => d.id));
+    const newDeliveryOrders = importDeliveryOrders.filter(d => !existingDeliveryOrderIds.has(d.id));
+    const overwrittenDeliveryOrders = importDeliveryOrders.filter(d => existingDeliveryOrderIds.has(d.id));
+
+    const existingQcCheckItemKeys = new Set(qcCheckItems.map(c => c.key));
+    const newQcCheckItems = importQcCheckItems.filter(c => !existingQcCheckItemKeys.has(c.key));
+    const overwrittenQcCheckItems = importQcCheckItems.filter(c => existingQcCheckItemKeys.has(c.key));
+
+    const existingQcRecordIds = new Set(qcRecords.map(q => q.id));
+    const newQcRecords = importQcRecords.filter(q => !existingQcRecordIds.has(q.id));
+    const overwrittenQcRecords = importQcRecords.filter(q => existingQcRecordIds.has(q.id));
+
+    const existingCollabTimelineIds = new Set(collabTimeline.map(t => t.id));
+    const newCollabTimeline = importCollabTimeline.filter(t => !existingCollabTimelineIds.has(t.id));
 
     return {
       sourceDeviceId,
@@ -1143,11 +1178,26 @@ function App() {
       totalRecords: importRecords.length,
       totalPatients: importPatients.length,
       totalShades: importShadeLibrary.length,
+      totalPhotoProcesses: importPhotoProcesses.length,
+      totalDeliveryOrders: importDeliveryOrders.length,
+      totalQcCheckItems: importQcCheckItems.length,
+      totalQcRecords: importQcRecords.length,
+      totalCollabTimeline: importCollabTimeline.length,
       conflicts,
       addedRecords: added,
       newPatients,
+      overwrittenPatients,
       newShades,
       existingImportShades,
+      newPhotoProcesses,
+      overwrittenPhotoProcesses,
+      newDeliveryOrders,
+      overwrittenDeliveryOrders,
+      newQcCheckItems,
+      overwrittenQcCheckItems,
+      newQcRecords,
+      overwrittenQcRecords,
+      newCollabTimeline,
       importData
     };
   }
@@ -1272,6 +1322,8 @@ function App() {
       });
     }
 
+    const mergedRecordIds = new Set(mergedRecords.map(r => r.id));
+
     if (collabImportPreview.addedRecords && collabImportPreview.addedRecords.length > 0) {
       const now = new Date().toISOString();
       collabImportPreview.addedRecords.forEach(ar => {
@@ -1285,6 +1337,7 @@ function App() {
             { status: `从${sourceDeviceName}导入新增记录`, at: today, by: '数据合并' }
           ]
         });
+        mergedRecordIds.add(ar.id);
       });
       timelineEntries.push({
         type: 'import-added',
@@ -1304,20 +1357,102 @@ function App() {
       });
     }
 
+    if (collabImportPreview.overwrittenPatients && collabImportPreview.overwrittenPatients.length > 0) {
+      const overwrittenPatientIds = new Set(collabImportPreview.overwrittenPatients.map(p => p.id));
+      mergedPatients = mergedPatients.map(p => overwrittenPatientIds.has(p.id) ? collabImportPreview.overwrittenPatients.find(op => op.id === p.id) || p : p);
+    }
+
     if (collabImportPreview.newShades && collabImportPreview.newShades.length > 0) {
       const maxOrder = shadeLibrary.length > 0 ? Math.max(...shadeLibrary.map((s) => s.order)) : -1;
       const newShadesWithOrder = collabImportPreview.newShades.map((s, i) => ({
         ...s,
         order: maxOrder + i + 1
       }));
-      const mergedShades = [...shadeLibrary, ...newShadesWithOrder];
+      let mergedShades = [...shadeLibrary, ...newShadesWithOrder];
+      if (collabImportPreview.existingImportShades && collabImportPreview.existingImportShades.length > 0) {
+        const overwrittenShadeCodes = new Set(collabImportPreview.existingImportShades.map(s => s.code));
+        mergedShades = mergedShades.map(s => overwrittenShadeCodes.has(s.code) ? { ...(collabImportPreview.existingImportShades.find(is => is.code === s.code) || s), order: s.order } : s);
+      }
       persistShadeLibrary(mergedShades);
       timelineEntries.push({
         type: 'import-shades',
         deviceId: sourceDeviceId,
-        title: '导入新增色号',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newShades.length} 个自定义色号`
+        title: '导入色号库',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newShades.length} 个新增色号，${collabImportPreview.existingImportShades?.length || 0} 个覆盖色号`
       });
+    }
+
+    if (collabImportPreview.newPhotoProcesses && collabImportPreview.newPhotoProcesses.length > 0) {
+      let mergedPhotoProcesses = [...photoProcesses, ...collabImportPreview.newPhotoProcesses];
+      if (collabImportPreview.overwrittenPhotoProcesses && collabImportPreview.overwrittenPhotoProcesses.length > 0) {
+        const overwrittenPPIds = new Set(collabImportPreview.overwrittenPhotoProcesses.map(p => p.id));
+        mergedPhotoProcesses = mergedPhotoProcesses.map(p => overwrittenPPIds.has(p.id) ? collabImportPreview.overwrittenPhotoProcesses.find(opp => opp.id === p.id) || p : p);
+      }
+      persistPhotoProcesses(mergedPhotoProcesses);
+      timelineEntries.push({
+        type: 'import-photo-processes',
+        deviceId: sourceDeviceId,
+        title: '导入拍照流程',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newPhotoProcesses.length} 个新增拍照流程，${collabImportPreview.overwrittenPhotoProcesses?.length || 0} 个覆盖`
+      });
+    }
+
+    if (collabImportPreview.newDeliveryOrders && collabImportPreview.newDeliveryOrders.length > 0) {
+      let mergedDeliveryOrders = [...deliveryOrders, ...collabImportPreview.newDeliveryOrders];
+      if (collabImportPreview.overwrittenDeliveryOrders && collabImportPreview.overwrittenDeliveryOrders.length > 0) {
+        const overwrittenDOIds = new Set(collabImportPreview.overwrittenDeliveryOrders.map(d => d.id));
+        mergedDeliveryOrders = mergedDeliveryOrders.map(d => overwrittenDOIds.has(d.id) ? collabImportPreview.overwrittenDeliveryOrders.find(odo => odo.id === d.id) || d : d);
+      }
+      persistDeliveryOrders(mergedDeliveryOrders);
+      timelineEntries.push({
+        type: 'import-delivery-orders',
+        deviceId: sourceDeviceId,
+        title: '导入交接单',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newDeliveryOrders.length} 份新增交接单，${collabImportPreview.overwrittenDeliveryOrders?.length || 0} 份覆盖`
+      });
+    }
+
+    if (collabImportPreview.newQcCheckItems && collabImportPreview.newQcCheckItems.length > 0) {
+      let mergedQcCheckItems = [...qcCheckItems, ...collabImportPreview.newQcCheckItems.map((ci, i) => ({
+        ...ci,
+        order: ci.order ?? (qcCheckItems.length + i + 1)
+      }))];
+      if (collabImportPreview.overwrittenQcCheckItems && collabImportPreview.overwrittenQcCheckItems.length > 0) {
+        const overwrittenCIKeys = new Set(collabImportPreview.overwrittenQcCheckItems.map(c => c.key));
+        mergedQcCheckItems = mergedQcCheckItems.map(c => overwrittenCIKeys.has(c.key) ? { ...(collabImportPreview.overwrittenQcCheckItems.find(oci => oci.key === c.key) || c), order: c.order } : c);
+      }
+      persistQcCheckItems(mergedQcCheckItems);
+      timelineEntries.push({
+        type: 'import-qc-config',
+        deviceId: sourceDeviceId,
+        title: '导入质控配置',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcCheckItems.length} 项新增质控配置，${collabImportPreview.overwrittenQcCheckItems?.length || 0} 项覆盖`
+      });
+    }
+
+    if (collabImportPreview.newQcRecords && collabImportPreview.newQcRecords.length > 0) {
+      let mergedQcRecords = [...qcRecords];
+      collabImportPreview.newQcRecords.forEach(nqr => {
+        if (nqr.recordId && !mergedRecordIds.has(nqr.recordId)) return;
+        mergedQcRecords.push(nqr);
+      });
+      if (collabImportPreview.overwrittenQcRecords && collabImportPreview.overwrittenQcRecords.length > 0) {
+        const overwrittenQRIds = new Set(collabImportPreview.overwrittenQcRecords.map(q => q.id));
+        mergedQcRecords = mergedQcRecords.map(q => overwrittenQRIds.has(q.id) ? collabImportPreview.overwrittenQcRecords.find(oqr => oqr.id === q.id) || q : q);
+      }
+      persistQcRecords(mergedQcRecords);
+      timelineEntries.push({
+        type: 'import-qc-records',
+        deviceId: sourceDeviceId,
+        title: '导入质控记录',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcRecords.length} 条新增质控记录，${collabImportPreview.overwrittenQcRecords?.length || 0} 条覆盖`
+      });
+    }
+
+    if (collabImportPreview.newCollabTimeline && collabImportPreview.newCollabTimeline.length > 0) {
+      const mergedTimeline = [...collabImportPreview.newCollabTimeline, ...collabTimeline];
+      setCollabTimeline(mergedTimeline);
+      persistCollabTimeline(mergedTimeline);
     }
 
     persistRecords(mergedRecords);
@@ -1332,8 +1467,12 @@ function App() {
       collabConflicts ? ` - 保留本地：${collabConflicts.filter(c => c.resolution === 'keepLocal').length} 条` : '',
       collabConflicts ? ` - 采用导入：${collabConflicts.filter(c => c.resolution === 'useImport').length} 条` : '',
       collabConflicts ? ` - 生成副本：${collabConflicts.filter(c => c.resolution === 'makeCopy').length} 条` : '',
-      `新增患者：${collabImportPreview.newPatients?.length || 0} 位`,
-      `新增色号：${collabImportPreview.newShades?.length || 0} 个`
+      `患者档案：新增 ${collabImportPreview.newPatients?.length || 0} 位，覆盖 ${collabImportPreview.overwrittenPatients?.length || 0} 位`,
+      `色号库：新增 ${collabImportPreview.newShades?.length || 0} 个`,
+      `拍照流程：新增 ${collabImportPreview.newPhotoProcesses?.length || 0} 个，覆盖 ${collabImportPreview.overwrittenPhotoProcesses?.length || 0} 个`,
+      `交接单：新增 ${collabImportPreview.newDeliveryOrders?.length || 0} 份，覆盖 ${collabImportPreview.overwrittenDeliveryOrders?.length || 0} 份`,
+      `质控配置：新增 ${collabImportPreview.newQcCheckItems?.length || 0} 项，覆盖 ${collabImportPreview.overwrittenQcCheckItems?.length || 0} 项`,
+      `质控记录：新增 ${collabImportPreview.newQcRecords?.length || 0} 条，覆盖 ${collabImportPreview.overwrittenQcRecords?.length || 0} 条`,
     ].filter(Boolean).join('\n');
     alert(summaryMsg);
 
@@ -1390,15 +1529,25 @@ function App() {
 
   function exportData() {
     const exportObj = {
-      version: '1.1',
+      version: '2.0',
       exportedAt: new Date().toISOString(),
       records: records,
       patients: patients,
       shadeLibrary: shadeLibrary,
+      photoProcesses: photoProcesses,
+      deliveryOrders: deliveryOrders,
+      qcCheckItems: qcCheckItems,
+      qcRecords: qcRecords,
+      collabTimeline: collabTimeline,
       meta: {
         recordCount: records.length,
         patientCount: patients.length,
         shadeCount: shadeLibrary.length,
+        photoProcessCount: photoProcesses.length,
+        deliveryOrderCount: deliveryOrders.length,
+        qcCheckItemCount: qcCheckItems.length,
+        qcRecordCount: qcRecords.length,
+        collabTimelineCount: collabTimeline.length,
       }
     };
     const jsonStr = JSON.stringify(exportObj, null, 2);
@@ -1407,7 +1556,7 @@ function App() {
     const a = document.createElement('a');
     a.href = url;
     const dateStr = getLocalDateString().replace(/-/g, '');
-    a.download = `dental-shade-export-${dateStr}.json`;
+    a.download = `dental-full-backup-${dateStr}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1419,10 +1568,20 @@ function App() {
     const existingPatientIds = new Set(patients.map(p => p.id));
     const existingPatientNames = new Set(patients.map(p => p.name));
     const existingShadeCodes = new Set(shadeLibrary.map(s => s.code));
+    const existingPhotoProcessIds = new Set(photoProcesses.map(p => p.id));
+    const existingDeliveryOrderIds = new Set(deliveryOrders.map(d => d.id));
+    const existingQcRecordIds = new Set(qcRecords.map(q => q.id));
+    const existingQcCheckItemKeys = new Set(qcCheckItems.map(c => c.key));
+    const existingCollabTimelineIds = new Set(collabTimeline.map(t => t.id));
 
     const importRecords = importData.records || [];
     const importPatients = importData.patients || [];
     const importShadeLibrary = importData.shadeLibrary || [];
+    const importPhotoProcesses = importData.photoProcesses || [];
+    const importDeliveryOrders = importData.deliveryOrders || [];
+    const importQcCheckItems = importData.qcCheckItems || [];
+    const importQcRecords = importData.qcRecords || [];
+    const importCollabTimeline = importData.collabTimeline || [];
 
     const duplicateRecordIds = importRecords.filter(r => existingRecordIds.has(r.id)).map(r => r.id);
     const newRecords = importRecords.filter(r => !existingRecordIds.has(r.id));
@@ -1436,21 +1595,62 @@ function App() {
     const newShades = importShadeLibrary.filter(s => !existingShadeCodes.has(s.code));
     const overwrittenShades = importShadeLibrary.filter(s => existingShadeCodes.has(s.code));
 
+    const newPhotoProcesses = importPhotoProcesses.filter(p => !existingPhotoProcessIds.has(p.id));
+    const overwrittenPhotoProcesses = importPhotoProcesses.filter(p => existingPhotoProcessIds.has(p.id));
+
+    const newDeliveryOrders = importDeliveryOrders.filter(d => !existingDeliveryOrderIds.has(d.id));
+    const overwrittenDeliveryOrders = importDeliveryOrders.filter(d => existingDeliveryOrderIds.has(d.id));
+
+    const newQcCheckItems = importQcCheckItems.filter(c => !existingQcCheckItemKeys.has(c.key));
+    const overwrittenQcCheckItems = importQcCheckItems.filter(c => existingQcCheckItemKeys.has(c.key));
+
+    const newQcRecords = importQcRecords.filter(q => !existingQcRecordIds.has(q.id));
+    const overwrittenQcRecords = importQcRecords.filter(q => existingQcRecordIds.has(q.id));
+    const skippedQcRecords = importQcRecords.filter(q => {
+      if (!q.recordId) return false;
+      const localRecordExists = existingRecordIds.has(q.recordId) || newRecords.some(r => r.id === q.recordId);
+      return !localRecordExists;
+    });
+
+    const newCollabTimeline = importCollabTimeline.filter(t => !existingCollabTimelineIds.has(t.id));
+    const skippedCollabTimeline = importCollabTimeline.filter(t => existingCollabTimelineIds.has(t.id));
+
     return {
       totalRecords: importRecords.length,
       totalPatients: importPatients.length,
       totalShades: importShadeLibrary.length,
+      totalPhotoProcesses: importPhotoProcesses.length,
+      totalDeliveryOrders: importDeliveryOrders.length,
+      totalQcCheckItems: importQcCheckItems.length,
+      totalQcRecords: importQcRecords.length,
+      totalCollabTimeline: importCollabTimeline.length,
       newRecords: newRecords.length,
       overwrittenRecords: overwrittenRecords.length,
+      skippedRecords: 0,
       duplicateRecordIds,
       newPatients: newPatients.length,
       overwrittenPatients: overwrittenPatients.length,
+      skippedPatients: 0,
       duplicatePatientIds,
       duplicatePatientNames,
       newShades: newShades.length,
       overwrittenShades: overwrittenShades.length,
-      newShadesList: newShades,
-      overwrittenShadesList: overwrittenShades,
+      skippedShades: 0,
+      newPhotoProcesses: newPhotoProcesses.length,
+      overwrittenPhotoProcesses: overwrittenPhotoProcesses.length,
+      skippedPhotoProcesses: 0,
+      newDeliveryOrders: newDeliveryOrders.length,
+      overwrittenDeliveryOrders: overwrittenDeliveryOrders.length,
+      skippedDeliveryOrders: 0,
+      newQcCheckItems: newQcCheckItems.length,
+      overwrittenQcCheckItems: overwrittenQcCheckItems.length,
+      skippedQcCheckItems: 0,
+      newQcRecords: newQcRecords.length,
+      overwrittenQcRecords: overwrittenQcRecords.length,
+      skippedQcRecords: skippedQcRecords.length,
+      newCollabTimeline: newCollabTimeline.length,
+      overwrittenCollabTimeline: 0,
+      skippedCollabTimeline: skippedCollabTimeline.length,
       importData
     };
   }
@@ -1467,8 +1667,11 @@ function App() {
         const content = e.target?.result;
         if (typeof content !== 'string') throw new Error('文件格式错误');
         const data = JSON.parse(content);
-        if (!data.records && !data.patients) {
-          throw new Error('未找到有效的记录或患者数据');
+        const hasData = data.records || data.patients || data.shadeLibrary
+          || data.photoProcesses || data.deliveryOrders || data.qcCheckItems
+          || data.qcRecords || data.collabTimeline;
+        if (!hasData) {
+          throw new Error('未找到有效的备份数据');
         }
         const analysis = analyzeImportData(data);
         setImportPreview(analysis);
@@ -1492,7 +1695,13 @@ function App() {
     const importRecords = importData.records || [];
     const importPatients = importData.patients || [];
     const importShadeLibrary = importData.shadeLibrary || [];
+    const importPhotoProcesses = importData.photoProcesses || [];
+    const importDeliveryOrders = importData.deliveryOrders || [];
+    const importQcCheckItems = importData.qcCheckItems || [];
+    const importQcRecords = importData.qcRecords || [];
+    const importCollabTimeline = importData.collabTimeline || [];
 
+    const mergedRecordIds = new Set();
     let mergedRecords = [...records];
     importRecords.forEach(ir => {
       if (existingRecordIds.has(ir.id)) {
@@ -1500,7 +1709,9 @@ function App() {
       } else {
         mergedRecords.push(ir);
       }
+      mergedRecordIds.add(ir.id);
     });
+    records.forEach(r => mergedRecordIds.add(r.id));
 
     let mergedPatients = [...patients];
     importPatients.forEach(ip => {
@@ -1525,10 +1736,84 @@ function App() {
       persistShadeLibrary(mergedShades);
     }
 
+    if (importPhotoProcesses.length > 0) {
+      const existingPhotoProcessIds = new Set(photoProcesses.map(p => p.id));
+      let mergedPhotoProcesses = [...photoProcesses];
+      importPhotoProcesses.forEach(ipp => {
+        if (existingPhotoProcessIds.has(ipp.id)) {
+          mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === ipp.id ? ipp : p);
+        } else {
+          mergedPhotoProcesses.push(ipp);
+        }
+      });
+      persistPhotoProcesses(mergedPhotoProcesses);
+    }
+
+    if (importDeliveryOrders.length > 0) {
+      const existingDeliveryOrderIds = new Set(deliveryOrders.map(d => d.id));
+      let mergedDeliveryOrders = [...deliveryOrders];
+      importDeliveryOrders.forEach(ido => {
+        if (existingDeliveryOrderIds.has(ido.id)) {
+          mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === ido.id ? ido : d);
+        } else {
+          mergedDeliveryOrders.push(ido);
+        }
+      });
+      persistDeliveryOrders(mergedDeliveryOrders);
+    }
+
+    if (importQcCheckItems.length > 0) {
+      const existingQcCheckItemKeys = new Set(qcCheckItems.map(c => c.key));
+      let mergedQcCheckItems = [...qcCheckItems];
+      importQcCheckItems.forEach(ici => {
+        if (existingQcCheckItemKeys.has(ici.key)) {
+          mergedQcCheckItems = mergedQcCheckItems.map(c => c.key === ici.key ? { ...c, ...ici, order: c.order } : c);
+        } else {
+          const maxOrder = mergedQcCheckItems.length > 0 ? Math.max(...mergedQcCheckItems.map(c => c.order || 0)) : 0;
+          mergedQcCheckItems.push({ ...ici, order: ici.order ?? (maxOrder + 1) });
+        }
+      });
+      persistQcCheckItems(mergedQcCheckItems);
+    }
+
+    if (importQcRecords.length > 0) {
+      const existingQcRecordIds = new Set(qcRecords.map(q => q.id));
+      let mergedQcRecords = [...qcRecords];
+      importQcRecords.forEach(iqr => {
+        if (!iqr.recordId || !mergedRecordIds.has(iqr.recordId)) return;
+        if (existingQcRecordIds.has(iqr.id)) {
+          mergedQcRecords = mergedQcRecords.map(q => q.id === iqr.id ? iqr : q);
+        } else {
+          mergedQcRecords.push(iqr);
+        }
+      });
+      persistQcRecords(mergedQcRecords);
+    }
+
+    if (importCollabTimeline.length > 0) {
+      const existingCollabTimelineIds = new Set(collabTimeline.map(t => t.id));
+      const newTimelineEntries = importCollabTimeline.filter(t => !existingCollabTimelineIds.has(t.id));
+      if (newTimelineEntries.length > 0) {
+        const mergedTimeline = [...newTimelineEntries, ...collabTimeline];
+        setCollabTimeline(mergedTimeline);
+        persistCollabTimeline(mergedTimeline);
+      }
+    }
+
     persistRecords(mergedRecords);
     persistPatients(mergedPatients);
 
-    alert(`导入成功！\n新增记录：${importPreview.newRecords} 条，覆盖记录：${importPreview.overwrittenRecords} 条\n新增患者：${importPreview.newPatients} 人，覆盖患者：${importPreview.overwrittenPatients} 人\n新增色号：${importPreview.newShades} 个，覆盖色号：${importPreview.overwrittenShades} 个`);
+    const summaryLines = [
+      `牙色记录：新增 ${importPreview.newRecords} 条，覆盖 ${importPreview.overwrittenRecords} 条`,
+      `患者档案：新增 ${importPreview.newPatients} 人，覆盖 ${importPreview.overwrittenPatients} 人`,
+      `色号库：新增 ${importPreview.newShades} 个，覆盖 ${importPreview.overwrittenShades} 个`,
+      `拍照流程：新增 ${importPreview.newPhotoProcesses} 个，覆盖 ${importPreview.overwrittenPhotoProcesses} 个`,
+      `交接单：新增 ${importPreview.newDeliveryOrders} 份，覆盖 ${importPreview.overwrittenDeliveryOrders} 份`,
+      `质控配置：新增 ${importPreview.newQcCheckItems} 项，覆盖 ${importPreview.overwrittenQcCheckItems} 项`,
+      `质控记录：新增 ${importPreview.newQcRecords} 条，覆盖 ${importPreview.overwrittenQcRecords} 条，跳过 ${importPreview.skippedQcRecords} 条（关联记录缺失）`,
+      `协作时间线：新增 ${importPreview.newCollabTimeline} 条，跳过 ${importPreview.skippedCollabTimeline} 条（ID 重复）`,
+    ].filter(l => !l.includes('新增 0') || l.includes('覆盖') || l.includes('跳过'));
+    alert(`导入成功！\n${summaryLines.join('\n')}`);
     cancelImport();
   }
 
@@ -5673,10 +5958,10 @@ function App() {
           <div className="panel form-panel data-panel">
             <div className="panel-title">
               <Download size={18} />
-              <h2>数据导出</h2>
+              <h2>完整备份导出</h2>
             </div>
             <p className="data-description">
-              将当前浏览器中存储的牙色记录、患者档案和时间线数据导出为 JSON 文件，用于备份或迁移。
+              将当前浏览器中存储的所有业务数据导出为完整备份包（JSON 文件），包含牙色记录、患者档案、色号库、拍照流程、交接单、质控配置、质控记录和协作时间线。
             </p>
             <div className="data-stats">
               <div className="data-stat-item">
@@ -5694,8 +5979,49 @@ function App() {
                 </div>
               </div>
             </div>
+            <div className="data-stats">
+              <div className="data-stat-item">
+                <Palette size={20} />
+                <div>
+                  <strong>{shadeLibrary.length}</strong>
+                  <span>色号库</span>
+                </div>
+              </div>
+              <div className="data-stat-item">
+                <Camera size={20} />
+                <div>
+                  <strong>{photoProcesses.length}</strong>
+                  <span>拍照流程</span>
+                </div>
+              </div>
+            </div>
+            <div className="data-stats">
+              <div className="data-stat-item">
+                <Package size={20} />
+                <div>
+                  <strong>{deliveryOrders.length}</strong>
+                  <span>交接单</span>
+                </div>
+              </div>
+              <div className="data-stat-item">
+                <ShieldCheck size={20} />
+                <div>
+                  <strong>{qcCheckItems.length}/{qcRecords.length}</strong>
+                  <span>质控配置/记录</span>
+                </div>
+              </div>
+            </div>
+            <div className="data-stats">
+              <div className="data-stat-item">
+                <History size={20} />
+                <div>
+                  <strong>{collabTimeline.length}</strong>
+                  <span>协作时间线</span>
+                </div>
+              </div>
+            </div>
             <button className="primary" type="button" onClick={exportData}>
-              <Download size={18} />导出数据为 JSON
+              <Download size={18} />导出完整备份包
             </button>
           </div>
 
@@ -5705,15 +6031,15 @@ function App() {
               <h2>数据导入</h2>
             </div>
             <p className="data-description">
-              选择从本系统导出的 JSON 文件进行数据导入。导入前会展示详细的统计信息和冲突提示，确认后才会执行合并。
+              选择从本系统导出的完整备份包 JSON 文件进行数据导入。导入前会按数据类型展示详细的新增、覆盖和跳过统计，确认后才会执行合并，并保持各类记录之间的关联关系。
             </p>
 
             {!importPreview ? (
               <div className="import-area">
                 <label className="import-label">
                   <Upload size={32} style={{ color: '#9ca3af' }} />
-                  <span>点击选择 JSON 文件或拖拽到此处</span>
-                  <p className="hint">仅支持由本系统导出的数据文件</p>
+                  <span>点击选择 JSON 备份文件或拖拽到此处</span>
+                  <p className="hint">仅支持由本系统导出的完整备份包文件</p>
                   <input
                     type="file"
                     accept=".json,application/json"
@@ -5729,7 +6055,7 @@ function App() {
               <div className="import-preview">
                 <div className="import-preview-header">
                   <CheckCircle2 size={20} style={{ color: 'var(--accent)' }} />
-                  <h3>文件解析成功</h3>
+                  <h3>备份文件解析成功</h3>
                 </div>
 
                 <div className="import-stats">
@@ -5768,7 +6094,125 @@ function App() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="import-stat-card">
+                    <h4>色号库</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <span className="label">总计</span>
+                        <strong>{importPreview.totalShades}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">新增</span>
+                        <strong className="text-success">{importPreview.newShades}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">覆盖</span>
+                        <strong className="text-warning">{importPreview.overwrittenShades}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>拍照流程</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <span className="label">总计</span>
+                        <strong>{importPreview.totalPhotoProcesses}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">新增</span>
+                        <strong className="text-success">{importPreview.newPhotoProcesses}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">覆盖</span>
+                        <strong className="text-warning">{importPreview.overwrittenPhotoProcesses}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>交接单</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <span className="label">总计</span>
+                        <strong>{importPreview.totalDeliveryOrders}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">新增</span>
+                        <strong className="text-success">{importPreview.newDeliveryOrders}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">覆盖</span>
+                        <strong className="text-warning">{importPreview.overwrittenDeliveryOrders}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>质控配置</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <span className="label">总计</span>
+                        <strong>{importPreview.totalQcCheckItems}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">新增</span>
+                        <strong className="text-success">{importPreview.newQcCheckItems}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">覆盖</span>
+                        <strong className="text-warning">{importPreview.overwrittenQcCheckItems}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>质控记录</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <span className="label">总计</span>
+                        <strong>{importPreview.totalQcRecords}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">新增</span>
+                        <strong className="text-success">{importPreview.newQcRecords}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">覆盖</span>
+                        <strong className="text-warning">{importPreview.overwrittenQcRecords}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>协作时间线</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <span className="label">总计</span>
+                        <strong>{importPreview.totalCollabTimeline}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">新增</span>
+                        <strong className="text-success">{importPreview.newCollabTimeline}</strong>
+                      </div>
+                      <div className="import-stat-item">
+                        <span className="label">跳过</span>
+                        <strong className="text-skip">{importPreview.skippedCollabTimeline}</strong>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {importPreview.skippedQcRecords > 0 && (
+                  <div className="import-warning">
+                    <AlertTriangle size={18} />
+                    <div>
+                      <strong>{importPreview.skippedQcRecords} 条质控记录将被跳过</strong>
+                      <p>这些质控记录关联的牙色记录在导入数据和本地数据中均不存在，无法保持关联关系，将被自动跳过。</p>
+                    </div>
+                  </div>
+                )}
 
                 {importPreview.duplicatePatientNames.length > 0 && (
                   <div className="import-warning">
@@ -5781,22 +6225,12 @@ function App() {
                   </div>
                 )}
 
-                {importPreview.overwrittenRecords > 0 && (
+                {(importPreview.overwrittenRecords > 0 || importPreview.overwrittenPatients > 0 || importPreview.overwrittenShades > 0 || importPreview.overwrittenPhotoProcesses > 0 || importPreview.overwrittenDeliveryOrders > 0 || importPreview.overwrittenQcCheckItems > 0 || importPreview.overwrittenQcRecords > 0) && (
                   <div className="import-warning">
                     <AlertTriangle size={18} />
                     <div>
-                      <strong>将覆盖 {importPreview.overwrittenRecords} 条已有记录</strong>
-                      <p>这些记录 ID 在当前数据中已存在，导入后将被新数据替换。</p>
-                    </div>
-                  </div>
-                )}
-
-                {importPreview.overwrittenPatients > 0 && (
-                  <div className="import-warning">
-                    <AlertTriangle size={18} />
-                    <div>
-                      <strong>将覆盖 {importPreview.overwrittenPatients} 个已有患者档案</strong>
-                      <p>这些患者 ID 在当前数据中已存在，导入后将被新数据替换。</p>
+                      <strong>部分数据将被覆盖</strong>
+                      <p>导入数据中存在与本地相同 ID/key 的记录，导入后这些本地数据将被替换。各类型覆盖数量已在上方统计中标注。</p>
                     </div>
                   </div>
                 )}
@@ -5966,10 +6400,10 @@ function App() {
             <div className="panel data-panel">
               <div className="panel-title">
                 <Download size={18} />
-                <h2>导出本设备数据</h2>
+                <h2>导出本设备完整备份</h2>
               </div>
               <p className="data-description">
-                将当前设备的所有记录和患者档案导出为 JSON 文件，用于导入其他设备。
+                将当前设备的所有业务数据导出为完整备份包（JSON 文件），包含牙色记录、患者档案、色号库、拍照流程、交接单、质控配置、质控记录和协作时间线，用于导入其他设备。
               </p>
               <div className="data-stats">
                 <div className="data-stat-item">
@@ -5987,8 +6421,24 @@ function App() {
                   </div>
                 </div>
               </div>
+              <div className="data-stats">
+                <div className="data-stat-item">
+                  <Palette size={20} />
+                  <div>
+                    <strong>{shadeLibrary.length}</strong>
+                    <span>色号库</span>
+                  </div>
+                </div>
+                <div className="data-stat-item">
+                  <Package size={20} />
+                  <div>
+                    <strong>{deliveryOrders.length}</strong>
+                    <span>交接单</span>
+                  </div>
+                </div>
+              </div>
               <button type="button" className="primary" onClick={exportCollabData}>
-                <Download size={18} />导出 {getDeviceInfo(currentDeviceId).name} 数据
+                <Download size={18} />导出 {getDeviceInfo(currentDeviceId).name} 完整备份
               </button>
             </div>
 
@@ -5998,14 +6448,14 @@ function App() {
                 <h2>导入其他设备数据</h2>
               </div>
               <p className="data-description">
-                选择从其他诊室平板导出的 JSON 文件，系统将自动检测冲突并提供处理方式。
+                选择从其他诊室平板导出的完整备份包 JSON 文件，系统将自动检测冲突并提供处理方式，同时合并所有数据类型。
               </p>
               {!collabImportPreview ? (
                 <div className="collab-import-area">
                   <label className="import-label">
                     <Upload size={32} style={{ color: '#9ca3af' }} />
-                    <span>点击选择 JSON 文件或拖拽到此处</span>
-                    <p className="hint">仅支持由本系统多诊室协作功能导出的数据文件</p>
+                    <span>点击选择 JSON 备份文件或拖拽到此处</span>
+                    <p className="hint">仅支持由本系统多诊室协作功能导出的完整备份包文件</p>
                     <input
                       type="file"
                       accept=".json,application/json"
@@ -6046,7 +6496,7 @@ function App() {
                       <ClipboardList size={20} />
                       <div>
                         <strong>{collabImportPreview.totalRecords}</strong>
-                        <span>记录总数</span>
+                        <span>牙色记录</span>
                       </div>
                     </div>
                     <div className="data-stat-item" style={{ flex: 1 }}>
@@ -6061,6 +6511,52 @@ function App() {
                       <div>
                         <strong style={{ color: '#dc2626' }}>{collabImportPreview.conflicts?.length || 0}</strong>
                         <span>冲突记录</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="collab-import-stats" style={{ marginTop: '8px' }}>
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <Users size={20} />
+                      <div>
+                        <strong>{collabImportPreview.totalPatients}</strong>
+                        <span>患者档案</span>
+                      </div>
+                    </div>
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <Palette size={20} />
+                      <div>
+                        <strong>{collabImportPreview.totalShades}</strong>
+                        <span>色号库</span>
+                      </div>
+                    </div>
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <Package size={20} />
+                      <div>
+                        <strong>{collabImportPreview.totalDeliveryOrders || 0}</strong>
+                        <span>交接单</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="collab-import-stats" style={{ marginTop: '8px' }}>
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <Camera size={20} />
+                      <div>
+                        <strong>{collabImportPreview.totalPhotoProcesses || 0}</strong>
+                        <span>拍照流程</span>
+                      </div>
+                    </div>
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <ShieldCheck size={20} />
+                      <div>
+                        <strong>{collabImportPreview.totalQcCheckItems || 0}/{collabImportPreview.totalQcRecords || 0}</strong>
+                        <span>质控配置/记录</span>
+                      </div>
+                    </div>
+                    <div className="data-stat-item" style={{ flex: 1 }}>
+                      <History size={20} />
+                      <div>
+                        <strong>{collabImportPreview.totalCollabTimeline || 0}</strong>
+                        <span>协作时间线</span>
                       </div>
                     </div>
                   </div>

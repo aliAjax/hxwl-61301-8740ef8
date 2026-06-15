@@ -2533,6 +2533,10 @@ select.with-icon {
   color: #d97706;
 }
 
+.import-stat-item strong.text-skip {
+  color: #6b7280;
+}
+
 .import-warning {
   display: flex;
   gap: 12px;
