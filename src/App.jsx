@@ -1164,9 +1164,15 @@ function App() {
     const newQcCheckItems = importQcCheckItems.filter(c => !existingQcCheckItemKeys.has(c.key));
     const overwrittenQcCheckItems = importQcCheckItems.filter(c => existingQcCheckItemKeys.has(c.key));
 
+    const reachableRecordIds = new Set([
+      ...records.map(r => r.id),
+      ...importRecords.map(r => r.id)
+    ]);
+    const importableQcRecords = importQcRecords.filter(q => !q.recordId || reachableRecordIds.has(q.recordId));
+    const skippedQcRecords = importQcRecords.filter(q => q.recordId && !reachableRecordIds.has(q.recordId));
     const existingQcRecordIds = new Set(qcRecords.map(q => q.id));
-    const newQcRecords = importQcRecords.filter(q => !existingQcRecordIds.has(q.id));
-    const overwrittenQcRecords = importQcRecords.filter(q => existingQcRecordIds.has(q.id));
+    const newQcRecords = importableQcRecords.filter(q => !existingQcRecordIds.has(q.id));
+    const overwrittenQcRecords = importableQcRecords.filter(q => existingQcRecordIds.has(q.id));
 
     const existingCollabTimelineIds = new Set(collabTimeline.map(t => t.id));
     const newCollabTimeline = importCollabTimeline.filter(t => !existingCollabTimelineIds.has(t.id));
@@ -1197,6 +1203,7 @@ function App() {
       overwrittenQcCheckItems,
       newQcRecords,
       overwrittenQcRecords,
+      skippedQcRecords,
       newCollabTimeline,
       importData
     };
@@ -1246,6 +1253,7 @@ function App() {
     let mergedRecords = [...records];
     let mergedPatients = [...patients];
     const timelineEntries = [];
+    const recordIdMap = new Map();
 
     if (collabConflicts && collabConflicts.length > 0) {
       const unresolved = collabConflicts.filter(c => !c.resolution);
@@ -1295,6 +1303,7 @@ function App() {
               }
             ]
           };
+          recordIdMap.set(imp.id, local.id);
           mergedRecords = mergedRecords.map(r => r.id === local.id ? importedRecord : r);
         } else if (resolution === 'makeCopy') {
           timelineEntries.push({
@@ -1303,9 +1312,10 @@ function App() {
             title: '冲突处理：生成副本',
             detail: `${patient} - ${tooth} 牙位，保留本地版本（v${local.version}）并新增${sourceDeviceName}版本（v${imp.version}）作为副本`
           });
+          const copyRecordId = uid();
           const copyRecord = {
             ...imp,
-            id: uid(),
+            id: copyRecordId,
             lastModified: now,
             version: 1,
             timeline: [
@@ -1317,6 +1327,7 @@ function App() {
               }
             ]
           };
+          recordIdMap.set(imp.id, copyRecordId);
           mergedRecords.unshift(copyRecord);
         }
       });
@@ -1327,9 +1338,11 @@ function App() {
     if (collabImportPreview.addedRecords && collabImportPreview.addedRecords.length > 0) {
       const now = new Date().toISOString();
       collabImportPreview.addedRecords.forEach(ar => {
+        const importedRecordId = uid();
+        recordIdMap.set(ar.id, importedRecordId);
         mergedRecords.unshift({
           ...ar,
-          id: uid(),
+          id: importedRecordId,
           lastModified: now,
           version: 1,
           timeline: [
@@ -1337,7 +1350,7 @@ function App() {
             { status: `从${sourceDeviceName}导入新增记录`, at: today, by: '数据合并' }
           ]
         });
-        mergedRecordIds.add(ar.id);
+        mergedRecordIds.add(importedRecordId);
       });
       timelineEntries.push({
         type: 'import-added',
@@ -1465,22 +1478,33 @@ function App() {
 
     if (hasNewQR || hasOverwrittenQR) {
       let mergedQcRecords = [...qcRecords];
+      const mapQcRecord = (qc) => {
+        const mappedRecordId = qc.recordId && recordIdMap.has(qc.recordId) ? recordIdMap.get(qc.recordId) : qc.recordId;
+        return mappedRecordId === qc.recordId ? qc : { ...qc, recordId: mappedRecordId };
+      };
       if (hasNewQR) {
         collabImportPreview.newQcRecords.forEach(nqr => {
-          if (nqr.recordId && !mergedRecordIds.has(nqr.recordId)) return;
-          mergedQcRecords.push(nqr);
+          const mappedQc = mapQcRecord(nqr);
+          if (mappedQc.recordId && !mergedRecordIds.has(mappedQc.recordId)) return;
+          mergedQcRecords.push(mappedQc);
         });
       }
       if (hasOverwrittenQR) {
-        const overwrittenQRIds = new Set(collabImportPreview.overwrittenQcRecords.map(q => q.id));
-        mergedQcRecords = mergedQcRecords.map(q => overwrittenQRIds.has(q.id) ? collabImportPreview.overwrittenQcRecords.find(oqr => oqr.id === q.id) || q : q);
+        const mappedOverwrittenQcRecords = collabImportPreview.overwrittenQcRecords.map(mapQcRecord);
+        const overwrittenQRIds = new Set(mappedOverwrittenQcRecords.map(q => q.id));
+        mergedQcRecords = mergedQcRecords.map(q => {
+          if (!overwrittenQRIds.has(q.id)) return q;
+          const mappedQc = mappedOverwrittenQcRecords.find(oqr => oqr.id === q.id);
+          if (!mappedQc?.recordId || mergedRecordIds.has(mappedQc.recordId)) return mappedQc || q;
+          return q;
+        });
       }
       persistQcRecords(mergedQcRecords);
       timelineEntries.push({
         type: 'import-qc-records',
         deviceId: sourceDeviceId,
         title: '导入质控记录',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcRecords?.length || 0} 条新增质控记录，${collabImportPreview.overwrittenQcRecords?.length || 0} 条覆盖`
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcRecords?.length || 0} 条新增质控记录，${collabImportPreview.overwrittenQcRecords?.length || 0} 条覆盖，${collabImportPreview.skippedQcRecords?.length || 0} 条跳过`
       });
     }
 
@@ -1507,7 +1531,7 @@ function App() {
       `拍照流程：新增 ${collabImportPreview.newPhotoProcesses?.length || 0} 个，覆盖 ${collabImportPreview.overwrittenPhotoProcesses?.length || 0} 个`,
       `交接单：新增 ${collabImportPreview.newDeliveryOrders?.length || 0} 份，覆盖 ${collabImportPreview.overwrittenDeliveryOrders?.length || 0} 份`,
       `质控配置：新增 ${collabImportPreview.newQcCheckItems?.length || 0} 项，覆盖 ${collabImportPreview.overwrittenQcCheckItems?.length || 0} 项`,
-      `质控记录：新增 ${collabImportPreview.newQcRecords?.length || 0} 条，覆盖 ${collabImportPreview.overwrittenQcRecords?.length || 0} 条`,
+      `质控记录：新增 ${collabImportPreview.newQcRecords?.length || 0} 条，覆盖 ${collabImportPreview.overwrittenQcRecords?.length || 0} 条，跳过 ${collabImportPreview.skippedQcRecords?.length || 0} 条`,
     ].filter(Boolean).join('\n');
     alert(summaryMsg);
 
@@ -6650,6 +6674,10 @@ function App() {
                         <div className="import-stat-item">
                           <span className="label">覆盖</span>
                           <strong className="text-warning">{collabImportPreview.overwrittenQcRecords?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">跳过</span>
+                          <strong className="text-skip">{collabImportPreview.skippedQcRecords?.length || 0}</strong>
                         </div>
                       </div>
                     </div>
