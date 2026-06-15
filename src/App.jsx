@@ -1347,29 +1347,41 @@ function App() {
       });
     }
 
-    if (collabImportPreview.newPatients && collabImportPreview.newPatients.length > 0) {
+    const hasNewPatients = collabImportPreview.newPatients && collabImportPreview.newPatients.length > 0;
+    const hasOverwrittenPatients = collabImportPreview.overwrittenPatients && collabImportPreview.overwrittenPatients.length > 0;
+
+    if (hasNewPatients) {
       mergedPatients = [...mergedPatients, ...collabImportPreview.newPatients];
-      timelineEntries.push({
-        type: 'import-patients',
-        deviceId: sourceDeviceId,
-        title: '导入新增患者',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newPatients.length} 位新患者档案`
-      });
     }
 
-    if (collabImportPreview.overwrittenPatients && collabImportPreview.overwrittenPatients.length > 0) {
+    if (hasOverwrittenPatients) {
       const overwrittenPatientIds = new Set(collabImportPreview.overwrittenPatients.map(p => p.id));
       mergedPatients = mergedPatients.map(p => overwrittenPatientIds.has(p.id) ? collabImportPreview.overwrittenPatients.find(op => op.id === p.id) || p : p);
     }
 
-    if (collabImportPreview.newShades && collabImportPreview.newShades.length > 0) {
+    if (hasNewPatients || hasOverwrittenPatients) {
+      timelineEntries.push({
+        type: 'import-patients',
+        deviceId: sourceDeviceId,
+        title: '导入患者档案',
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newPatients?.length || 0} 位新增患者，${collabImportPreview.overwrittenPatients?.length || 0} 位覆盖`
+      });
+    }
+
+    const hasNewShades = collabImportPreview.newShades && collabImportPreview.newShades.length > 0;
+    const hasOverwrittenShades = collabImportPreview.existingImportShades && collabImportPreview.existingImportShades.length > 0;
+
+    if (hasNewShades || hasOverwrittenShades) {
       const maxOrder = shadeLibrary.length > 0 ? Math.max(...shadeLibrary.map((s) => s.order)) : -1;
-      const newShadesWithOrder = collabImportPreview.newShades.map((s, i) => ({
-        ...s,
-        order: maxOrder + i + 1
-      }));
-      let mergedShades = [...shadeLibrary, ...newShadesWithOrder];
-      if (collabImportPreview.existingImportShades && collabImportPreview.existingImportShades.length > 0) {
+      let mergedShades = [...shadeLibrary];
+      if (hasNewShades) {
+        const newShadesWithOrder = collabImportPreview.newShades.map((s, i) => ({
+          ...s,
+          order: maxOrder + i + 1
+        }));
+        mergedShades = [...mergedShades, ...newShadesWithOrder];
+      }
+      if (hasOverwrittenShades) {
         const overwrittenShadeCodes = new Set(collabImportPreview.existingImportShades.map(s => s.code));
         mergedShades = mergedShades.map(s => overwrittenShadeCodes.has(s.code) ? { ...(collabImportPreview.existingImportShades.find(is => is.code === s.code) || s), order: s.order } : s);
       }
@@ -1378,13 +1390,19 @@ function App() {
         type: 'import-shades',
         deviceId: sourceDeviceId,
         title: '导入色号库',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newShades.length} 个新增色号，${collabImportPreview.existingImportShades?.length || 0} 个覆盖色号`
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newShades?.length || 0} 个新增色号，${collabImportPreview.existingImportShades?.length || 0} 个覆盖色号`
       });
     }
 
-    if (collabImportPreview.newPhotoProcesses && collabImportPreview.newPhotoProcesses.length > 0) {
-      let mergedPhotoProcesses = [...photoProcesses, ...collabImportPreview.newPhotoProcesses];
-      if (collabImportPreview.overwrittenPhotoProcesses && collabImportPreview.overwrittenPhotoProcesses.length > 0) {
+    const hasNewPP = collabImportPreview.newPhotoProcesses && collabImportPreview.newPhotoProcesses.length > 0;
+    const hasOverwrittenPP = collabImportPreview.overwrittenPhotoProcesses && collabImportPreview.overwrittenPhotoProcesses.length > 0;
+
+    if (hasNewPP || hasOverwrittenPP) {
+      let mergedPhotoProcesses = [...photoProcesses];
+      if (hasNewPP) {
+        mergedPhotoProcesses = [...mergedPhotoProcesses, ...collabImportPreview.newPhotoProcesses];
+      }
+      if (hasOverwrittenPP) {
         const overwrittenPPIds = new Set(collabImportPreview.overwrittenPhotoProcesses.map(p => p.id));
         mergedPhotoProcesses = mergedPhotoProcesses.map(p => overwrittenPPIds.has(p.id) ? collabImportPreview.overwrittenPhotoProcesses.find(opp => opp.id === p.id) || p : p);
       }
@@ -1393,13 +1411,19 @@ function App() {
         type: 'import-photo-processes',
         deviceId: sourceDeviceId,
         title: '导入拍照流程',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newPhotoProcesses.length} 个新增拍照流程，${collabImportPreview.overwrittenPhotoProcesses?.length || 0} 个覆盖`
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newPhotoProcesses?.length || 0} 个新增拍照流程，${collabImportPreview.overwrittenPhotoProcesses?.length || 0} 个覆盖`
       });
     }
 
-    if (collabImportPreview.newDeliveryOrders && collabImportPreview.newDeliveryOrders.length > 0) {
-      let mergedDeliveryOrders = [...deliveryOrders, ...collabImportPreview.newDeliveryOrders];
-      if (collabImportPreview.overwrittenDeliveryOrders && collabImportPreview.overwrittenDeliveryOrders.length > 0) {
+    const hasNewDO = collabImportPreview.newDeliveryOrders && collabImportPreview.newDeliveryOrders.length > 0;
+    const hasOverwrittenDO = collabImportPreview.overwrittenDeliveryOrders && collabImportPreview.overwrittenDeliveryOrders.length > 0;
+
+    if (hasNewDO || hasOverwrittenDO) {
+      let mergedDeliveryOrders = [...deliveryOrders];
+      if (hasNewDO) {
+        mergedDeliveryOrders = [...mergedDeliveryOrders, ...collabImportPreview.newDeliveryOrders];
+      }
+      if (hasOverwrittenDO) {
         const overwrittenDOIds = new Set(collabImportPreview.overwrittenDeliveryOrders.map(d => d.id));
         mergedDeliveryOrders = mergedDeliveryOrders.map(d => overwrittenDOIds.has(d.id) ? collabImportPreview.overwrittenDeliveryOrders.find(odo => odo.id === d.id) || d : d);
       }
@@ -1408,16 +1432,22 @@ function App() {
         type: 'import-delivery-orders',
         deviceId: sourceDeviceId,
         title: '导入交接单',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newDeliveryOrders.length} 份新增交接单，${collabImportPreview.overwrittenDeliveryOrders?.length || 0} 份覆盖`
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newDeliveryOrders?.length || 0} 份新增交接单，${collabImportPreview.overwrittenDeliveryOrders?.length || 0} 份覆盖`
       });
     }
 
-    if (collabImportPreview.newQcCheckItems && collabImportPreview.newQcCheckItems.length > 0) {
-      let mergedQcCheckItems = [...qcCheckItems, ...collabImportPreview.newQcCheckItems.map((ci, i) => ({
-        ...ci,
-        order: ci.order ?? (qcCheckItems.length + i + 1)
-      }))];
-      if (collabImportPreview.overwrittenQcCheckItems && collabImportPreview.overwrittenQcCheckItems.length > 0) {
+    const hasNewQCI = collabImportPreview.newQcCheckItems && collabImportPreview.newQcCheckItems.length > 0;
+    const hasOverwrittenQCI = collabImportPreview.overwrittenQcCheckItems && collabImportPreview.overwrittenQcCheckItems.length > 0;
+
+    if (hasNewQCI || hasOverwrittenQCI) {
+      let mergedQcCheckItems = [...qcCheckItems];
+      if (hasNewQCI) {
+        mergedQcCheckItems = [...mergedQcCheckItems, ...collabImportPreview.newQcCheckItems.map((ci, i) => ({
+          ...ci,
+          order: ci.order ?? (qcCheckItems.length + i + 1)
+        }))];
+      }
+      if (hasOverwrittenQCI) {
         const overwrittenCIKeys = new Set(collabImportPreview.overwrittenQcCheckItems.map(c => c.key));
         mergedQcCheckItems = mergedQcCheckItems.map(c => overwrittenCIKeys.has(c.key) ? { ...(collabImportPreview.overwrittenQcCheckItems.find(oci => oci.key === c.key) || c), order: c.order } : c);
       }
@@ -1426,17 +1456,22 @@ function App() {
         type: 'import-qc-config',
         deviceId: sourceDeviceId,
         title: '导入质控配置',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcCheckItems.length} 项新增质控配置，${collabImportPreview.overwrittenQcCheckItems?.length || 0} 项覆盖`
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcCheckItems?.length || 0} 项新增质控配置，${collabImportPreview.overwrittenQcCheckItems?.length || 0} 项覆盖`
       });
     }
 
-    if (collabImportPreview.newQcRecords && collabImportPreview.newQcRecords.length > 0) {
+    const hasNewQR = collabImportPreview.newQcRecords && collabImportPreview.newQcRecords.length > 0;
+    const hasOverwrittenQR = collabImportPreview.overwrittenQcRecords && collabImportPreview.overwrittenQcRecords.length > 0;
+
+    if (hasNewQR || hasOverwrittenQR) {
       let mergedQcRecords = [...qcRecords];
-      collabImportPreview.newQcRecords.forEach(nqr => {
-        if (nqr.recordId && !mergedRecordIds.has(nqr.recordId)) return;
-        mergedQcRecords.push(nqr);
-      });
-      if (collabImportPreview.overwrittenQcRecords && collabImportPreview.overwrittenQcRecords.length > 0) {
+      if (hasNewQR) {
+        collabImportPreview.newQcRecords.forEach(nqr => {
+          if (nqr.recordId && !mergedRecordIds.has(nqr.recordId)) return;
+          mergedQcRecords.push(nqr);
+        });
+      }
+      if (hasOverwrittenQR) {
         const overwrittenQRIds = new Set(collabImportPreview.overwrittenQcRecords.map(q => q.id));
         mergedQcRecords = mergedQcRecords.map(q => overwrittenQRIds.has(q.id) ? collabImportPreview.overwrittenQcRecords.find(oqr => oqr.id === q.id) || q : q);
       }
@@ -1445,7 +1480,7 @@ function App() {
         type: 'import-qc-records',
         deviceId: sourceDeviceId,
         title: '导入质控记录',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcRecords.length} 条新增质控记录，${collabImportPreview.overwrittenQcRecords?.length || 0} 条覆盖`
+        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcRecords?.length || 0} 条新增质控记录，${collabImportPreview.overwrittenQcRecords?.length || 0} 条覆盖`
       });
     }
 
@@ -6491,77 +6526,165 @@ function App() {
                       </span>
                     </div>
                   </div>
-                  <div className="collab-import-stats">
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <ClipboardList size={20} />
-                      <div>
-                        <strong>{collabImportPreview.totalRecords}</strong>
-                        <span>牙色记录</span>
+
+                  <div className="import-stats" style={{ marginTop: '14px' }}>
+                    <div className="import-stat-card">
+                      <h4>牙色记录</h4>
+                      <div className="import-stat-grid">
+                        <div className="import-stat-item">
+                          <span className="label">总计</span>
+                          <strong>{collabImportPreview.totalRecords}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">新增</span>
+                          <strong className="text-success">{collabImportPreview.addedRecords?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">冲突</span>
+                          <strong style={{ color: '#dc2626' }}>{collabImportPreview.conflicts?.length || 0}</strong>
+                        </div>
                       </div>
                     </div>
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <Plus size={20} />
-                      <div>
-                        <strong style={{ color: '#059669' }}>{collabImportPreview.addedRecords?.length || 0}</strong>
-                        <span>新增记录</span>
+
+                    <div className="import-stat-card">
+                      <h4>患者档案</h4>
+                      <div className="import-stat-grid">
+                        <div className="import-stat-item">
+                          <span className="label">总计</span>
+                          <strong>{collabImportPreview.totalPatients}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">新增</span>
+                          <strong className="text-success">{collabImportPreview.newPatients?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">覆盖</span>
+                          <strong className="text-warning">{collabImportPreview.overwrittenPatients?.length || 0}</strong>
+                        </div>
                       </div>
                     </div>
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <AlertTriangle size={20} />
-                      <div>
-                        <strong style={{ color: '#dc2626' }}>{collabImportPreview.conflicts?.length || 0}</strong>
-                        <span>冲突记录</span>
+
+                    <div className="import-stat-card">
+                      <h4>色号库</h4>
+                      <div className="import-stat-grid">
+                        <div className="import-stat-item">
+                          <span className="label">总计</span>
+                          <strong>{collabImportPreview.totalShades}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">新增</span>
+                          <strong className="text-success">{collabImportPreview.newShades?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">覆盖</span>
+                          <strong className="text-warning">{collabImportPreview.existingImportShades?.length || 0}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="import-stat-card">
+                      <h4>拍照流程</h4>
+                      <div className="import-stat-grid">
+                        <div className="import-stat-item">
+                          <span className="label">总计</span>
+                          <strong>{collabImportPreview.totalPhotoProcesses || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">新增</span>
+                          <strong className="text-success">{collabImportPreview.newPhotoProcesses?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">覆盖</span>
+                          <strong className="text-warning">{collabImportPreview.overwrittenPhotoProcesses?.length || 0}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="import-stat-card">
+                      <h4>交接单</h4>
+                      <div className="import-stat-grid">
+                        <div className="import-stat-item">
+                          <span className="label">总计</span>
+                          <strong>{collabImportPreview.totalDeliveryOrders || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">新增</span>
+                          <strong className="text-success">{collabImportPreview.newDeliveryOrders?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">覆盖</span>
+                          <strong className="text-warning">{collabImportPreview.overwrittenDeliveryOrders?.length || 0}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="import-stat-card">
+                      <h4>质控配置</h4>
+                      <div className="import-stat-grid">
+                        <div className="import-stat-item">
+                          <span className="label">总计</span>
+                          <strong>{collabImportPreview.totalQcCheckItems || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">新增</span>
+                          <strong className="text-success">{collabImportPreview.newQcCheckItems?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">覆盖</span>
+                          <strong className="text-warning">{collabImportPreview.overwrittenQcCheckItems?.length || 0}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="import-stat-card">
+                      <h4>质控记录</h4>
+                      <div className="import-stat-grid">
+                        <div className="import-stat-item">
+                          <span className="label">总计</span>
+                          <strong>{collabImportPreview.totalQcRecords || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">新增</span>
+                          <strong className="text-success">{collabImportPreview.newQcRecords?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">覆盖</span>
+                          <strong className="text-warning">{collabImportPreview.overwrittenQcRecords?.length || 0}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="import-stat-card">
+                      <h4>协作时间线</h4>
+                      <div className="import-stat-grid">
+                        <div className="import-stat-item">
+                          <span className="label">总计</span>
+                          <strong>{collabImportPreview.totalCollabTimeline || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">新增</span>
+                          <strong className="text-success">{collabImportPreview.newCollabTimeline?.length || 0}</strong>
+                        </div>
+                        <div className="import-stat-item">
+                          <span className="label">跳过</span>
+                          <strong className="text-skip">{(collabImportPreview.totalCollabTimeline || 0) - (collabImportPreview.newCollabTimeline?.length || 0)}</strong>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="collab-import-stats" style={{ marginTop: '8px' }}>
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <Users size={20} />
+
+                  {(collabImportPreview.overwrittenPatients?.length > 0 || collabImportPreview.existingImportShades?.length > 0 || collabImportPreview.overwrittenPhotoProcesses?.length > 0 || collabImportPreview.overwrittenDeliveryOrders?.length > 0 || collabImportPreview.overwrittenQcCheckItems?.length > 0 || collabImportPreview.overwrittenQcRecords?.length > 0) && (
+                    <div className="import-warning" style={{ marginTop: '12px' }}>
+                      <AlertTriangle size={18} />
                       <div>
-                        <strong>{collabImportPreview.totalPatients}</strong>
-                        <span>患者档案</span>
+                        <strong>部分数据将被覆盖</strong>
+                        <p>导入数据中存在与本地相同 ID/key 的记录，导入后这些本地数据将被替换。各类型覆盖数量已在上方统计中标注。</p>
                       </div>
                     </div>
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <Palette size={20} />
-                      <div>
-                        <strong>{collabImportPreview.totalShades}</strong>
-                        <span>色号库</span>
-                      </div>
-                    </div>
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <Package size={20} />
-                      <div>
-                        <strong>{collabImportPreview.totalDeliveryOrders || 0}</strong>
-                        <span>交接单</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="collab-import-stats" style={{ marginTop: '8px' }}>
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <Camera size={20} />
-                      <div>
-                        <strong>{collabImportPreview.totalPhotoProcesses || 0}</strong>
-                        <span>拍照流程</span>
-                      </div>
-                    </div>
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <ShieldCheck size={20} />
-                      <div>
-                        <strong>{collabImportPreview.totalQcCheckItems || 0}/{collabImportPreview.totalQcRecords || 0}</strong>
-                        <span>质控配置/记录</span>
-                      </div>
-                    </div>
-                    <div className="data-stat-item" style={{ flex: 1 }}>
-                      <History size={20} />
-                      <div>
-                        <strong>{collabImportPreview.totalCollabTimeline || 0}</strong>
-                        <span>协作时间线</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
+
                   {(!collabConflicts || collabConflicts.length === 0) ? (
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                       <button type="button" className="secondary" onClick={cancelCollabImport}>
                         <X size={16} />取消
                       </button>
