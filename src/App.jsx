@@ -1341,6 +1341,8 @@ function App() {
           fieldResolutions.forEach(fr => {
             if (fr.resolution === 'import') {
               mergedRecord[fr.fieldKey] = fr.importValue;
+            } else if (fr.resolution === 'local') {
+              mergedRecord[fr.fieldKey] = fr.localValue;
             }
           });
           mergedRecord.lastModified = now;
@@ -1369,27 +1371,54 @@ function App() {
       const ceConflicts = collabImportPreview.crossEntityConflicts;
 
       if (ceConflicts.patients && ceConflicts.patients.length > 0) {
+        const now = new Date().toISOString();
         ceConflicts.patients.forEach(item => {
           const res = crossEntityResolutions[item.entityKey];
           if (!res) return;
-          if (res.resolution === 'useImport') {
+          if (res.resolution === 'keepLocal') {
+            mergedPatients = mergedPatients.map(p => p.id === item.local.id ? {
+              ...p,
+              timeline: [...(p.timeline || []), { status: `跨实体合并：保留本地患者档案，忽略${sourceDeviceName}版本`, at: today, by: '跨实体合并' }]
+            } : p);
+          } else if (res.resolution === 'useImport') {
             mergedPatients = mergedPatients.map(p => p.id === item.local.id ? {
               ...item.import,
               id: item.local.id,
-              timeline: [...(p.timeline || []), { status: `从${sourceDeviceName}合并，覆盖本地患者`, at: today, by: '跨实体合并' }]
+              createdAt: p.createdAt || item.import.createdAt || now,
+              timeline: [
+                ...(p.timeline || []),
+                ...(item.import.timeline || []).slice(-2),
+                { status: `跨实体合并：采用${sourceDeviceName}版本覆盖`, at: today, by: '跨实体合并' }
+              ]
             } : p);
           } else if (res.resolution === 'makeCopy') {
             const copyId = uid();
             mergedPatients.push({
               ...item.import,
               id: copyId,
-              timeline: [{ status: `从${sourceDeviceName}合并，作为副本保存`, at: today, by: '跨实体合并' }]
+              createdAt: now,
+              timeline: [
+                ...(item.import.timeline || []),
+                { status: `跨实体合并：从${sourceDeviceName}导入为副本`, at: today, by: '跨实体合并' }
+              ]
             });
           } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
             let mergedItem = { ...item.local };
             res.fieldResolutions.forEach(fr => {
-              if (fr.resolution === 'import') mergedItem[fr.fieldKey] = fr.importValue;
+              if (fr.resolution === 'import') {
+                mergedItem[fr.fieldKey] = fr.importValue;
+              } else if (fr.resolution === 'local') {
+                mergedItem[fr.fieldKey] = fr.localValue;
+              }
             });
+            mergedItem.timeline = [
+              ...(item.local.timeline || []),
+              {
+                status: `跨实体合并：字段级合并，${res.fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用${sourceDeviceName}值`,
+                at: today,
+                by: '跨实体合并'
+              }
+            ];
             mergedPatients = mergedPatients.map(p => p.id === item.local.id ? mergedItem : p);
           }
         });
@@ -1402,18 +1431,56 @@ function App() {
       }
 
       if (ceConflicts.photoProcesses && ceConflicts.photoProcesses.length > 0) {
+        const now = new Date().toISOString();
         ceConflicts.photoProcesses.forEach(item => {
           const res = crossEntityResolutions[item.entityKey];
           if (!res) return;
-          if (res.resolution === 'useImport') {
-            mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? { ...item.import, id: item.local.id } : p);
+          if (res.resolution === 'keepLocal') {
+            mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? {
+              ...p,
+              lastModified: now,
+              timeline: [...(p.timeline || []), { status: `跨实体合并：保留本地拍照流程`, at: today, by: '跨实体合并' }]
+            } : p);
+          } else if (res.resolution === 'useImport') {
+            mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? {
+              ...item.import,
+              id: item.local.id,
+              lastModified: now,
+              timeline: [
+                ...(p.timeline || []),
+                ...(item.import.timeline || []).slice(-2),
+                { status: `跨实体合并：采用${sourceDeviceName}拍照流程`, at: today, by: '跨实体合并' }
+              ]
+            } : p);
           } else if (res.resolution === 'makeCopy') {
-            mergedPhotoProcesses.push({ ...item.import, id: uid() });
+            const copyId = uid();
+            mergedPhotoProcesses.push({
+              ...item.import,
+              id: copyId,
+              lastModified: now,
+              timeline: [
+                ...(item.import.timeline || []),
+                { status: `跨实体合并：从${sourceDeviceName}导入拍照流程副本`, at: today, by: '跨实体合并' }
+              ]
+            });
           } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
             let mergedItem = { ...item.local };
             res.fieldResolutions.forEach(fr => {
-              if (fr.resolution === 'import') mergedItem[fr.fieldKey] = fr.importValue;
+              if (fr.resolution === 'import') {
+                mergedItem[fr.fieldKey] = fr.importValue;
+              } else if (fr.resolution === 'local') {
+                mergedItem[fr.fieldKey] = fr.localValue;
+              }
             });
+            mergedItem.lastModified = now;
+            mergedItem.timeline = [
+              ...(item.local.timeline || []),
+              {
+                status: `跨实体合并：字段级合并拍照流程，${res.fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用${sourceDeviceName}值`,
+                at: today,
+                by: '跨实体合并'
+              }
+            ];
             mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? mergedItem : p);
           }
         });
@@ -1426,18 +1493,56 @@ function App() {
       }
 
       if (ceConflicts.deliveryOrders && ceConflicts.deliveryOrders.length > 0) {
+        const now = new Date().toISOString();
         ceConflicts.deliveryOrders.forEach(item => {
           const res = crossEntityResolutions[item.entityKey];
           if (!res) return;
-          if (res.resolution === 'useImport') {
-            mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? { ...item.import, id: item.local.id } : d);
+          if (res.resolution === 'keepLocal') {
+            mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? {
+              ...d,
+              lastModified: now,
+              timeline: [...(d.timeline || []), { status: `跨实体合并：保留本地交接单`, at: today, by: '跨实体合并' }]
+            } : d);
+          } else if (res.resolution === 'useImport') {
+            mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? {
+              ...item.import,
+              id: item.local.id,
+              lastModified: now,
+              timeline: [
+                ...(d.timeline || []),
+                ...(item.import.timeline || []).slice(-2),
+                { status: `跨实体合并：采用${sourceDeviceName}交接单`, at: today, by: '跨实体合并' }
+              ]
+            } : d);
           } else if (res.resolution === 'makeCopy') {
-            mergedDeliveryOrders.push({ ...item.import, id: uid() });
+            const copyId = uid();
+            mergedDeliveryOrders.push({
+              ...item.import,
+              id: copyId,
+              lastModified: now,
+              timeline: [
+                ...(item.import.timeline || []),
+                { status: `跨实体合并：从${sourceDeviceName}导入交接单副本`, at: today, by: '跨实体合并' }
+              ]
+            });
           } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
             let mergedItem = { ...item.local };
             res.fieldResolutions.forEach(fr => {
-              if (fr.resolution === 'import') mergedItem[fr.fieldKey] = fr.importValue;
+              if (fr.resolution === 'import') {
+                mergedItem[fr.fieldKey] = fr.importValue;
+              } else if (fr.resolution === 'local') {
+                mergedItem[fr.fieldKey] = fr.localValue;
+              }
             });
+            mergedItem.lastModified = now;
+            mergedItem.timeline = [
+              ...(item.local.timeline || []),
+              {
+                status: `跨实体合并：字段级合并交接单，${res.fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用${sourceDeviceName}值`,
+                at: today,
+                by: '跨实体合并'
+              }
+            ];
             mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? mergedItem : d);
           }
         });
@@ -1450,18 +1555,56 @@ function App() {
       }
 
       if (ceConflicts.qcRecords && ceConflicts.qcRecords.length > 0) {
+        const now = new Date().toISOString();
         ceConflicts.qcRecords.forEach(item => {
           const res = crossEntityResolutions[item.entityKey];
           if (!res) return;
-          if (res.resolution === 'useImport') {
-            mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? { ...item.import, id: item.local.id } : q);
+          if (res.resolution === 'keepLocal') {
+            mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? {
+              ...q,
+              lastModified: now,
+              timeline: [...(q.timeline || []), { status: `跨实体合并：保留本地质控记录`, at: today, by: '跨实体合并' }]
+            } : q);
+          } else if (res.resolution === 'useImport') {
+            mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? {
+              ...item.import,
+              id: item.local.id,
+              lastModified: now,
+              timeline: [
+                ...(q.timeline || []),
+                ...(item.import.timeline || []).slice(-2),
+                { status: `跨实体合并：采用${sourceDeviceName}质控记录`, at: today, by: '跨实体合并' }
+              ]
+            } : q);
           } else if (res.resolution === 'makeCopy') {
-            mergedQcRecords.push({ ...item.import, id: uid() });
+            const copyId = uid();
+            mergedQcRecords.push({
+              ...item.import,
+              id: copyId,
+              lastModified: now,
+              timeline: [
+                ...(item.import.timeline || []),
+                { status: `跨实体合并：从${sourceDeviceName}导入质控记录副本`, at: today, by: '跨实体合并' }
+              ]
+            });
           } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
             let mergedItem = { ...item.local };
             res.fieldResolutions.forEach(fr => {
-              if (fr.resolution === 'import') mergedItem[fr.fieldKey] = fr.importValue;
+              if (fr.resolution === 'import') {
+                mergedItem[fr.fieldKey] = fr.importValue;
+              } else if (fr.resolution === 'local') {
+                mergedItem[fr.fieldKey] = fr.localValue;
+              }
             });
+            mergedItem.lastModified = now;
+            mergedItem.timeline = [
+              ...(item.local.timeline || []),
+              {
+                status: `跨实体合并：字段级合并质控记录，${res.fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用${sourceDeviceName}值`,
+                at: today,
+                by: '跨实体合并'
+              }
+            ];
             mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? mergedItem : q);
           }
         });
@@ -1527,8 +1670,22 @@ function App() {
     }
 
     if (collabImportPreview.overwrittenPatients && collabImportPreview.overwrittenPatients.length > 0) {
-      const overwrittenPatientIds = new Set(collabImportPreview.overwrittenPatients.map(p => p.id));
-      mergedPatients = mergedPatients.map(p => overwrittenPatientIds.has(p.id) ? collabImportPreview.overwrittenPatients.find(op => op.id === p.id) || p : p);
+      const handledPatientIds = new Set();
+      if (collabImportPreview.crossEntityConflicts?.patients) {
+        collabImportPreview.crossEntityConflicts.patients.forEach(item => {
+          handledPatientIds.add(item.local.id);
+        });
+      }
+      const overwrittenPatientIds = new Set(
+        collabImportPreview.overwrittenPatients
+          .filter(p => !handledPatientIds.has(p.id))
+          .map(p => p.id)
+      );
+      mergedPatients = mergedPatients.map(p =>
+        overwrittenPatientIds.has(p.id)
+          ? collabImportPreview.overwrittenPatients.find(op => op.id === p.id) || p
+          : p
+      );
     }
 
     if (collabImportPreview.newPatients?.length > 0 || collabImportPreview.overwrittenPatients?.length > 0) {
