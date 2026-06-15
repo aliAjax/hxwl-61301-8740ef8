@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge, ArrowUp, ArrowDown } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge, ArrowUp, ArrowDown, Printer } from 'lucide-react';
 import './App.css';
 
 const appConfig = {
@@ -909,6 +909,7 @@ function App() {
   const [deliveryOrders, setDeliveryOrders] = useState(loadDeliveryOrders);
   const [deliveryOrderForm, setDeliveryOrderForm] = useState(appConfig.deliveryOrderDefaultValues);
   const [selectedDeliveryOrder, setSelectedDeliveryOrder] = useState(null);
+  const [showPrintSummary, setShowPrintSummary] = useState(false);
   const [deliveryOrderFilter, setDeliveryOrderFilter] = useState('全部');
   const [draggedRecordId, setDraggedRecordId] = useState(null);
   const [dragOverDate, setDragOverDate] = useState(null);
@@ -4248,6 +4249,19 @@ function App() {
                       ))}
                     </div>
                   </div>
+
+                  <div className="detail-actions">
+                    <p className="hint">交接单操作：</p>
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className="primary"
+                        onClick={() => setShowPrintSummary(true)}
+                      >
+                        <Printer size={16} />打印交接摘要
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="empty">点击任意交接单查看详情和关联记录。</p>
@@ -6067,6 +6081,196 @@ function App() {
           </div>
         </div>
       )}
+
+      {showPrintSummary && selectedDeliveryOrder && (
+        <div className="modal-overlay print-modal-overlay" onClick={() => setShowPrintSummary(false)}>
+          <div className="print-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="print-modal-header">
+              <div className="panel-title" style={{ marginBottom: 0 }}>
+                <Printer size={18} />
+                <h2>交接单打印摘要</h2>
+              </div>
+              <div className="print-header-actions">
+                <button
+                  type="button"
+                  className="primary print-action-btn"
+                  onClick={() => window.print()}
+                >
+                  <Printer size={16} />打印
+                </button>
+                <button
+                  type="button"
+                  className="secondary print-action-btn"
+                  onClick={() => setShowPrintSummary(false)}
+                >
+                  <X size={16} />关闭
+                </button>
+              </div>
+            </div>
+            <div className="print-modal-body">
+              <div className="print-summary-a4" id="print-summary-area">
+                <div className="print-summary-header">
+                  <div className="print-clinic-name">
+                    <SmilePlus size={28} style={{ color: 'var(--accent)' }} />
+                    <h1>技工所交接摘要</h1>
+                  </div>
+                  <div className="print-summary-meta">
+                    <div className="print-meta-row">
+                      <span className="print-meta-label">打印日期：</span>
+                      <span className="print-meta-value">{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="print-section print-order-info">
+                  <h3 className="print-section-title">交接单基本信息</h3>
+                  <div className="print-info-grid">
+                    <div className="print-info-item">
+                      <span className="print-info-label">交接单号</span>
+                      <span className="print-info-value print-order-no">{selectedDeliveryOrder.orderNo}</span>
+                    </div>
+                    <div className="print-info-item">
+                      <span className="print-info-label">技工所</span>
+                      <span className="print-info-value">{selectedDeliveryOrder.labName}</span>
+                    </div>
+                    <div className="print-info-item">
+                      <span className="print-info-label">交接状态</span>
+                      <span className={`print-info-value print-status ${deliveryOrderStatusClass(selectedDeliveryOrder.status)}`}>
+                        {selectedDeliveryOrder.status}
+                      </span>
+                    </div>
+                    <div className="print-info-item">
+                      <span className="print-info-label">关联记录数</span>
+                      <span className="print-info-value">{selectedDeliveryOrder.recordIds.length} 条</span>
+                    </div>
+                  </div>
+                  {selectedDeliveryOrder.remark && (
+                    <div className="print-remark">
+                      <span className="print-info-label">交接备注：</span>
+                      <span>{selectedDeliveryOrder.remark}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="print-section print-records">
+                  <h3 className="print-section-title">关联患者与修复详情</h3>
+                  <table className="print-records-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '6%' }}>序号</th>
+                        <th style={{ width: '12%' }}>患者姓名</th>
+                        <th style={{ width: '8%' }}>牙位</th>
+                        <th style={{ width: '8%' }}>色号</th>
+                        <th style={{ width: '26%' }}>拍照备注</th>
+                        <th style={{ width: '12%' }}>复诊日期</th>
+                        <th style={{ width: '28%' }}>质控缺失项</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedDeliveryOrder.recordIds.map((rid, idx) => {
+                        const record = getRecordById(rid);
+                        if (!record) return null;
+                        const qc = getQcByRecordId(rid);
+                        const missingItems = getMissingQcItemsByQc(qc, record.status);
+                        return (
+                          <tr key={rid}>
+                            <td className="print-cell-center">{idx + 1}</td>
+                            <td className="print-cell-bold">{record.patient}</td>
+                            <td className="print-cell-center">{record.tooth}</td>
+                            <td className="print-cell-center print-shade-cell">{record.shade}</td>
+                            <td>{record.photoNote || <span className="print-empty">—</span>}</td>
+                            <td className="print-cell-center">{record.followUp || <span className="print-empty">未排期</span>}</td>
+                            <td>
+                              {missingItems.length > 0 ? (
+                                <div className="print-missing-list">
+                                  {missingItems.map((item) => (
+                                    <span
+                                      key={item.key}
+                                      className={`print-missing-tag ${item.critical ? 'critical' : ''}`}
+                                    >
+                                      {item.critical && '★ '}{item.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="print-all-checked">✓ 全部完成</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="print-section print-timeline-section">
+                  <h3 className="print-section-title">发送与回收时间</h3>
+                  <div className="print-timeline">
+                    <div className="print-timeline-item">
+                      <div className="print-timeline-dot print-dot-create"></div>
+                      <div className="print-timeline-content">
+                        <span className="print-timeline-label">创建时间</span>
+                        <span className="print-timeline-value">
+                          {selectedDeliveryOrder.createdAt
+                            ? new Date(selectedDeliveryOrder.createdAt).toLocaleString('zh-CN', {
+                                year: 'numeric', month: '2-digit', day: '2-digit',
+                                hour: '2-digit', minute: '2-digit'
+                              })
+                            : '—'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="print-timeline-item">
+                      <div className={`print-timeline-dot ${selectedDeliveryOrder.sentAt ? 'print-dot-sent' : 'print-dot-pending'}`}></div>
+                      <div className="print-timeline-content">
+                        <span className="print-timeline-label">发送时间</span>
+                        <span className="print-timeline-value">
+                          {selectedDeliveryOrder.sentAt
+                            ? new Date(selectedDeliveryOrder.sentAt).toLocaleString('zh-CN', {
+                                year: 'numeric', month: '2-digit', day: '2-digit',
+                                hour: '2-digit', minute: '2-digit'
+                              })
+                            : '待发送'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="print-timeline-item">
+                      <div className={`print-timeline-dot ${selectedDeliveryOrder.receivedAt ? 'print-dot-received' : 'print-dot-pending'}`}></div>
+                      <div className="print-timeline-content">
+                        <span className="print-timeline-label">回收时间</span>
+                        <span className="print-timeline-value">
+                          {selectedDeliveryOrder.receivedAt
+                            ? new Date(selectedDeliveryOrder.receivedAt).toLocaleString('zh-CN', {
+                                year: 'numeric', month: '2-digit', day: '2-digit',
+                                hour: '2-digit', minute: '2-digit'
+                              })
+                            : '待回收'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="print-section print-signatures">
+                  <div className="print-signature-item">
+                    <span className="print-signature-label">诊所经办人签字：</span>
+                    <span className="print-signature-line"></span>
+                  </div>
+                  <div className="print-signature-item">
+                    <span className="print-signature-label">技工所签收人签字：</span>
+                    <span className="print-signature-line"></span>
+                  </div>
+                </div>
+
+                <div className="print-footer">
+                  <span>本摘要由牙科诊所牙色比色记录系统自动生成 · {appConfig.title}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
