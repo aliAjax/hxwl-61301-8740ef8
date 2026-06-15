@@ -1199,9 +1199,16 @@ function App() {
 
   function setConflictResolution(key, resolution) {
     if (!collabConflicts) return;
-    setCollabConflicts(collabConflicts.map(c =>
-      c.key === key ? { ...c, resolution, fieldResolutions: c.fieldDiffs ? c.fieldDiffs.map(fd => ({ ...fd, resolution })) : undefined } : c
-    ));
+    setCollabConflicts(collabConflicts.map(c => {
+      if (c.key !== key) return c;
+      const fieldResolutions = c.fieldDiffs
+        ? c.fieldDiffs.map(fd => ({
+          ...fd,
+          resolution: resolution === 'fieldMerge' ? fd.resolution : resolution,
+        }))
+        : undefined;
+      return { ...c, resolution, fieldResolutions };
+    }));
   }
 
   function setFieldResolution(conflictKey, fieldKey, resolution) {
@@ -1227,7 +1234,10 @@ function App() {
         [entityKey]: {
           ...existing,
           resolution,
-          fieldResolutions: existing.fieldResolutions.map(fr => ({ ...fr, resolution })),
+          fieldResolutions: existing.fieldResolutions.map(fr => ({
+            ...fr,
+            resolution: resolution === 'fieldMerge' ? fr.resolution : resolution,
+          })),
         },
       };
     });
