@@ -571,6 +571,216 @@ function getDataStatus(appConfig) {
   };
 }
 
+const MERGE_ENTITY_FIELDS = {
+  records: [
+    { key: 'patient', label: '患者姓名' },
+    { key: 'tooth', label: '牙位' },
+    { key: 'shade', label: '比色结果' },
+    { key: 'photoNote', label: '拍照备注' },
+    { key: 'followUp', label: '复诊日期' },
+    { key: 'status', label: '修复状态' },
+    { key: 'deviceId', label: '设备ID' },
+    { key: 'lastModified', label: '最后修改时间' },
+    { key: 'version', label: '版本号' },
+  ],
+  patients: [
+    { key: 'name', label: '姓名' },
+    { key: 'phone', label: '电话' },
+    { key: 'commonTooth', label: '常用牙位' },
+    { key: 'allergyNote', label: '过敏备注' },
+    { key: 'shadeCount', label: '比色次数' },
+  ],
+  photoProcesses: [
+    { key: 'recordId', label: '关联记录ID' },
+    { key: 'currentStep', label: '当前步骤' },
+    { key: 'completed', label: '是否完成' },
+    { key: 'updatedAt', label: '更新时间' },
+  ],
+  qcRecords: [
+    { key: 'recordId', label: '关联记录ID' },
+    { key: 'createdAt', label: '创建时间' },
+    { key: 'updatedAt', label: '更新时间' },
+  ],
+  deliveryOrders: [
+    { key: 'orderNo', label: '交接单号' },
+    { key: 'labName', label: '技工所名称' },
+    { key: 'remark', label: '备注' },
+    { key: 'status', label: '状态' },
+    { key: 'createdAt', label: '创建时间' },
+    { key: 'sentAt', label: '发送时间' },
+    { key: 'receivedAt', label: '回收时间' },
+  ],
+};
+
+const MERGE_ENTITY_NAMES = {
+  records: '比色记录',
+  patients: '患者档案',
+  photoProcesses: '拍照流程',
+  qcRecords: '质控记录',
+  deliveryOrders: '交接单',
+};
+
+function shallowEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return a === b;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(k => a[k] === b[k]);
+}
+
+function diffEntityFields(localItem, importItem, entityType) {
+  const fields = MERGE_ENTITY_FIELDS[entityType] || [];
+  const diffs = [];
+  const SKIP_KEYS = new Set(['id', 'timeline']);
+
+  fields.forEach(({ key, label }) => {
+    if (SKIP_KEYS.has(key)) return;
+    const localVal = localItem[key];
+    const importVal = importItem[key];
+    if (localVal === importVal) return;
+    if (localVal == null && importVal == null) return;
+    if (typeof localVal === 'object' && typeof importVal === 'object' && shallowEqual(localVal, importVal)) return;
+    diffs.push({
+      fieldKey: key,
+      fieldLabel: label,
+      localValue: localVal ?? '',
+      importValue: importVal ?? '',
+      resolution: 'import',
+    });
+  });
+
+  const allKeys = new Set([...Object.keys(localItem), ...Object.keys(importItem)]);
+  allKeys.forEach(key => {
+    if (SKIP_KEYS.has(key)) return;
+    if (fields.some(f => f.key === key)) return;
+    const localVal = localItem[key];
+    const importVal = importItem[key];
+    if (localVal === importVal) return;
+    if (localVal == null && importVal == null) return;
+    if (typeof localVal === 'object' && typeof importVal === 'object' && shallowEqual(localVal, importVal)) return;
+    diffs.push({
+      fieldKey: key,
+      fieldLabel: key,
+      localValue: localVal ?? '',
+      importValue: importVal ?? '',
+      resolution: 'import',
+    });
+  });
+
+  return diffs;
+}
+
+function matchEntities(localList, importList, entityType) {
+  const matched = [];
+  const localMatched = new Set();
+  const importMatched = new Set();
+  const localOnly = [];
+  const importOnly = [];
+
+  const matchFns = {
+    records: (a, b) => a.patient === b.patient && a.tooth === b.tooth,
+    patients: (a, b) => a.id === b.id || (a.name && b.name && a.name === b.name),
+    photoProcesses: (a, b) => a.id === b.id || (a.recordId && b.recordId && a.recordId === b.recordId),
+    qcRecords: (a, b) => a.id === b.id || (a.recordId && b.recordId && a.recordId === b.recordId),
+    deliveryOrders: (a, b) => a.id === b.id || a.orderNo === b.orderNo,
+  };
+
+  const matchFn = matchFns[entityType] || ((a, b) => a.id === b.id);
+
+  importList.forEach((imp, iIdx) => {
+    let bestLocalIdx = -1;
+    let bestLocalId = null;
+    localList.forEach((loc, lIdx) => {
+      if (localMatched.has(lIdx)) return;
+      if (matchFn(loc, imp)) {
+        if (loc.id === imp.id) {
+          bestLocalIdx = lIdx;
+          bestLocalId = loc.id;
+        } else if (bestLocalIdx === -1) {
+          bestLocalIdx = lIdx;
+          bestLocalId = loc.id;
+        }
+      }
+    });
+    if (bestLocalIdx >= 0) {
+      matched.push({
+        local: localList[bestLocalIdx],
+        import: imp,
+        localIndex: bestLocalIdx,
+        importIndex: iIdx,
+        fieldDiffs: diffEntityFields(localList[bestLocalIdx], imp, entityType),
+      });
+      localMatched.add(bestLocalIdx);
+      importMatched.add(iIdx);
+    }
+  });
+
+  localList.forEach((loc, idx) => {
+    if (!localMatched.has(idx)) localOnly.push(loc);
+  });
+  importList.forEach((imp, idx) => {
+    if (!importMatched.has(idx)) importOnly.push(imp);
+  });
+
+  return { matched, localOnly, importOnly };
+}
+
+function detectDuplicatePatients(localPatients, importPatients) {
+  const duplicates = [];
+  const localNameMap = new Map();
+  localPatients.forEach(p => {
+    if (p.name) localNameMap.set(p.name, p);
+  });
+  importPatients.forEach(imp => {
+    if (imp.name && localNameMap.has(imp.name) && localNameMap.get(imp.name).id !== imp.id) {
+      duplicates.push({
+        local: localNameMap.get(imp.name),
+        import: imp,
+        reason: '同名患者',
+      });
+    }
+  });
+  return duplicates;
+}
+
+function detectOrphanPhotoProcesses(photoProcesses, records) {
+  const recordIds = new Set(records.map(r => r.id));
+  return photoProcesses.filter(pp => pp.recordId && !recordIds.has(pp.recordId));
+}
+
+function repairIdReferences(mergedData, recordIdMap) {
+  const repaired = { ...mergedData };
+
+  if (repaired.photoProcesses) {
+    repaired.photoProcesses = repaired.photoProcesses.map(pp => {
+      const newRecordId = recordIdMap.get(pp.recordId);
+      return newRecordId && newRecordId !== pp.recordId
+        ? { ...pp, recordId: newRecordId }
+        : pp;
+    });
+  }
+
+  if (repaired.qcRecords) {
+    repaired.qcRecords = repaired.qcRecords.map(qc => {
+      const newRecordId = recordIdMap.get(qc.recordId);
+      return newRecordId && newRecordId !== qc.recordId
+        ? { ...qc, recordId: newRecordId }
+        : qc;
+    });
+  }
+
+  if (repaired.deliveryOrders) {
+    repaired.deliveryOrders = repaired.deliveryOrders.map(d => {
+      if (!d.recordIds || !Array.isArray(d.recordIds)) return d;
+      const newRecordIds = d.recordIds.map(rid => recordIdMap.get(rid) || rid);
+      return shallowEqual(newRecordIds, d.recordIds) ? d : { ...d, recordIds: newRecordIds };
+    });
+  }
+
+  return repaired;
+}
+
 export {
   DATA_CATEGORIES,
   CATEGORY_NAMES,
@@ -587,4 +797,12 @@ export {
   withPatientIds,
   migrateShadeLibrary,
   normalizeQcItems,
+  MERGE_ENTITY_FIELDS,
+  MERGE_ENTITY_NAMES,
+  diffEntityFields,
+  matchEntities,
+  detectDuplicatePatients,
+  detectOrphanPhotoProcesses,
+  repairIdReferences,
+  shallowEqual,
 };

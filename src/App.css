@@ -3085,6 +3085,141 @@ select.with-icon {
   color: #dc2626;
 }
 
+.collab-timeline-entry[class*="cross-entity"] .collab-tl-icon {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.collab-timeline-entry[class*="orphan"] .collab-tl-icon {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.collab-timeline-entry[class*="duplicate"] .collab-tl-icon {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.field-diff-section {
+  margin: 12px 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.field-diff-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.field-diff-header svg {
+  color: var(--accent);
+}
+
+.field-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.field-diff-table thead {
+  background: #f3f4f6;
+}
+
+.field-diff-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.field-diff-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.field-diff-table tr:last-child td {
+  border-bottom: none;
+}
+
+.field-diff-label {
+  font-weight: 700;
+  color: #374151;
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.field-diff-value {
+  color: #4b5563;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-diff-local .field-diff-value:first-of-type {
+  background: #f0fdfa;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.field-diff-import .field-diff-value:last-of-type {
+  background: #fffbeb;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.field-diff-choice {
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.field-choice-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.field-choice-label input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cross-entity-section {
+  margin-top: 16px;
+}
+
+.cross-entity-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #fde68a;
+}
+
 @media (max-width: 980px) {
   .collab-workspace {
     grid-template-columns: 1fr;
@@ -3112,6 +3247,14 @@ select.with-icon {
 
   .collab-import-stats {
     flex-direction: column;
+  }
+
+  .field-diff-table {
+    font-size: 12px;
+  }
+
+  .field-diff-value {
+    max-width: 120px;
   }
 }
 

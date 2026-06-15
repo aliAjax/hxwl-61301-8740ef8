@@ -13,6 +13,14 @@ import {
   withPatientIds,
   migrateShadeLibrary,
   normalizeQcItems,
+  MERGE_ENTITY_FIELDS,
+  MERGE_ENTITY_NAMES,
+  diffEntityFields,
+  matchEntities,
+  detectDuplicatePatients,
+  detectOrphanPhotoProcesses,
+  repairIdReferences,
+  shallowEqual,
 } from './dataStore';
 
 const appConfig = {
@@ -500,12 +508,14 @@ function detectConflicts(localRecords, importRecords) {
         matchLocal.lastModified === importRec.lastModified;
       if (!isSameVersion && !conflictKeys.has(key)) {
         conflictKeys.add(key);
+        const fieldDiffs = diffEntityFields(matchLocal, importRec, 'records');
         conflicts.push({
           key,
           patient: importRec.patient,
           tooth: importRec.tooth,
           local: matchLocal,
           import: importRec,
+          fieldDiffs,
           resolution: null
         });
       }
@@ -820,6 +830,7 @@ function App() {
   const [collabConflicts, setCollabConflicts] = useState(null);
   const [collabImportPreview, setCollabImportPreview] = useState(null);
   const [collabImportFileName, setCollabImportFileName] = useState('');
+  const [crossEntityResolutions, setCrossEntityResolutions] = useState({});
   const [collabSimulateDevice, setCollabSimulateDevice] = useState('tablet-2');
   const [collabForm, setCollabForm] = useState({
     patient: '林雨',
@@ -1009,6 +1020,14 @@ function App() {
 
     const { conflicts, added } = detectConflicts(records, importRecords);
 
+    const recordsMatch = matchEntities(records, importRecords, 'records');
+    const patientsMatch = matchEntities(patients, importPatients, 'patients');
+    const photoMatch = matchEntities(photoProcesses, importPhotoProcesses, 'photoProcesses');
+    const deliveryMatch = matchEntities(deliveryOrders, importDeliveryOrders, 'deliveryOrders');
+    const qcMatch = matchEntities(qcRecords, importQcRecords, 'qcRecords');
+
+    const duplicatePatients = detectDuplicatePatients(patients, importPatients);
+
     const existingPatientIds = new Set(patients.map(p => p.id));
     const newPatients = importPatients.filter(p => !existingPatientIds.has(p.id));
     const overwrittenPatients = importPatients.filter(p => existingPatientIds.has(p.id));
@@ -1042,6 +1061,54 @@ function App() {
     const existingCollabTimelineIds = new Set(collabTimeline.map(t => t.id));
     const newCollabTimeline = importCollabTimeline.filter(t => !existingCollabTimelineIds.has(t.id));
 
+    const crossEntityConflicts = {
+      records: recordsMatch.matched
+        .filter(m => m.fieldDiffs.length > 0)
+        .map(m => ({
+          local: m.local,
+          import: m.import,
+          fieldDiffs: m.fieldDiffs,
+          entityKey: `record-${m.local.id}`,
+        })),
+      patients: patientsMatch.matched
+        .filter(m => m.fieldDiffs.length > 0)
+        .map(m => ({
+          local: m.local,
+          import: m.import,
+          fieldDiffs: m.fieldDiffs,
+          entityKey: `patient-${m.local.id}`,
+        })),
+      photoProcesses: photoMatch.matched
+        .filter(m => m.fieldDiffs.length > 0)
+        .map(m => ({
+          local: m.local,
+          import: m.import,
+          fieldDiffs: m.fieldDiffs,
+          entityKey: `photo-${m.local.id}`,
+        })),
+      deliveryOrders: deliveryMatch.matched
+        .filter(m => m.fieldDiffs.length > 0)
+        .map(m => ({
+          local: m.local,
+          import: m.import,
+          fieldDiffs: m.fieldDiffs,
+          entityKey: `delivery-${m.local.id}`,
+        })),
+      qcRecords: qcMatch.matched
+        .filter(m => m.fieldDiffs.length > 0)
+        .map(m => ({
+          local: m.local,
+          import: m.import,
+          fieldDiffs: m.fieldDiffs,
+          entityKey: `qc-${m.local.id}`,
+        })),
+    };
+
+    const potentialOrphans = detectOrphanPhotoProcesses(
+      [...photoProcesses, ...importPhotoProcesses],
+      [...records, ...importRecords]
+    );
+
     return {
       sourceDeviceId,
       sourceDeviceName,
@@ -1070,6 +1137,14 @@ function App() {
       overwrittenQcRecords,
       skippedQcRecords,
       newCollabTimeline,
+      crossEntityConflicts,
+      recordsMatch,
+      patientsMatch,
+      photoMatch,
+      deliveryMatch,
+      qcMatch,
+      duplicatePatients,
+      potentialOrphans,
       importData
     };
   }
@@ -1091,9 +1166,27 @@ function App() {
         const analysis = analyzeCollabImport(data);
         setCollabImportPreview(analysis);
         if (analysis.conflicts.length > 0) {
-          setCollabConflicts(analysis.conflicts.map(c => ({ ...c, resolution: 'keepLocal' })));
+          setCollabConflicts(analysis.conflicts.map(c => ({
+            ...c,
+            resolution: 'keepLocal',
+            fieldResolutions: c.fieldDiffs
+              ? c.fieldDiffs.map(fd => ({ ...fd, resolution: 'import' }))
+              : undefined,
+          })));
         } else {
           setCollabConflicts(null);
+        }
+        if (analysis.crossEntityConflicts) {
+          const ceResolutions = {};
+          Object.entries(analysis.crossEntityConflicts).forEach(([entityType, items]) => {
+            items.forEach(item => {
+              ceResolutions[item.entityKey] = {
+                resolution: 'keepLocal',
+                fieldResolutions: item.fieldDiffs.map(fd => ({ ...fd, resolution: 'import' })),
+              };
+            });
+          });
+          setCrossEntityResolutions(ceResolutions);
         }
       } catch (err) {
         alert('导入失败：' + (err.message || '文件格式错误'));
@@ -1107,8 +1200,54 @@ function App() {
   function setConflictResolution(key, resolution) {
     if (!collabConflicts) return;
     setCollabConflicts(collabConflicts.map(c =>
-      c.key === key ? { ...c, resolution } : c
+      c.key === key ? { ...c, resolution, fieldResolutions: c.fieldDiffs ? c.fieldDiffs.map(fd => ({ ...fd, resolution })) : undefined } : c
     ));
+  }
+
+  function setFieldResolution(conflictKey, fieldKey, resolution) {
+    if (!collabConflicts) return;
+    setCollabConflicts(collabConflicts.map(c => {
+      if (c.key !== conflictKey || !c.fieldResolutions) return c;
+      return {
+        ...c,
+        resolution: 'fieldMerge',
+        fieldResolutions: c.fieldResolutions.map(fr =>
+          fr.fieldKey === fieldKey ? { ...fr, resolution } : fr
+        ),
+      };
+    }));
+  }
+
+  function setCrossEntityResolution(entityKey, resolution) {
+    setCrossEntityResolutions(prev => {
+      const existing = prev[entityKey];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [entityKey]: {
+          ...existing,
+          resolution,
+          fieldResolutions: existing.fieldResolutions.map(fr => ({ ...fr, resolution })),
+        },
+      };
+    });
+  }
+
+  function setCrossEntityFieldResolution(entityKey, fieldKey, resolution) {
+    setCrossEntityResolutions(prev => {
+      const existing = prev[entityKey];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [entityKey]: {
+          ...existing,
+          resolution: 'fieldMerge',
+          fieldResolutions: existing.fieldResolutions.map(fr =>
+            fr.fieldKey === fieldKey ? { ...fr, resolution } : fr
+          ),
+        },
+      };
+    });
   }
 
   function confirmCollabImport() {
@@ -1117,6 +1256,9 @@ function App() {
 
     let mergedRecords = [...records];
     let mergedPatients = [...patients];
+    let mergedPhotoProcesses = [...photoProcesses];
+    let mergedDeliveryOrders = [...deliveryOrders];
+    let mergedQcRecords = [...qcRecords];
     const timelineEntries = [];
     const recordIdMap = new Map();
 
@@ -1128,7 +1270,7 @@ function App() {
       }
 
       collabConflicts.forEach(conflict => {
-        const { local, import: imp, resolution, patient, tooth } = conflict;
+        const { local, import: imp, resolution, patient, tooth, fieldResolutions } = conflict;
         const now = new Date().toISOString();
 
         if (resolution === 'keepLocal') {
@@ -1194,8 +1336,142 @@ function App() {
           };
           recordIdMap.set(imp.id, copyRecordId);
           mergedRecords.unshift(copyRecord);
+        } else if (resolution === 'fieldMerge' && fieldResolutions) {
+          let mergedRecord = { ...local };
+          fieldResolutions.forEach(fr => {
+            if (fr.resolution === 'import') {
+              mergedRecord[fr.fieldKey] = fr.importValue;
+            }
+          });
+          mergedRecord.lastModified = now;
+          mergedRecord.version = Math.max(local.version || 1, imp.version || 1) + 1;
+          mergedRecord.timeline = [
+            ...(local.timeline || []),
+            {
+              status: `字段级合并：从${sourceDeviceName}选择性合并 ${fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段`,
+              at: today,
+              by: '冲突合并'
+            }
+          ];
+          recordIdMap.set(imp.id, local.id);
+          mergedRecords = mergedRecords.map(r => r.id === local.id ? mergedRecord : r);
+          timelineEntries.push({
+            type: 'conflict-resolve-merge',
+            deviceId: sourceDeviceId,
+            title: '冲突处理：字段级合并',
+            detail: `${patient} - ${tooth} 牙位，字段级合并，${fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用导入值`
+          });
         }
       });
+    }
+
+    if (collabImportPreview.crossEntityConflicts && crossEntityResolutions) {
+      const ceConflicts = collabImportPreview.crossEntityConflicts;
+
+      if (ceConflicts.patients && ceConflicts.patients.length > 0) {
+        ceConflicts.patients.forEach(item => {
+          const res = crossEntityResolutions[item.entityKey];
+          if (!res) return;
+          if (res.resolution === 'useImport') {
+            mergedPatients = mergedPatients.map(p => p.id === item.local.id ? {
+              ...item.import,
+              id: item.local.id,
+              timeline: [...(p.timeline || []), { status: `从${sourceDeviceName}合并，覆盖本地患者`, at: today, by: '跨实体合并' }]
+            } : p);
+          } else if (res.resolution === 'makeCopy') {
+            const copyId = uid();
+            mergedPatients.push({
+              ...item.import,
+              id: copyId,
+              timeline: [{ status: `从${sourceDeviceName}合并，作为副本保存`, at: today, by: '跨实体合并' }]
+            });
+          } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
+            let mergedItem = { ...item.local };
+            res.fieldResolutions.forEach(fr => {
+              if (fr.resolution === 'import') mergedItem[fr.fieldKey] = fr.importValue;
+            });
+            mergedPatients = mergedPatients.map(p => p.id === item.local.id ? mergedItem : p);
+          }
+        });
+        timelineEntries.push({
+          type: 'cross-entity-patients',
+          deviceId: sourceDeviceId,
+          title: '患者档案跨实体合并',
+          detail: `从${sourceDeviceName}合并 ${ceConflicts.patients.length} 条患者档案冲突`
+        });
+      }
+
+      if (ceConflicts.photoProcesses && ceConflicts.photoProcesses.length > 0) {
+        ceConflicts.photoProcesses.forEach(item => {
+          const res = crossEntityResolutions[item.entityKey];
+          if (!res) return;
+          if (res.resolution === 'useImport') {
+            mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? { ...item.import, id: item.local.id } : p);
+          } else if (res.resolution === 'makeCopy') {
+            mergedPhotoProcesses.push({ ...item.import, id: uid() });
+          } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
+            let mergedItem = { ...item.local };
+            res.fieldResolutions.forEach(fr => {
+              if (fr.resolution === 'import') mergedItem[fr.fieldKey] = fr.importValue;
+            });
+            mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? mergedItem : p);
+          }
+        });
+        timelineEntries.push({
+          type: 'cross-entity-photo',
+          deviceId: sourceDeviceId,
+          title: '拍照流程跨实体合并',
+          detail: `从${sourceDeviceName}合并 ${ceConflicts.photoProcesses.length} 条拍照流程冲突`
+        });
+      }
+
+      if (ceConflicts.deliveryOrders && ceConflicts.deliveryOrders.length > 0) {
+        ceConflicts.deliveryOrders.forEach(item => {
+          const res = crossEntityResolutions[item.entityKey];
+          if (!res) return;
+          if (res.resolution === 'useImport') {
+            mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? { ...item.import, id: item.local.id } : d);
+          } else if (res.resolution === 'makeCopy') {
+            mergedDeliveryOrders.push({ ...item.import, id: uid() });
+          } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
+            let mergedItem = { ...item.local };
+            res.fieldResolutions.forEach(fr => {
+              if (fr.resolution === 'import') mergedItem[fr.fieldKey] = fr.importValue;
+            });
+            mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? mergedItem : d);
+          }
+        });
+        timelineEntries.push({
+          type: 'cross-entity-delivery',
+          deviceId: sourceDeviceId,
+          title: '交接单跨实体合并',
+          detail: `从${sourceDeviceName}合并 ${ceConflicts.deliveryOrders.length} 条交接单冲突`
+        });
+      }
+
+      if (ceConflicts.qcRecords && ceConflicts.qcRecords.length > 0) {
+        ceConflicts.qcRecords.forEach(item => {
+          const res = crossEntityResolutions[item.entityKey];
+          if (!res) return;
+          if (res.resolution === 'useImport') {
+            mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? { ...item.import, id: item.local.id } : q);
+          } else if (res.resolution === 'makeCopy') {
+            mergedQcRecords.push({ ...item.import, id: uid() });
+          } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
+            let mergedItem = { ...item.local };
+            res.fieldResolutions.forEach(fr => {
+              if (fr.resolution === 'import') mergedItem[fr.fieldKey] = fr.importValue;
+            });
+            mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? mergedItem : q);
+          }
+        });
+        timelineEntries.push({
+          type: 'cross-entity-qc',
+          deviceId: sourceDeviceId,
+          title: '质控记录跨实体合并',
+          detail: `从${sourceDeviceName}合并 ${ceConflicts.qcRecords.length} 条质控记录冲突`
+        });
+      }
     }
 
     const mergedRecordIds = new Set(mergedRecords.map(r => r.id));
@@ -1225,19 +1501,37 @@ function App() {
       });
     }
 
-    const hasNewPatients = collabImportPreview.newPatients && collabImportPreview.newPatients.length > 0;
-    const hasOverwrittenPatients = collabImportPreview.overwrittenPatients && collabImportPreview.overwrittenPatients.length > 0;
-
-    if (hasNewPatients) {
-      mergedPatients = [...mergedPatients, ...collabImportPreview.newPatients];
+    if (collabImportPreview.newPatients && collabImportPreview.newPatients.length > 0) {
+      const dpNames = new Set();
+      if (collabImportPreview.duplicatePatients) {
+        collabImportPreview.duplicatePatients.forEach(dp => dpNames.add(dp.import.name));
+      }
+      collabImportPreview.newPatients.forEach(np => {
+        if (dpNames.has(np.name)) {
+          mergedPatients.push({
+            ...np,
+            id: uid(),
+            name: `${np.name}（导入副本）`,
+            createdAt: new Date().toISOString(),
+          });
+          timelineEntries.push({
+            type: 'duplicate-patient-copy',
+            deviceId: sourceDeviceId,
+            title: '重复患者：生成副本',
+            detail: `患者"${np.name}"已存在，导入为副本"${np.name}（导入副本）"`
+          });
+        } else {
+          mergedPatients.push(np);
+        }
+      });
     }
 
-    if (hasOverwrittenPatients) {
+    if (collabImportPreview.overwrittenPatients && collabImportPreview.overwrittenPatients.length > 0) {
       const overwrittenPatientIds = new Set(collabImportPreview.overwrittenPatients.map(p => p.id));
       mergedPatients = mergedPatients.map(p => overwrittenPatientIds.has(p.id) ? collabImportPreview.overwrittenPatients.find(op => op.id === p.id) || p : p);
     }
 
-    if (hasNewPatients || hasOverwrittenPatients) {
+    if (collabImportPreview.newPatients?.length > 0 || collabImportPreview.overwrittenPatients?.length > 0) {
       timelineEntries.push({
         type: 'import-patients',
         deviceId: sourceDeviceId,
@@ -1272,18 +1566,26 @@ function App() {
       });
     }
 
-    const hasNewPP = collabImportPreview.newPhotoProcesses && collabImportPreview.newPhotoProcesses.length > 0;
-    const hasOverwrittenPP = collabImportPreview.overwrittenPhotoProcesses && collabImportPreview.overwrittenPhotoProcesses.length > 0;
+    if (collabImportPreview.newPhotoProcesses && collabImportPreview.newPhotoProcesses.length > 0) {
+      mergedPhotoProcesses = [...mergedPhotoProcesses, ...collabImportPreview.newPhotoProcesses.map(pp => {
+        const mappedRecordId = recordIdMap.get(pp.recordId);
+        return mappedRecordId ? { ...pp, recordId: mappedRecordId } : pp;
+      })];
+    }
 
-    if (hasNewPP || hasOverwrittenPP) {
-      let mergedPhotoProcesses = [...photoProcesses];
-      if (hasNewPP) {
-        mergedPhotoProcesses = [...mergedPhotoProcesses, ...collabImportPreview.newPhotoProcesses];
-      }
-      if (hasOverwrittenPP) {
-        const overwrittenPPIds = new Set(collabImportPreview.overwrittenPhotoProcesses.map(p => p.id));
-        mergedPhotoProcesses = mergedPhotoProcesses.map(p => overwrittenPPIds.has(p.id) ? collabImportPreview.overwrittenPhotoProcesses.find(opp => opp.id === p.id) || p : p);
-      }
+    const orphanCheck = detectOrphanPhotoProcesses(mergedPhotoProcesses, mergedRecords);
+    if (orphanCheck.length > 0) {
+      const orphanIds = new Set(orphanCheck.map(o => o.id));
+      mergedPhotoProcesses = mergedPhotoProcesses.filter(pp => !orphanIds.has(pp.id));
+      timelineEntries.push({
+        type: 'orphan-cleanup',
+        deviceId: sourceDeviceId,
+        title: '孤立拍照流程清理',
+        detail: `移除 ${orphanCheck.length} 个无关联比色记录的孤立拍照流程`
+      });
+    }
+
+    if (collabImportPreview.newPhotoProcesses?.length > 0 || collabImportPreview.overwrittenPhotoProcesses?.length > 0) {
       persistPhotoProcesses(mergedPhotoProcesses);
       timelineEntries.push({
         type: 'import-photo-processes',
@@ -1293,18 +1595,15 @@ function App() {
       });
     }
 
-    const hasNewDO = collabImportPreview.newDeliveryOrders && collabImportPreview.newDeliveryOrders.length > 0;
-    const hasOverwrittenDO = collabImportPreview.overwrittenDeliveryOrders && collabImportPreview.overwrittenDeliveryOrders.length > 0;
+    if (collabImportPreview.newDeliveryOrders && collabImportPreview.newDeliveryOrders.length > 0) {
+      mergedDeliveryOrders = [...mergedDeliveryOrders, ...collabImportPreview.newDeliveryOrders.map(d => {
+        if (!d.recordIds || !Array.isArray(d.recordIds)) return d;
+        const newRecordIds = d.recordIds.map(rid => recordIdMap.get(rid) || rid);
+        return { ...d, recordIds: newRecordIds };
+      })];
+    }
 
-    if (hasNewDO || hasOverwrittenDO) {
-      let mergedDeliveryOrders = [...deliveryOrders];
-      if (hasNewDO) {
-        mergedDeliveryOrders = [...mergedDeliveryOrders, ...collabImportPreview.newDeliveryOrders];
-      }
-      if (hasOverwrittenDO) {
-        const overwrittenDOIds = new Set(collabImportPreview.overwrittenDeliveryOrders.map(d => d.id));
-        mergedDeliveryOrders = mergedDeliveryOrders.map(d => overwrittenDOIds.has(d.id) ? collabImportPreview.overwrittenDeliveryOrders.find(odo => odo.id === d.id) || d : d);
-      }
+    if (collabImportPreview.newDeliveryOrders?.length > 0 || collabImportPreview.overwrittenDeliveryOrders?.length > 0) {
       persistDeliveryOrders(mergedDeliveryOrders);
       timelineEntries.push({
         type: 'import-delivery-orders',
@@ -1338,32 +1637,16 @@ function App() {
       });
     }
 
-    const hasNewQR = collabImportPreview.newQcRecords && collabImportPreview.newQcRecords.length > 0;
-    const hasOverwrittenQR = collabImportPreview.overwrittenQcRecords && collabImportPreview.overwrittenQcRecords.length > 0;
+    if (collabImportPreview.newQcRecords && collabImportPreview.newQcRecords.length > 0) {
+      collabImportPreview.newQcRecords.forEach(nqr => {
+        const mappedRecordId = recordIdMap.has(nqr.recordId) ? recordIdMap.get(nqr.recordId) : nqr.recordId;
+        const mappedQc = mappedRecordId === nqr.recordId ? nqr : { ...nqr, recordId: mappedRecordId };
+        if (mappedQc.recordId && !mergedRecordIds.has(mappedQc.recordId)) return;
+        mergedQcRecords.push(mappedQc);
+      });
+    }
 
-    if (hasNewQR || hasOverwrittenQR) {
-      let mergedQcRecords = [...qcRecords];
-      const mapQcRecord = (qc) => {
-        const mappedRecordId = qc.recordId && recordIdMap.has(qc.recordId) ? recordIdMap.get(qc.recordId) : qc.recordId;
-        return mappedRecordId === qc.recordId ? qc : { ...qc, recordId: mappedRecordId };
-      };
-      if (hasNewQR) {
-        collabImportPreview.newQcRecords.forEach(nqr => {
-          const mappedQc = mapQcRecord(nqr);
-          if (mappedQc.recordId && !mergedRecordIds.has(mappedQc.recordId)) return;
-          mergedQcRecords.push(mappedQc);
-        });
-      }
-      if (hasOverwrittenQR) {
-        const mappedOverwrittenQcRecords = collabImportPreview.overwrittenQcRecords.map(mapQcRecord);
-        const overwrittenQRIds = new Set(mappedOverwrittenQcRecords.map(q => q.id));
-        mergedQcRecords = mergedQcRecords.map(q => {
-          if (!overwrittenQRIds.has(q.id)) return q;
-          const mappedQc = mappedOverwrittenQcRecords.find(oqr => oqr.id === q.id);
-          if (!mappedQc?.recordId || mergedRecordIds.has(mappedQc.recordId)) return mappedQc || q;
-          return q;
-        });
-      }
+    if (collabImportPreview.newQcRecords?.length > 0 || collabImportPreview.overwrittenQcRecords?.length > 0) {
       persistQcRecords(mergedQcRecords);
       timelineEntries.push({
         type: 'import-qc-records',
@@ -1379,10 +1662,27 @@ function App() {
       persistCollabTimeline(mergedTimeline);
     }
 
+    const repairResult = repairIdReferences({
+      records: mergedRecords,
+      photoProcesses: mergedPhotoProcesses,
+      qcRecords: mergedQcRecords,
+      deliveryOrders: mergedDeliveryOrders,
+    }, recordIdMap);
+    mergedPhotoProcesses = repairResult.photoProcesses || mergedPhotoProcesses;
+    mergedQcRecords = repairResult.qcRecords || mergedQcRecords;
+    mergedDeliveryOrders = repairResult.deliveryOrders || mergedDeliveryOrders;
+
     persistRecords(mergedRecords);
     persistPatients(mergedPatients);
+    persistPhotoProcesses(mergedPhotoProcesses);
+    persistDeliveryOrders(mergedDeliveryOrders);
+    persistQcRecords(mergedQcRecords);
 
     addCollabTimelineEntries(timelineEntries);
+
+    const totalCeConflicts = collabImportPreview.crossEntityConflicts
+      ? Object.values(collabImportPreview.crossEntityConflicts).reduce((sum, items) => sum + items.length, 0)
+      : 0;
 
     const summaryMsg = [
       `导入来源：${sourceDeviceName}`,
@@ -1391,12 +1691,17 @@ function App() {
       collabConflicts ? ` - 保留本地：${collabConflicts.filter(c => c.resolution === 'keepLocal').length} 条` : '',
       collabConflicts ? ` - 采用导入：${collabConflicts.filter(c => c.resolution === 'useImport').length} 条` : '',
       collabConflicts ? ` - 生成副本：${collabConflicts.filter(c => c.resolution === 'makeCopy').length} 条` : '',
+      collabConflicts ? ` - 字段级合并：${collabConflicts.filter(c => c.resolution === 'fieldMerge').length} 条` : '',
+      `跨实体冲突：${totalCeConflicts} 条`,
       `患者档案：新增 ${collabImportPreview.newPatients?.length || 0} 位，覆盖 ${collabImportPreview.overwrittenPatients?.length || 0} 位`,
+      collabImportPreview.duplicatePatients?.length > 0 ? ` - 同名患者检测：${collabImportPreview.duplicatePatients.length} 位` : '',
       `色号库：新增 ${collabImportPreview.newShades?.length || 0} 个`,
       `拍照流程：新增 ${collabImportPreview.newPhotoProcesses?.length || 0} 个，覆盖 ${collabImportPreview.overwrittenPhotoProcesses?.length || 0} 个`,
+      orphanCheck?.length > 0 ? ` - 孤立流程清理：${orphanCheck.length} 个` : '',
       `交接单：新增 ${collabImportPreview.newDeliveryOrders?.length || 0} 份，覆盖 ${collabImportPreview.overwrittenDeliveryOrders?.length || 0} 份`,
       `质控配置：新增 ${collabImportPreview.newQcCheckItems?.length || 0} 项，覆盖 ${collabImportPreview.overwrittenQcCheckItems?.length || 0} 项`,
       `质控记录：新增 ${collabImportPreview.newQcRecords?.length || 0} 条，覆盖 ${collabImportPreview.overwrittenQcRecords?.length || 0} 条，跳过 ${collabImportPreview.skippedQcRecords?.length || 0} 条`,
+      `关联ID修复：${recordIdMap.size} 条映射`,
     ].filter(Boolean).join('\n');
     alert(summaryMsg);
 
@@ -1407,6 +1712,7 @@ function App() {
     setCollabImportPreview(null);
     setCollabImportFileName('');
     setCollabConflicts(null);
+    setCrossEntityResolutions({});
   }
 
   function simulateAddRecord() {
@@ -6660,7 +6966,7 @@ function App() {
                     </div>
                   )}
 
-                  {(!collabConflicts || collabConflicts.length === 0) ? (
+                  {(!collabConflicts || collabConflicts.length === 0) && (!collabImportPreview.crossEntityConflicts || Object.values(collabImportPreview.crossEntityConflicts).every(items => !items || items.length === 0)) && (
                     <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                       <button type="button" className="secondary" onClick={cancelCollabImport}>
                         <X size={16} />取消
@@ -6669,7 +6975,7 @@ function App() {
                         <CheckCircle2 size={16} />确认导入
                       </button>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>
@@ -6680,7 +6986,7 @@ function App() {
               <div className="panel data-panel collab-conflicts">
                 <div className="collab-conflicts-header">
                   <AlertTriangle size={20} />
-                  <h3>检测到 {collabConflicts.length} 条冲突记录，请选择处理方式</h3>
+                  <h3>检测到 {collabConflicts.length} 条比色记录冲突，请选择处理方式</h3>
                 </div>
                 <ul className="collab-conflict-list">
                   {collabConflicts.map(conflict => {
@@ -6720,6 +7026,55 @@ function App() {
                             </div>
                           </div>
                         </div>
+
+                        {conflict.fieldDiffs && conflict.fieldDiffs.length > 0 && (
+                          <div className="field-diff-section">
+                            <div className="field-diff-header">
+                              <Layers size={14} />
+                              <span>字段级差异预览（{conflict.fieldDiffs.length} 个字段不同）</span>
+                            </div>
+                            <table className="field-diff-table">
+                              <thead>
+                                <tr>
+                                  <th>字段</th>
+                                  <th>本地值</th>
+                                  <th>导入值</th>
+                                  <th>选择</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {conflict.fieldResolutions?.map((fr, fIdx) => (
+                                  <tr key={fr.fieldKey} className={fr.resolution === 'import' ? 'field-diff-import' : 'field-diff-local'}>
+                                    <td className="field-diff-label">{fr.fieldLabel}</td>
+                                    <td className="field-diff-value">{String(fr.localValue ?? '') || '—'}</td>
+                                    <td className="field-diff-value">{String(fr.importValue ?? '') || '—'}</td>
+                                    <td className="field-diff-choice">
+                                      <label className="field-choice-label">
+                                        <input
+                                          type="radio"
+                                          name={`field-${conflict.key}-${fr.fieldKey}`}
+                                          checked={fr.resolution === 'local'}
+                                          onChange={() => setFieldResolution(conflict.key, fr.fieldKey, 'local')}
+                                        />
+                                        <span>本地</span>
+                                      </label>
+                                      <label className="field-choice-label">
+                                        <input
+                                          type="radio"
+                                          name={`field-${conflict.key}-${fr.fieldKey}`}
+                                          checked={fr.resolution === 'import'}
+                                          onChange={() => setFieldResolution(conflict.key, fr.fieldKey, 'import')}
+                                        />
+                                        <span>导入</span>
+                                      </label>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
                         <div className="conflict-resolution">
                           <label
                             className={`conflict-option ${conflict.resolution === 'keepLocal' ? 'selected' : ''}`}
@@ -6763,19 +7118,202 @@ function App() {
                               <span>两者都保留，导入数据作为副本新增</span>
                             </div>
                           </label>
+                          {conflict.fieldDiffs && conflict.fieldDiffs.length > 0 && (
+                            <label
+                              className={`conflict-option ${conflict.resolution === 'fieldMerge' ? 'selected' : ''}`}
+                            >
+                              <input
+                                type="radio"
+                                name={`resolution-${conflict.key}`}
+                                checked={conflict.resolution === 'fieldMerge'}
+                                onChange={() => setConflictResolution(conflict.key, 'fieldMerge')}
+                              />
+                              <div className="conflict-option-content">
+                                <strong>字段级合并</strong>
+                                <span>按上方字段选择逐项合并本地与导入值</span>
+                              </div>
+                            </label>
+                          )}
                         </div>
                       </li>
                     );
                   })}
                 </ul>
-                <div className="import-actions" style={{ marginTop: '16px' }}>
-                  <button type="button" className="secondary" onClick={cancelCollabImport}>
-                    <X size={16} />取消导入
-                  </button>
-                  <button type="button" className="primary" onClick={confirmCollabImport}>
-                    <GitMerge size={16} />确认合并 ({collabConflicts.length} 条冲突)
-                  </button>
+              </div>
+            )}
+
+            {collabImportPreview && collabImportPreview.crossEntityConflicts && (() => {
+              const ceConflicts = collabImportPreview.crossEntityConflicts;
+              const totalCeConflicts = Object.values(ceConflicts).reduce((sum, items) => sum + items.length, 0);
+              if (totalCeConflicts === 0) return null;
+              return (
+                <div className="panel data-panel collab-conflicts" style={{ borderColor: '#f59e0b' }}>
+                  <div className="collab-conflicts-header" style={{ color: '#92400e' }}>
+                    <GitMerge size={20} />
+                    <h3>跨实体冲突检测 · 共 {totalCeConflicts} 条需处理</h3>
+                  </div>
+
+                  {collabImportPreview.duplicatePatients && collabImportPreview.duplicatePatients.length > 0 && (
+                    <div className="import-warning" style={{ marginTop: '12px' }}>
+                      <AlertOctagon size={18} />
+                      <div>
+                        <strong>检测到 {collabImportPreview.duplicatePatients.length} 位同名患者</strong>
+                        <p>以下患者姓名在本地和导入数据中均存在，但ID不同，可能为同一人：{collabImportPreview.duplicatePatients.map(dp => `"${dp.import.name}"`).join('、')}</p>
+                        <p className="hint">导入时将为同名患者自动生成副本（添加"导入副本"后缀）</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {collabImportPreview.potentialOrphans && collabImportPreview.potentialOrphans.length > 0 && (
+                    <div className="import-warning" style={{ marginTop: '8px' }}>
+                      <AlertCircle size={18} />
+                      <div>
+                        <strong>检测到 {collabImportPreview.potentialOrphans.length} 个潜在孤立拍照流程</strong>
+                        <p>部分拍照流程关联的比色记录在合并后可能不存在，合并时将自动清理这些孤立记录</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {Object.entries(ceConflicts).map(([entityType, items]) => {
+                    if (!items || items.length === 0) return null;
+                    const entityName = MERGE_ENTITY_NAMES[entityType] || entityType;
+                    return (
+                      <div key={entityType} className="cross-entity-section">
+                        <h4 className="cross-entity-title">{entityName}冲突 · {items.length} 条</h4>
+                        <ul className="collab-conflict-list">
+                          {items.map(item => {
+                            const res = crossEntityResolutions[item.entityKey] || { resolution: 'keepLocal', fieldResolutions: item.fieldDiffs.map(fd => ({ ...fd, resolution: 'import' })) };
+                            return (
+                              <li key={item.entityKey} className="collab-conflict-item">
+                                <div className="conflict-patient-info">
+                                  {entityType === 'patients' && <Users size={16} style={{ color: 'var(--accent)' }} />}
+                                  {entityType === 'photoProcesses' && <Camera size={16} style={{ color: 'var(--accent)' }} />}
+                                  {entityType === 'deliveryOrders' && <Package size={16} style={{ color: 'var(--accent)' }} />}
+                                  {entityType === 'qcRecords' && <ClipboardList size={16} style={{ color: 'var(--accent)' }} />}
+                                  <strong>{item.local.name || item.local.orderNo || item.local.recordId || item.local.id?.slice(0, 8)}</strong>
+                                  {item.local.name && <span>· {item.local.phone || item.local.id?.slice(0, 8)}</span>}
+                                </div>
+                                {item.fieldDiffs && item.fieldDiffs.length > 0 && (
+                                  <table className="field-diff-table">
+                                    <thead>
+                                      <tr>
+                                        <th>字段</th>
+                                        <th>本地值</th>
+                                        <th>导入值</th>
+                                        <th>选择</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {res.fieldResolutions?.map((fr, fIdx) => (
+                                        <tr key={fr.fieldKey} className={fr.resolution === 'import' ? 'field-diff-import' : 'field-diff-local'}>
+                                          <td className="field-diff-label">{fr.fieldLabel}</td>
+                                          <td className="field-diff-value">{String(fr.localValue ?? '') || '—'}</td>
+                                          <td className="field-diff-value">{String(fr.importValue ?? '') || '—'}</td>
+                                          <td className="field-diff-choice">
+                                            <label className="field-choice-label">
+                                              <input
+                                                type="radio"
+                                                name={`ce-field-${item.entityKey}-${fr.fieldKey}`}
+                                                checked={fr.resolution === 'local'}
+                                                onChange={() => setCrossEntityFieldResolution(item.entityKey, fr.fieldKey, 'local')}
+                                              />
+                                              <span>本地</span>
+                                            </label>
+                                            <label className="field-choice-label">
+                                              <input
+                                                type="radio"
+                                                name={`ce-field-${item.entityKey}-${fr.fieldKey}`}
+                                                checked={fr.resolution === 'import'}
+                                                onChange={() => setCrossEntityFieldResolution(item.entityKey, fr.fieldKey, 'import')}
+                                              />
+                                              <span>导入</span>
+                                            </label>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                                <div className="conflict-resolution">
+                                  <label className={`conflict-option ${res.resolution === 'keepLocal' ? 'selected' : ''}`}>
+                                    <input
+                                      type="radio"
+                                      name={`ce-resolution-${item.entityKey}`}
+                                      checked={res.resolution === 'keepLocal'}
+                                      onChange={() => setCrossEntityResolution(item.entityKey, 'keepLocal')}
+                                    />
+                                    <div className="conflict-option-content">
+                                      <strong>保留本地</strong>
+                                      <span>保留当前设备数据</span>
+                                    </div>
+                                  </label>
+                                  <label className={`conflict-option ${res.resolution === 'useImport' ? 'selected' : ''}`}>
+                                    <input
+                                      type="radio"
+                                      name={`ce-resolution-${item.entityKey}`}
+                                      checked={res.resolution === 'useImport'}
+                                      onChange={() => setCrossEntityResolution(item.entityKey, 'useImport')}
+                                    />
+                                    <div className="conflict-option-content">
+                                      <strong>采用导入</strong>
+                                      <span>用导入数据覆盖本地</span>
+                                    </div>
+                                  </label>
+                                  <label className={`conflict-option ${res.resolution === 'makeCopy' ? 'selected' : ''}`}>
+                                    <input
+                                      type="radio"
+                                      name={`ce-resolution-${item.entityKey}`}
+                                      checked={res.resolution === 'makeCopy'}
+                                      onChange={() => setCrossEntityResolution(item.entityKey, 'makeCopy')}
+                                    />
+                                    <div className="conflict-option-content">
+                                      <strong>生成副本</strong>
+                                      <span>两者都保留</span>
+                                    </div>
+                                  </label>
+                                  {item.fieldDiffs && item.fieldDiffs.length > 0 && (
+                                    <label className={`conflict-option ${res.resolution === 'fieldMerge' ? 'selected' : ''}`}>
+                                      <input
+                                        type="radio"
+                                        name={`ce-resolution-${item.entityKey}`}
+                                        checked={res.resolution === 'fieldMerge'}
+                                        onChange={() => setCrossEntityResolution(item.entityKey, 'fieldMerge')}
+                                      />
+                                      <div className="conflict-option-content">
+                                        <strong>字段级合并</strong>
+                                        <span>逐字段选择合并</span>
+                                      </div>
+                                    </label>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })}
+
+                  <div className="import-actions" style={{ marginTop: '16px' }}>
+                    <button type="button" className="secondary" onClick={cancelCollabImport}>
+                      <X size={16} />取消导入
+                    </button>
+                    <button type="button" className="primary" onClick={confirmCollabImport}>
+                      <GitMerge size={16} />确认合并
+                    </button>
+                  </div>
                 </div>
+              );
+            })()}
+
+            {(!collabConflicts || collabConflicts.length === 0) && collabImportPreview && (!collabImportPreview.crossEntityConflicts || Object.values(collabImportPreview.crossEntityConflicts).every(items => !items || items.length === 0)) && (
+              <div style={{ display: 'flex', gap: '10px', marginTop: '0' }}>
+                <button type="button" className="secondary" onClick={cancelCollabImport}>
+                  <X size={16} />取消
+                </button>
+                <button type="button" className="primary" onClick={confirmCollabImport}>
+                  <CheckCircle2 size={16} />确认导入
+                </button>
               </div>
             )}
 
