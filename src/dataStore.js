@@ -164,13 +164,14 @@ function parseLegacyQcCheckItems(raw, appConfig) {
   return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
 }
 
-function parseLegacyQcRecords(raw, qcCheckItems) {
+function parseLegacyQcRecords(raw, appConfig, qcCheckItems) {
+  const checkItems = qcCheckItems || appConfig.qcCheckItems;
   const parsed = JSON.parse(raw);
   if (!Array.isArray(parsed)) return [];
   return parsed.map((qc) => ({
     id: qc.id || uid(),
     recordId: qc.recordId || '',
-    items: normalizeQcItems(qc.items, qcCheckItems),
+    items: normalizeQcItems(qc.items, checkItems),
     createdAt: qc.createdAt || new Date().toISOString(),
     updatedAt: qc.updatedAt || new Date().toISOString(),
   }));
@@ -402,6 +403,20 @@ function loadUnifiedData(appConfig) {
   if (recoveryResult.recovered) {
     result.data = recoveryResult.data;
     result.recoveryLog = [...result.recoveryLog, ...recoveryResult.recoveryLog];
+  }
+
+  const checkItems = result.data.data[DATA_CATEGORIES.qcCheckItems];
+  const qcRecords = result.data.data[DATA_CATEGORIES.qcRecords];
+  if (Array.isArray(qcRecords) && Array.isArray(checkItems)) {
+    const normalizedQcRecords = qcRecords.map((qc) => ({
+      ...qc,
+      items: normalizeQcItems(qc.items, checkItems),
+      updatedAt: qc.updatedAt || new Date().toISOString(),
+    }));
+    result.data.data[DATA_CATEGORIES.qcRecords] = normalizedQcRecords;
+  }
+
+  if (recoveryResult.recovered || Array.isArray(qcRecords)) {
     saveUnifiedData(result.data);
   }
 
