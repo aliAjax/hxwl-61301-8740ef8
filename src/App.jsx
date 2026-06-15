@@ -484,6 +484,23 @@ function getDeviceInfo(deviceId) {
   return appConfig.devices.find(d => d.id === deviceId) || { id: deviceId, name: deviceId, room: '未知', color: '#6b7280' };
 }
 
+function getRooms() {
+  const roomSet = new Set();
+  const rooms = [];
+  appConfig.devices.forEach(d => {
+    if (!roomSet.has(d.room)) {
+      roomSet.add(d.room);
+      rooms.push({ name: d.room, color: d.color });
+    }
+  });
+  return rooms;
+}
+
+function getRoomInfo(roomName) {
+  const room = getRooms().find(r => r.name === roomName);
+  return room || { name: roomName || '未安排', color: '#6b7280' };
+}
+
 function formatDateTime(isoStr) {
   try {
     const d = new Date(isoStr);
@@ -913,6 +930,7 @@ function App() {
   const [deliveryOrderFilter, setDeliveryOrderFilter] = useState('全部');
   const [draggedRecordId, setDraggedRecordId] = useState(null);
   const [dragOverDate, setDragOverDate] = useState(null);
+  const [dragOverRoom, setDragOverRoom] = useState(null);
   const [boardSelectedRecord, setBoardSelectedRecord] = useState(null);
   const [editingFollowUpRecordId, setEditingFollowUpRecordId] = useState(null);
   const [boardFilterStatus, setBoardFilterStatus] = useState('全部');
@@ -933,12 +951,13 @@ function App() {
     tooth: '',
     shade: '',
     photoNote: '',
-    followUp: ''
+    followUp: '',
+    followUpRoom: ''
   });
 
   useEffect(() => {
     setEditingRecordId(null);
-    setEditRecordForm({ patient: '', tooth: '', shade: '', photoNote: '', followUp: '' });
+    setEditRecordForm({ patient: '', tooth: '', shade: '', photoNote: '', followUp: '', followUpRoom: '' });
   }, [selected]);
 
   const [currentDeviceId, setCurrentDeviceId] = useState(loadCurrentDevice);
@@ -1874,6 +1893,40 @@ function App() {
     if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
   }
 
+  function updateFollowUpRoom(id, newRoom) {
+    const record = records.find((r) => r.id === id);
+    if (!record) return;
+    const oldRoom = record.followUpRoom || '未安排';
+    const next = records.map((item) => item.id === id ? {
+      ...item,
+      followUpRoom: newRoom,
+      lastModified: new Date().toISOString(),
+      version: (item.version || 1) + 1,
+      timeline: [...(item.timeline || []), { status: `复诊诊室调整: ${oldRoom} → ${newRoom || '未安排'}`, at: today, by: '排期调整' }]
+    } : item);
+    persistRecords(next);
+    if (selected?.id === id) setSelected(next.find((item) => item.id === id));
+    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
+  }
+
+  function updateFollowUpDateAndRoom(id, newDate, newRoom) {
+    const record = records.find((r) => r.id === id);
+    if (!record) return;
+    const oldDate = record.followUp || '未排期';
+    const oldRoom = record.followUpRoom || '未安排';
+    const next = records.map((item) => item.id === id ? {
+      ...item,
+      followUp: newDate,
+      followUpRoom: newRoom,
+      lastModified: new Date().toISOString(),
+      version: (item.version || 1) + 1,
+      timeline: [...(item.timeline || []), { status: `复诊调整: 日期 ${oldDate} → ${newDate}，诊室 ${oldRoom} → ${newRoom || '未安排'}`, at: today, by: '排期调整' }]
+    } : item);
+    persistRecords(next);
+    if (selected?.id === id) setSelected(next.find((item) => item.id === id));
+    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
+  }
+
   function startEditRecord(record) {
     setEditingRecordId(record.id);
     setEditRecordForm({
@@ -1881,7 +1934,8 @@ function App() {
       tooth: record.tooth || '',
       shade: record.shade || '',
       photoNote: record.photoNote || '',
-      followUp: record.followUp || ''
+      followUp: record.followUp || '',
+      followUpRoom: record.followUpRoom || ''
     });
   }
 
@@ -1892,7 +1946,8 @@ function App() {
       tooth: '',
       shade: '',
       photoNote: '',
-      followUp: ''
+      followUp: '',
+      followUpRoom: ''
     });
   }
 
@@ -1916,6 +1971,9 @@ function App() {
     if (editRecordForm.followUp !== record.followUp) {
       changes.push(`复诊日期: ${record.followUp || '未排期'} → ${editRecordForm.followUp || '未排期'}`);
     }
+    if (editRecordForm.followUpRoom !== (record.followUpRoom || '')) {
+      changes.push(`复诊诊室: ${record.followUpRoom || '未安排'} → ${editRecordForm.followUpRoom || '未安排'}`);
+    }
 
     if (changes.length === 0) {
       cancelEditRecord();
@@ -1930,6 +1988,7 @@ function App() {
       shade: editRecordForm.shade,
       photoNote: editRecordForm.photoNote,
       followUp: editRecordForm.followUp,
+      followUpRoom: editRecordForm.followUpRoom || null,
       lastModified: new Date().toISOString(),
       version: (item.version || 1) + 1,
       timeline: [...(item.timeline || []), { status: timelineEntry, at: today, by: '编辑修改' }]
@@ -1955,28 +2014,38 @@ function App() {
     e.dataTransfer.effectAllowed = 'move';
   }
 
-  function handleDragOver(e, date) {
+  function handleDragOver(e, date, room = null) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverDate(date);
+    if (room !== null) {
+      setDragOverRoom(room);
+    }
   }
 
   function handleDragLeave() {
     setDragOverDate(null);
+    setDragOverRoom(null);
   }
 
-  function handleDrop(e, date) {
+  function handleDrop(e, date, room = null) {
     e.preventDefault();
     if (draggedRecordId) {
-      updateFollowUpDate(draggedRecordId, date);
+      if (room !== null) {
+        updateFollowUpDateAndRoom(draggedRecordId, date, room);
+      } else {
+        updateFollowUpDate(draggedRecordId, date);
+      }
     }
     setDraggedRecordId(null);
     setDragOverDate(null);
+    setDragOverRoom(null);
   }
 
   function handleDragEnd() {
     setDraggedRecordId(null);
     setDragOverDate(null);
+    setDragOverRoom(null);
   }
 
   function removeRecord(id) {
@@ -2933,6 +3002,18 @@ function App() {
                             onChange={(e) => setEditRecordForm({ ...editRecordForm, followUp: e.target.value })}
                           />
                         </label>
+                        <label className="wide">
+                          <span>复诊诊室</span>
+                          <select
+                            value={editRecordForm.followUpRoom || ''}
+                            onChange={(e) => setEditRecordForm({ ...editRecordForm, followUpRoom: e.target.value })}
+                          >
+                            <option value="">未安排</option>
+                            {getRooms().map((room) => (
+                              <option key={room.name} value={room.name}>{room.name}</option>
+                            ))}
+                          </select>
+                        </label>
                       </div>
                       <div className="detail-actions" style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
                         <button
@@ -2962,6 +3043,12 @@ function App() {
                         <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
                           <CalendarCheck size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
                           复诊日期：{selected.followUp}
+                        </p>
+                      )}
+                      {selected.followUpRoom && (
+                        <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
+                          <Stethoscope size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
+                          复诊诊室：{selected.followUpRoom}
                         </p>
                       )}
                     </>
@@ -3655,46 +3742,111 @@ function App() {
               </div>
 
               {todayFollowUps.length > 0 ? (
-                <div className="records">
-                  {todayFollowUps.map((item) => (
-                    <article
-                      className={'record follow-up-record ' + (item.conflict ? 'conflict' : '')}
-                      key={item.id}
-                      onClick={() => setSelected(item)}
-                    >
-                      <div className="record-head">
-                        <div>
-                          <h3>{item.patient}</h3>
-                          <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
+                <div className="today-followups-rooms">
+                  {getRooms().map((room) => {
+                    const roomRecords = todayFollowUps.filter(r => r.followUpRoom === room.name);
+                    if (roomRecords.length === 0) return null;
+                    return (
+                      <div key={room.name} className="today-room-group">
+                        <div className="today-room-header" style={{ borderLeftColor: room.color }}>
+                          <Stethoscope size={14} style={{ color: room.color }} />
+                          <span className="today-room-name">{room.name}</span>
+                          <span className="today-room-count">{roomRecords.length} 人</span>
                         </div>
-                        <span className={'status ' + statusClass(item.status)}>{item.status}</span>
+                        <div className="records today-room-records">
+                          {roomRecords.map((item) => (
+                            <article
+                              className={'record follow-up-record ' + (item.conflict ? 'conflict' : '')}
+                              key={item.id}
+                              onClick={() => setSelected(item)}
+                              style={{ borderLeftColor: room.color }}
+                            >
+                              <div className="record-head">
+                                <div>
+                                  <h3>{item.patient}</h3>
+                                  <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
+                                </div>
+                                <span className={'status ' + statusClass(item.status)}>{item.status}</span>
+                              </div>
+                              <p className="record-detail">{item.photoNote}</p>
+                              {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
+                              <div className="actions quick-actions" onClick={(event) => event.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  className="quick-action-btn"
+                                  onClick={() => updateStatus(item.id, '制作中')}
+                                  disabled={getTransitionInfo(item, '制作中').disabled}
+                                  title={getTransitionInfo(item, '制作中').title}
+                                >
+                                  <RotateCcw size={14} />
+                                  制作中
+                                </button>
+                                <button
+                                  type="button"
+                                  className="quick-action-btn primary-action"
+                                  onClick={() => updateStatus(item.id, '已完成修复')}
+                                  disabled={getTransitionInfo(item, '已完成修复').disabled}
+                                  title={getTransitionInfo(item, '已完成修复').title}
+                                >
+                                  <CheckCircle2 size={14} />
+                                  已完成
+                                </button>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
                       </div>
-                      <p className="record-detail">{item.photoNote}</p>
-                      {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
-                      <div className="actions quick-actions" onClick={(event) => event.stopPropagation()}>
-                        <button
-                          type="button"
-                          className="quick-action-btn"
-                          onClick={() => updateStatus(item.id, '制作中')}
-                          disabled={getTransitionInfo(item, '制作中').disabled}
-                          title={getTransitionInfo(item, '制作中').title}
-                        >
-                          <RotateCcw size={14} />
-                          制作中
-                        </button>
-                        <button
-                          type="button"
-                          className="quick-action-btn primary-action"
-                          onClick={() => updateStatus(item.id, '已完成修复')}
-                          disabled={getTransitionInfo(item, '已完成修复').disabled}
-                          title={getTransitionInfo(item, '已完成修复').title}
-                        >
-                          <CheckCircle2 size={14} />
-                          已完成
-                        </button>
+                    );
+                  })}
+                  {todayFollowUps.filter(r => !r.followUpRoom).length > 0 && (
+                    <div className="today-room-group">
+                      <div className="today-room-header today-room-unassigned">
+                        <span className="today-room-name">未安排诊室</span>
+                        <span className="today-room-count">{todayFollowUps.filter(r => !r.followUpRoom).length} 人</span>
                       </div>
-                    </article>
-                  ))}
+                      <div className="records today-room-records">
+                        {todayFollowUps.filter(r => !r.followUpRoom).map((item) => (
+                          <article
+                            className={'record follow-up-record ' + (item.conflict ? 'conflict' : '')}
+                            key={item.id}
+                            onClick={() => setSelected(item)}
+                          >
+                            <div className="record-head">
+                              <div>
+                                <h3>{item.patient}</h3>
+                                <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
+                              </div>
+                              <span className={'status ' + statusClass(item.status)}>{item.status}</span>
+                            </div>
+                            <p className="record-detail">{item.photoNote}</p>
+                            {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
+                            <div className="actions quick-actions" onClick={(event) => event.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="quick-action-btn"
+                                onClick={() => updateStatus(item.id, '制作中')}
+                                disabled={getTransitionInfo(item, '制作中').disabled}
+                                title={getTransitionInfo(item, '制作中').title}
+                              >
+                                <RotateCcw size={14} />
+                                制作中
+                              </button>
+                              <button
+                                type="button"
+                                className="quick-action-btn primary-action"
+                                onClick={() => updateStatus(item.id, '已完成修复')}
+                                disabled={getTransitionInfo(item, '已完成修复').disabled}
+                                title={getTransitionInfo(item, '已完成修复').title}
+                              >
+                                <CheckCircle2 size={14} />
+                                已完成
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="empty-state">
@@ -3716,6 +3868,28 @@ function App() {
                   <h3>{selectedTodayFollowUp.patient}</h3>
                   <p>{`牙位 ${selectedTodayFollowUp.tooth} · ${selectedTodayFollowUp.shade}`}</p>
                   <p>{selectedTodayFollowUp.photoNote}</p>
+                  {selectedTodayFollowUp.followUpRoom && (
+                    <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
+                      <Stethoscope size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
+                      复诊诊室：{selectedTodayFollowUp.followUpRoom}
+                    </p>
+                  )}
+                  <div className="detail-section-divider">
+                    <Stethoscope size={16} />
+                    安排诊室
+                  </div>
+                  <label className="wide">
+                    <span>选择复诊诊室</span>
+                    <select
+                      value={selectedTodayFollowUp.followUpRoom || ''}
+                      onChange={(e) => updateFollowUpRoom(selectedTodayFollowUp.id, e.target.value || null)}
+                    >
+                      <option value="">未安排</option>
+                      {getRooms().map((room) => (
+                        <option key={room.name} value={room.name}>{room.name}</option>
+                      ))}
+                    </select>
+                  </label>
 
                   {selectedTodayFollowUp.shade && (
                     <div className="shade-detail-card">
@@ -4390,10 +4564,21 @@ function App() {
                   const dayRecords = recordsByDate.grouped[dateStr] || [];
                   const isToday = dateStr === today;
                   const dayStatus = isToday ? 'today' : (diffDays(dateStr, today) <= 3 ? 'soon' : 'normal');
+                  const rooms = getRooms();
+                  const recordsByRoom = {};
+                  const unassignedRecords = [];
+                  dayRecords.forEach(r => {
+                    if (r.followUpRoom) {
+                      if (!recordsByRoom[r.followUpRoom]) recordsByRoom[r.followUpRoom] = [];
+                      recordsByRoom[r.followUpRoom].push(r);
+                    } else {
+                      unassignedRecords.push(r);
+                    }
+                  });
                   return (
                     <div
                       key={dateStr}
-                      className={'board-column ' + (dragOverDate === dateStr ? 'drag-over' : '') + ' ' + (isToday ? 'board-column-today' : '')}
+                      className={'board-column ' + (dragOverDate === dateStr && !dragOverRoom ? 'drag-over' : '') + ' ' + (isToday ? 'board-column-today' : '')}
                     >
                       <div className={'board-column-header board-header-' + dayStatus}>
                         <div>
@@ -4408,63 +4593,168 @@ function App() {
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, dateStr)}
                       >
-                        {dayRecords.map((record) => {
-                          const status = getFollowUpStatus(record.followUp);
-                          const isFiltered = filteredBoardRecordsByStatus.find((r) => r.id === record.id);
-                          if (boardFilterStatus !== '全部' && !isFiltered) return null;
+                        {rooms.map((room) => {
+                          const roomRecords = recordsByRoom[room.name] || [];
+                          const isRoomDragOver = dragOverDate === dateStr && dragOverRoom === room.name;
                           return (
-                            <div
-                              key={record.id}
-                              className={'board-card ' + status.class + ' ' + (boardSelectedRecord?.id === record.id ? 'selected' : '') + ' ' + (draggedRecordId === record.id ? 'dragging' : '')}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, record.id)}
-                              onDragEnd={handleDragEnd}
-                              onClick={() => setBoardSelectedRecord(record)}
-                            >
-                              <div className="board-card-header">
-                                <GripVertical size={14} className="drag-handle" />
-                                <h4>{record.patient}</h4>
-                                <span className={'status ' + statusClass(record.status)}>{record.status}</span>
+                            <div key={room.name} className={'board-room-group ' + (isRoomDragOver ? 'drag-over' : '')}>
+                              <div className="board-room-header" style={{ borderLeftColor: room.color }}>
+                                <span className="board-room-name">{room.name}</span>
+                                <span className="board-room-count">{roomRecords.length} 条</span>
                               </div>
-                              <div className="board-card-meta">
-                                <span>牙位 {record.tooth} · {record.shade}</span>
+                              <div
+                                className="board-room-body"
+                                onDragOver={(e) => {
+                                  e.stopPropagation();
+                                  handleDragOver(e, dateStr, room.name);
+                                }}
+                                onDragLeave={(e) => {
+                                  e.stopPropagation();
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const x = e.clientX;
+                                  const y = e.clientY;
+                                  if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                                    setDragOverRoom(null);
+                                  }
+                                }}
+                                onDrop={(e) => {
+                                  e.stopPropagation();
+                                  handleDrop(e, dateStr, room.name);
+                                }}
+                              >
+                                {roomRecords.map((record) => {
+                                  const status = getFollowUpStatus(record.followUp);
+                                  const isFiltered = filteredBoardRecordsByStatus.find((r) => r.id === record.id);
+                                  if (boardFilterStatus !== '全部' && !isFiltered) return null;
+                                  return (
+                                    <div
+                                      key={record.id}
+                                      className={'board-card ' + status.class + ' ' + (boardSelectedRecord?.id === record.id ? 'selected' : '') + ' ' + (draggedRecordId === record.id ? 'dragging' : '')}
+                                      draggable
+                                      onDragStart={(e) => handleDragStart(e, record.id)}
+                                      onDragEnd={handleDragEnd}
+                                      onClick={() => setBoardSelectedRecord(record)}
+                                      style={{ borderLeftColor: room.color }}
+                                    >
+                                      <div className="board-card-header">
+                                        <GripVertical size={14} className="drag-handle" />
+                                        <h4>{record.patient}</h4>
+                                        <span className={'status ' + statusClass(record.status)}>{record.status}</span>
+                                      </div>
+                                      <div className="board-card-meta">
+                                        <span>牙位 {record.tooth} · {record.shade}</span>
+                                      </div>
+                                      <div className="board-card-footer">
+                                        <span className="board-followup-date">
+                                          <Clock size={12} />
+                                          {isToday ? '今日复诊' : `${diffDays(dateStr, today)}天后`}
+                                        </span>
+                                        <span className="board-room-tag" style={{ backgroundColor: room.color + '20', color: room.color }}>
+                                          {room.name}
+                                        </span>
+                                      </div>
+                                      {editingFollowUpRecordId === record.id ? (
+                                        <div className="board-card-date-picker" onClick={(e) => e.stopPropagation()}>
+                                          <input
+                                            type="date"
+                                            value={record.followUp || ''}
+                                            onChange={(e) => {
+                                              updateFollowUpDate(record.id, e.target.value);
+                                              setEditingFollowUpRecordId(null);
+                                            }}
+                                            autoFocus
+                                          />
+                                          <button type="button" onClick={() => setEditingFollowUpRecordId(null)}>
+                                            <X size={14} />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          className="board-edit-date-btn"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingFollowUpRecordId(record.id);
+                                          }}
+                                        >
+                                          <Edit3 size={12} /> 调整日期
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
-                              <div className="board-card-footer">
-                                <span className="board-followup-date">
-                                  <Clock size={12} />
-                                  {isToday ? '今日复诊' : `${diffDays(dateStr, today)}天后`}
-                                </span>
-                              </div>
-                              {editingFollowUpRecordId === record.id ? (
-                                <div className="board-card-date-picker" onClick={(e) => e.stopPropagation()}>
-                                  <input
-                                    type="date"
-                                    value={record.followUp || ''}
-                                    onChange={(e) => {
-                                      updateFollowUpDate(record.id, e.target.value);
-                                      setEditingFollowUpRecordId(null);
-                                    }}
-                                    autoFocus
-                                  />
-                                  <button type="button" onClick={() => setEditingFollowUpRecordId(null)}>
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="board-edit-date-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingFollowUpRecordId(record.id);
-                                  }}
-                                >
-                                  <Edit3 size={12} /> 调整日期
-                                </button>
-                              )}
                             </div>
                           );
                         })}
+
+                        {unassignedRecords.length > 0 && (
+                          <div className="board-room-group board-room-unassigned">
+                            <div className="board-room-header">
+                              <span className="board-room-name">未安排诊室</span>
+                              <span className="board-room-count">{unassignedRecords.length} 条</span>
+                            </div>
+                            <div className="board-room-body">
+                              {unassignedRecords.map((record) => {
+                                const status = getFollowUpStatus(record.followUp);
+                                const isFiltered = filteredBoardRecordsByStatus.find((r) => r.id === record.id);
+                                if (boardFilterStatus !== '全部' && !isFiltered) return null;
+                                return (
+                                  <div
+                                    key={record.id}
+                                    className={'board-card ' + status.class + ' ' + (boardSelectedRecord?.id === record.id ? 'selected' : '') + ' ' + (draggedRecordId === record.id ? 'dragging' : '')}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, record.id)}
+                                    onDragEnd={handleDragEnd}
+                                    onClick={() => setBoardSelectedRecord(record)}
+                                  >
+                                    <div className="board-card-header">
+                                      <GripVertical size={14} className="drag-handle" />
+                                      <h4>{record.patient}</h4>
+                                      <span className={'status ' + statusClass(record.status)}>{record.status}</span>
+                                    </div>
+                                    <div className="board-card-meta">
+                                      <span>牙位 {record.tooth} · {record.shade}</span>
+                                    </div>
+                                    <div className="board-card-footer">
+                                      <span className="board-followup-date">
+                                        <Clock size={12} />
+                                        {isToday ? '今日复诊' : `${diffDays(dateStr, today)}天后`}
+                                      </span>
+                                    </div>
+                                    {editingFollowUpRecordId === record.id ? (
+                                      <div className="board-card-date-picker" onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                          type="date"
+                                          value={record.followUp || ''}
+                                          onChange={(e) => {
+                                            updateFollowUpDate(record.id, e.target.value);
+                                            setEditingFollowUpRecordId(null);
+                                          }}
+                                          autoFocus
+                                        />
+                                        <button type="button" onClick={() => setEditingFollowUpRecordId(null)}>
+                                          <X size={14} />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="board-edit-date-btn"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingFollowUpRecordId(record.id);
+                                        }}
+                                      >
+                                        <Edit3 size={12} /> 调整日期
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -4512,6 +4802,12 @@ function App() {
                       <strong>{getFollowUpStatus(boardSelectedRecord.followUp).label}</strong>
                       <span>· 复诊日期：{boardSelectedRecord.followUp}</span>
                     </div>
+                    {boardSelectedRecord.followUpRoom && (
+                      <div className="followup-room-tag" style={{ borderColor: getRoomInfo(boardSelectedRecord.followUpRoom).color, backgroundColor: getRoomInfo(boardSelectedRecord.followUpRoom).color + '15' }}>
+                        <Stethoscope size={14} />
+                        <span>诊室：{boardSelectedRecord.followUpRoom}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="detail-section-divider">
                     <Edit3 size={16} />
@@ -4524,6 +4820,22 @@ function App() {
                       value={boardSelectedRecord.followUp || ''}
                       onChange={(e) => updateFollowUpDate(boardSelectedRecord.id, e.target.value)}
                     />
+                  </label>
+                  <div className="detail-section-divider">
+                    <Stethoscope size={16} />
+                    安排诊室
+                  </div>
+                  <label className="wide">
+                    <span>选择复诊诊室</span>
+                    <select
+                      value={boardSelectedRecord.followUpRoom || ''}
+                      onChange={(e) => updateFollowUpRoom(boardSelectedRecord.id, e.target.value || null)}
+                    >
+                      <option value="">未安排</option>
+                      {getRooms().map((room) => (
+                        <option key={room.name} value={room.name}>{room.name}</option>
+                      ))}
+                    </select>
                   </label>
 
                   {boardSelectedRecord.shade && (
