@@ -1550,20 +1550,25 @@ function App() {
     }
   }
 
-  function updatePhotoProcessStep(stepKey, field, value) {
-    if (!editingPhotoProcess) return;
-    const next = {
-      ...editingPhotoProcess,
-      steps: {
-        ...editingPhotoProcess.steps,
-        [stepKey]: {
-          ...editingPhotoProcess.steps[stepKey],
-          [field]: value
-        }
-      },
-      updatedAt: new Date().toISOString()
-    };
-    setEditingPhotoProcess(next);
+  function updatePhotoProcessStep(stepKey, fieldOrFields, value) {
+    setEditingPhotoProcess((prev) => {
+      if (!prev) return prev;
+      const fieldsPatch =
+        typeof fieldOrFields === 'string'
+          ? { [fieldOrFields]: value }
+          : fieldOrFields;
+      return {
+        ...prev,
+        steps: {
+          ...prev.steps,
+          [stepKey]: {
+            ...prev.steps[stepKey],
+            ...fieldsPatch
+          }
+        },
+        updatedAt: new Date().toISOString()
+      };
+    });
   }
 
   function goToStep(stepIndex) {
@@ -1591,8 +1596,10 @@ function App() {
 
     try {
       const result = await compressImage(file, 500, 0.75, 1920);
-      updatePhotoProcessStep(stepKey, 'imageUrl', result.dataUrl);
-      updatePhotoProcessStep(stepKey, 'fileSize', result.size);
+      updatePhotoProcessStep(stepKey, {
+        imageUrl: result.dataUrl,
+        fileSize: result.size
+      });
 
       if (result.compressed) {
         const savedKB = Math.round((result.originalSize - result.size) / 1024);
@@ -1617,8 +1624,10 @@ function App() {
   }
 
   function removeImage(stepKey) {
-    updatePhotoProcessStep(stepKey, 'imageUrl', '');
-    updatePhotoProcessStep(stepKey, 'fileSize', 0);
+    updatePhotoProcessStep(stepKey, {
+      imageUrl: '',
+      fileSize: 0
+    });
   }
 
   function getShadeInfo(code) {
