@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge, ArrowUp, ArrowDown, Printer } from 'lucide-react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge, ArrowUp, ArrowDown, Printer, XCircle } from 'lucide-react';
 import './App.css';
+import {
+  DATA_CATEGORIES,
+  CATEGORY_NAMES,
+  CURRENT_SCHEMA_VERSION,
+  loadUnifiedData,
+  saveCategory,
+  getDataStatus,
+  clearMigrationAndRecoveryLogs,
+  withIds,
+  withPatientIds,
+  migrateShadeLibrary,
+  normalizeQcItems,
+} from './dataStore';
 
 const appConfig = {
   "id": "hxwl-61301",
@@ -436,50 +449,6 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function withIds(items) {
-  return items.map((item) => ({
-    id: item.id || uid(),
-    timeline: item.timeline || [{ status: item.status, at: today, by: '系统' }],
-    deviceId: item.deviceId || appConfig.defaultDeviceId,
-    lastModified: item.lastModified || new Date().toISOString(),
-    version: item.version || 1,
-    ...item
-  }));
-}
-
-function loadCurrentDevice() {
-  const raw = localStorage.getItem(appConfig.collabStorage);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      return parsed.currentDeviceId || appConfig.defaultDeviceId;
-    } catch {
-      return appConfig.defaultDeviceId;
-    }
-  }
-  return appConfig.defaultDeviceId;
-}
-
-function loadCollabTimeline() {
-  const raw = localStorage.getItem(appConfig.collabTimelineStorage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function persistCurrentDevice(deviceId) {
-  localStorage.setItem(appConfig.collabStorage, JSON.stringify({ currentDeviceId: deviceId }));
-}
-
-function persistCollabTimeline(timeline) {
-  localStorage.setItem(appConfig.collabTimelineStorage, JSON.stringify(timeline));
-}
-
 function getDeviceInfo(deviceId) {
   return appConfig.devices.find(d => d.id === deviceId) || { id: deviceId, name: deviceId, room: '未知', color: '#6b7280' };
 }
@@ -546,152 +515,6 @@ function detectConflicts(localRecords, importRecords) {
   });
 
   return { conflicts, added };
-}
-
-function loadRecords() {
-  const raw = localStorage.getItem(appConfig.storage);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return withIds(parsed.map((item) => ({
-          patient: item.patient || '',
-          tooth: item.tooth || '',
-          shade: item.shade || '',
-          photoNote: item.photoNote || '',
-          followUp: item.followUp || '',
-          status: item.status || appConfig.primaryStatus,
-          ...item
-        })));
-      }
-      return withIds(appConfig.seed);
-    } catch {
-      return withIds(appConfig.seed);
-    }
-  }
-  return withIds(appConfig.seed);
-}
-
-function loadPatients() {
-  const raw = localStorage.getItem(appConfig.patientStorage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return withPatientIds(appConfig.patientSeed);
-    }
-  }
-  return withPatientIds(appConfig.patientSeed);
-}
-
-function withPatientIds(patients) {
-  return patients.map((p) => ({ id: p.id || uid(), createdAt: new Date().toISOString(), ...p }));
-}
-
-function loadShadeLibrary() {
-  const raw = localStorage.getItem(appConfig.shadeLibraryStorage);
-  let library;
-  if (raw) {
-    try {
-      library = JSON.parse(raw);
-    } catch {
-      library = appConfig.shadeLibrarySeed;
-    }
-  } else {
-    library = appConfig.shadeLibrarySeed;
-  }
-  const builtInCodes = appConfig.shadeLibrarySeed.map((s) => s.code);
-  const migrated = library.map((s, i) => ({
-    ...s,
-    isBuiltIn: s.isBuiltIn !== undefined ? s.isBuiltIn : builtInCodes.includes(s.code),
-    order: s.order !== undefined ? s.order : i
-  }));
-  return migrated.sort((a, b) => a.order - b.order);
-}
-
-function loadPhotoProcesses() {
-  const raw = localStorage.getItem(appConfig.photoProcessStorage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function loadDeliveryOrders() {
-  const raw = localStorage.getItem(appConfig.deliveryOrderStorage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return appConfig.deliveryOrderSeed;
-    }
-  }
-  return appConfig.deliveryOrderSeed;
-}
-
-function normalizeQcItems(items, checkItems) {
-  const ciList = checkItems || appConfig.qcCheckItems;
-  const normalized = {};
-  ciList.forEach((ci) => {
-    if (items && items[ci.key] && typeof items[ci.key] === 'object') {
-      normalized[ci.key] = {
-        checked: !!items[ci.key].checked,
-        remark: items[ci.key].remark || '',
-        checkedAt: items[ci.key].checkedAt || null
-      };
-    } else {
-      normalized[ci.key] = { checked: false, remark: '', checkedAt: null };
-    }
-  });
-  return normalized;
-}
-
-function loadQcCheckItemConfig() {
-  const raw = localStorage.getItem(appConfig.qcCheckItemConfigStorage);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((ci) => ({
-          key: ci.key || uid(),
-          label: ci.label || '',
-          icon: ci.icon || 'ClipboardList',
-          requiredFor: Array.isArray(ci.requiredFor) ? ci.requiredFor : [],
-          description: ci.description || '',
-          order: ci.order ?? 0,
-          critical: !!ci.critical
-        }));
-      }
-      return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
-    } catch {
-      return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
-    }
-  }
-  return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
-}
-
-function loadQcRecords(checkItems) {
-  const raw = localStorage.getItem(appConfig.qcStorage);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.map((qc) => ({
-        id: qc.id || uid(),
-        recordId: qc.recordId || '',
-        items: normalizeQcItems(qc.items, checkItems),
-        createdAt: qc.createdAt || new Date().toISOString(),
-        updatedAt: qc.updatedAt || new Date().toISOString()
-      }));
-    } catch {
-      return [];
-    }
-  }
-  return [];
 }
 
 function generateOrderNo() {
@@ -903,10 +726,10 @@ function ToothChart({ value, onChange, enabledTeeth, records }) {
 
 function App() {
   const [activeTab, setActiveTab] = useState('records');
-  const [records, setRecords] = useState(loadRecords);
-  const [patients, setPatients] = useState(loadPatients);
-  const [shadeLibrary, setShadeLibrary] = useState(loadShadeLibrary);
-  const [photoProcesses, setPhotoProcesses] = useState(loadPhotoProcesses);
+  const [records, setRecords] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [shadeLibrary, setShadeLibrary] = useState([]);
+  const [photoProcesses, setPhotoProcesses] = useState([]);
   const [form, setForm] = useState(appConfig.defaultValues);
   const [filters, setFilters] = useState({ query: '', status: '全部', tooth: '全部', shade: '全部', followUpStatus: '全部' });
   const [selected, setSelected] = useState(null);
@@ -923,7 +746,7 @@ function App() {
   const [compressMessage, setCompressMessage] = useState(null);
   const [selectedPhotoProcess, setSelectedPhotoProcess] = useState(null);
   const [photoProcessFilter, setPhotoProcessFilter] = useState('all');
-  const [deliveryOrders, setDeliveryOrders] = useState(loadDeliveryOrders);
+  const [deliveryOrders, setDeliveryOrders] = useState([]);
   const [deliveryOrderForm, setDeliveryOrderForm] = useState(appConfig.deliveryOrderDefaultValues);
   const [selectedDeliveryOrder, setSelectedDeliveryOrder] = useState(null);
   const [showPrintSummary, setShowPrintSummary] = useState(false);
@@ -936,13 +759,10 @@ function App() {
   const [boardFilterStatus, setBoardFilterStatus] = useState('全部');
   const [importPreview, setImportPreview] = useState(null);
   const [importFileName, setImportFileName] = useState('');
-  const [qcRecords, setQcRecords] = useState(() => {
-    const ci = loadQcCheckItemConfig();
-    return loadQcRecords(ci);
-  });
+  const [qcRecords, setQcRecords] = useState([]);
   const [selectedQcRecord, setSelectedQcRecord] = useState(null);
   const [qcFilter, setQcFilter] = useState('全部');
-  const [qcCheckItems, setQcCheckItems] = useState(loadQcCheckItemConfig);
+  const [qcCheckItems, setQcCheckItems] = useState([]);
   const [editingQcItem, setEditingQcItem] = useState(null);
   const [showQcConfig, setShowQcConfig] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState(null);
@@ -954,14 +774,49 @@ function App() {
     followUp: '',
     followUpRoom: ''
   });
+  const [dataMigrationLog, setDataMigrationLog] = useState([]);
+  const [dataRecoveryLog, setDataRecoveryLog] = useState([]);
+  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
+  const [showRecoveryNotice, setShowRecoveryNotice] = useState(false);
+  const [dataInitialized, setDataInitialized] = useState(false);
 
   useEffect(() => {
     setEditingRecordId(null);
     setEditRecordForm({ patient: '', tooth: '', shade: '', photoNote: '', followUp: '', followUpRoom: '' });
   }, [selected]);
 
-  const [currentDeviceId, setCurrentDeviceId] = useState(loadCurrentDevice);
-  const [collabTimeline, setCollabTimeline] = useState(loadCollabTimeline);
+  const [currentDeviceId, setCurrentDeviceId] = useState(appConfig.defaultDeviceId);
+  const [collabTimeline, setCollabTimeline] = useState([]);
+
+  useEffect(() => {
+    const result = loadUnifiedData(appConfig);
+    const data = result.data.data;
+
+    setRecords(data.records);
+    setPatients(data.patients);
+    setShadeLibrary(data.shadeLibrary);
+    setPhotoProcesses(data.photoProcesses);
+    setDeliveryOrders(data.deliveryOrders);
+    setQcCheckItems(data.qcCheckItems);
+    setQcRecords(data.qcRecords.map(qc => ({
+      ...qc,
+      items: normalizeQcItems(qc.items, data.qcCheckItems)
+    })));
+    setCurrentDeviceId(data.collab.currentDeviceId);
+    setCollabTimeline(data.collabTimeline);
+
+    setDataMigrationLog(result.migrationLog);
+    setDataRecoveryLog(result.recoveryLog);
+
+    if (result.migrationLog.length > 0) {
+      setShowMigrationNotice(true);
+    }
+    if (result.recoveryLog.length > 0) {
+      setShowRecoveryNotice(true);
+    }
+
+    setDataInitialized(true);
+  }, []);
   const [collabConflicts, setCollabConflicts] = useState(null);
   const [collabImportPreview, setCollabImportPreview] = useState(null);
   const [collabImportFileName, setCollabImportFileName] = useState('');
@@ -977,37 +832,37 @@ function App() {
 
   function persistRecords(next) {
     setRecords(next);
-    localStorage.setItem(appConfig.storage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.records, next, appConfig);
   }
 
   function persistPatients(next) {
     setPatients(next);
-    localStorage.setItem(appConfig.patientStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.patients, next, appConfig);
   }
 
   function persistShadeLibrary(next) {
     setShadeLibrary(next);
-    localStorage.setItem(appConfig.shadeLibraryStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.shadeLibrary, next, appConfig);
   }
 
   function persistPhotoProcesses(next) {
     setPhotoProcesses(next);
-    localStorage.setItem(appConfig.photoProcessStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.photoProcesses, next, appConfig);
   }
 
   function persistDeliveryOrders(next) {
     setDeliveryOrders(next);
-    localStorage.setItem(appConfig.deliveryOrderStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.deliveryOrders, next, appConfig);
   }
 
   function persistQcRecords(next) {
     setQcRecords(next);
-    localStorage.setItem(appConfig.qcStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.qcRecords, next, appConfig);
   }
 
   function persistQcCheckItems(next) {
     setQcCheckItems(next);
-    localStorage.setItem(appConfig.qcCheckItemConfigStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.qcCheckItems, next, appConfig);
     const migrated = qcRecords.map((qc) => ({
       ...qc,
       items: normalizeQcItems(qc.items, next),
@@ -1026,6 +881,16 @@ function App() {
         });
       }
     }
+  }
+
+  function persistCurrentDevice(deviceId) {
+    setCurrentDeviceId(deviceId);
+    saveCategory(DATA_CATEGORIES.collab, { currentDeviceId: deviceId }, appConfig);
+  }
+
+  function persistCollabTimeline(timeline) {
+    setCollabTimeline(timeline);
+    saveCategory(DATA_CATEGORIES.collabTimeline, timeline, appConfig);
   }
 
   function saveQcItemConfig(item) {
@@ -6014,6 +5879,90 @@ function App() {
 
       {activeTab === 'dataManagement' && (
         <section className="workspace data-management">
+          {showMigrationNotice && dataMigrationLog.length > 0 && (
+            <div className="data-notice migration-notice">
+              <div className="notice-header">
+                <RefreshCw size={20} />
+                <h3>数据迁移完成</h3>
+                <button className="notice-close" onClick={() => setShowMigrationNotice(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="notice-message">
+                您的本地数据已成功升级到新版本（v{CURRENT_SCHEMA_VERSION}）。以下是迁移详情：
+              </p>
+              <ul className="notice-log">
+                {dataMigrationLog.slice(0, 10).map((log, idx) => (
+                  <li key={idx}>
+                    <CheckCircle2 size={14} className="log-icon success" />
+                    <span>{log.message}</span>
+                    <small>{formatDateTime(log.timestamp)}</small>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {showRecoveryNotice && dataRecoveryLog.length > 0 && (
+            <div className="data-notice recovery-notice">
+              <div className="notice-header">
+                <AlertTriangle size={20} />
+                <h3>部分数据已恢复</h3>
+                <button className="notice-close" onClick={() => setShowRecoveryNotice(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="notice-message">
+                检测到部分数据损坏，已自动恢复为默认值。其他数据保持完整。以下是恢复详情：
+              </p>
+              <ul className="notice-log">
+                {dataRecoveryLog.slice(0, 10).map((log, idx) => (
+                  <li key={idx}>
+                    <AlertTriangle size={14} className="log-icon warning" />
+                    <span>{log.message}</span>
+                    <small>{formatDateTime(log.timestamp)}</small>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="panel form-panel data-panel">
+            <div className="panel-title">
+              <Database size={18} />
+              <h2>数据模型状态</h2>
+            </div>
+            <div className="data-model-status">
+              <div className="status-item">
+                <span className="status-label">Schema 版本</span>
+                <span className="status-value">v{CURRENT_SCHEMA_VERSION}</span>
+              </div>
+              <div className="status-item">
+                <span className="status-label">迁移记录</span>
+                <span className="status-value">{dataMigrationLog.length} 条</span>
+              </div>
+              <div className="status-item">
+                <span className="status-label">恢复记录</span>
+                <span className="status-value">{dataRecoveryLog.length} 条</span>
+              </div>
+            </div>
+            {(dataMigrationLog.length > 0 || dataRecoveryLog.length > 0) && (
+              <button
+                className="secondary"
+                type="button"
+                onClick={() => {
+                  clearMigrationAndRecoveryLogs(appConfig);
+                  setDataMigrationLog([]);
+                  setDataRecoveryLog([]);
+                  setShowMigrationNotice(false);
+                  setShowRecoveryNotice(false);
+                }}
+              >
+                <XCircle size={16} />清除迁移和恢复记录
+              </button>
+            )}
+          </div>
+
           <div className="panel form-panel data-panel">
             <div className="panel-title">
               <Download size={18} />
