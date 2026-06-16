@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Database } from 'lucide-react';
+import { loadCategory, saveCategory } from './dataStore';
+import { useDataManagement } from './hooks/useDataManagement';
 import './App.css';
 
 const appConfig = {
@@ -289,6 +291,14 @@ const appConfig = {
       "sentAt": "2026-06-13T10:30:00.000Z",
       "receivedAt": null
     }
+  ],
+  "defaultDeviceId": "tablet-main",
+  "qcCheckItems": [
+    { "key": "shadeMatch", "label": "比色结果核对", "category": "比色", "order": 1 },
+    { "key": "photoQuality", "label": "照片质量检查", "category": "拍照", "order": 2 },
+    { "key": "patientInfo", "label": "患者信息确认", "category": "档案", "order": 3 },
+    { "key": "deliveryCheck", "label": "交接单核对", "category": "技工所", "order": 4 },
+    { "key": "followUpPlan", "label": "复诊计划确认", "category": "复诊", "order": 5 }
   ]
 };
 
@@ -420,6 +430,30 @@ function loadDeliveryOrders() {
   return appConfig.deliveryOrderSeed;
 }
 
+function loadQcCheckItems() {
+  try {
+    const data = loadCategory('qcCheckItems', appConfig);
+    if (Array.isArray(data) && data.length > 0) return data;
+  } catch {}
+  return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
+}
+
+function loadQcRecords() {
+  try {
+    const data = loadCategory('qcRecords', appConfig);
+    if (Array.isArray(data)) return data;
+  } catch {}
+  return [];
+}
+
+function loadCollabTimeline() {
+  try {
+    const data = loadCategory('collabTimeline', appConfig);
+    if (Array.isArray(data)) return data;
+  } catch {}
+  return [];
+}
+
 function generateOrderNo() {
   const dateStr = getLocalDateString().replace(/-/g, '');
   const random = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -481,6 +515,51 @@ function App() {
   const [boardSelectedRecord, setBoardSelectedRecord] = useState(null);
   const [editingFollowUpRecordId, setEditingFollowUpRecordId] = useState(null);
   const [boardFilterStatus, setBoardFilterStatus] = useState('全部');
+  const [qcCheckItems, setQcCheckItems] = useState(loadQcCheckItems);
+  const [qcRecords, setQcRecords] = useState(loadQcRecords);
+  const [collabTimeline, setCollabTimeline] = useState(loadCollabTimeline);
+
+  const dataManagement = useDataManagement({
+    appConfig,
+    records,
+    patients,
+    shadeLibrary,
+    photoProcesses,
+    deliveryOrders,
+    qcCheckItems,
+    qcRecords,
+    collabTimeline,
+    persistRecords,
+    persistPatients,
+    persistShadeLibrary,
+    persistPhotoProcesses,
+    persistDeliveryOrders,
+    persistQcCheckItems,
+    persistQcRecords,
+    persistCollabTimeline,
+    setCollabTimeline,
+  });
+
+  const {
+    importPreview,
+    importFileName,
+    dataMigrationLog,
+    dataRecoveryLog,
+    showMigrationNotice,
+    showRecoveryNotice,
+    exportData,
+    handleImportFile,
+    confirmImport,
+    cancelImport,
+    clearLogs,
+    dismissMigrationNotice,
+    dismissRecoveryNotice,
+    initializeData,
+  } = dataManagement;
+
+  useEffect(() => {
+    initializeData();
+  }, []);
 
   function persistRecords(next) {
     setRecords(next);
@@ -505,6 +584,21 @@ function App() {
   function persistDeliveryOrders(next) {
     setDeliveryOrders(next);
     localStorage.setItem(appConfig.deliveryOrderStorage, JSON.stringify(next));
+  }
+
+  function persistQcCheckItems(next) {
+    setQcCheckItems(next);
+    saveCategory('qcCheckItems', next, appConfig);
+  }
+
+  function persistQcRecords(next) {
+    setQcRecords(next);
+    saveCategory('qcRecords', next, appConfig);
+  }
+
+  function persistCollabTimeline(next) {
+    setCollabTimeline(next);
+    saveCategory('collabTimeline', next, appConfig);
   }
 
   function getPhotoProcessByRecordId(recordId) {
@@ -1049,6 +1143,13 @@ function App() {
               {boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === 'overdue').length}
             </span>
           )}
+        </button>
+        <button
+          className={'tab ' + (activeTab === 'dataManagement' ? 'active' : '')}
+          onClick={() => setActiveTab('dataManagement')}
+        >
+          <Database size={16} />
+          数据管理
         </button>
       </div>
 
@@ -2547,6 +2648,355 @@ function App() {
               )}
             </aside>
           </section>
+        </>
+      )}
+
+      {activeTab === 'dataManagement' && (
+        <>
+          {showMigrationNotice && (
+            <div className="panel migration-notice" style={{ marginBottom: 20 }}>
+              <div className="notice-header">
+                <CheckCircle2 size={22} />
+                <h3>数据迁移完成</h3>
+                <button className="notice-close" onClick={dismissMigrationNotice}>
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="notice-message">
+                您的本地数据已成功升级到新版本（v {1}）。以下是迁移详情：
+              </p>
+              <ul className="notice-log">
+                {dataMigrationLog.map((log, idx) => (
+                  <li key={idx}>
+                    <span className={'log-icon ' + (log.action === 'migrated' || log.action === 'initialized' ? 'success' : 'warning')}>
+                      {log.action === 'migrated' || log.action === 'initialized' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                    </span>
+                    <span>{log.message}</span>
+                    {log.timestamp && <small>{new Date(log.timestamp).toLocaleString('zh-CN')}</small>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {showRecoveryNotice && (
+            <div className="panel recovery-notice" style={{ marginBottom: 20 }}>
+              <div className="notice-header">
+                <AlertTriangle size={22} />
+                <h3>数据恢复提醒</h3>
+                <button className="notice-close" onClick={dismissRecoveryNotice}>
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="notice-message">
+                检测到部分数据异常，已自动恢复为默认值。以下是恢复详情：
+              </p>
+              <ul className="notice-log">
+                {dataRecoveryLog.map((log, idx) => (
+                  <li key={idx}>
+                    <span className="log-icon warning">
+                      <AlertTriangle size={16} />
+                    </span>
+                    <span>{log.message}</span>
+                    {log.timestamp && <small>{new Date(log.timestamp).toLocaleString('zh-CN')}</small>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="data-management">
+            <div className="panel data-panel">
+              <div className="panel-title">
+                <Database size={18} />
+                <h2>数据模型状态</h2>
+              </div>
+              <div className="data-model-status">
+                <div className="status-item">
+                  <span className="status-label">Schema 版本</span>
+                  <span className="status-value">v1</span>
+                </div>
+                <div className="status-item">
+                  <span className="status-label">迁移记录</span>
+                  <span className="status-value">{dataMigrationLog.length} 条</span>
+                </div>
+                <div className="status-item">
+                  <span className="status-label">恢复记录</span>
+                  <span className="status-value">{dataRecoveryLog.length} 条</span>
+                </div>
+              </div>
+              {(dataMigrationLog.length > 0 || dataRecoveryLog.length > 0) && (
+                <button type="button" className="secondary" onClick={clearLogs} style={{ width: '100%' }}>
+                  <X size={16} /> 清除迁移和恢复记录
+                </button>
+              )}
+            </div>
+
+            <div className="panel data-panel">
+              <div className="panel-title">
+                <FileText size={18} />
+                <h2>完整备份导出</h2>
+              </div>
+              <p className="data-description">
+                将当前浏览器中存储的所有业务数据导出为完整备份包（JSON 文件），包含牙色记录、患者档案、色号库、拍照流程、交接单、质控配置、质控记录和协作时间线。
+              </p>
+              <div className="data-stats">
+                <div className="data-stat-item">
+                  <ClipboardList size={24} />
+                  <div>
+                    <strong>{records.length}</strong>
+                    <span>牙色记录</span>
+                  </div>
+                </div>
+                <div className="data-stat-item">
+                  <Users size={24} />
+                  <div>
+                    <strong>{patients.length}</strong>
+                    <span>患者档案</span>
+                  </div>
+                </div>
+              </div>
+              <div className="data-stats">
+                <div className="data-stat-item">
+                  <Palette size={24} />
+                  <div>
+                    <strong>{shadeLibrary.length}</strong>
+                    <span>色号库</span>
+                  </div>
+                </div>
+                <div className="data-stat-item">
+                  <Camera size={24} />
+                  <div>
+                    <strong>{photoProcesses.length}</strong>
+                    <span>拍照流程</span>
+                  </div>
+                </div>
+              </div>
+              <div className="data-stats">
+                <div className="data-stat-item">
+                  <Package size={24} />
+                  <div>
+                    <strong>{deliveryOrders.length}</strong>
+                    <span>交接单</span>
+                  </div>
+                </div>
+                <div className="data-stat-item">
+                  <CheckSquare size={24} />
+                  <div>
+                    <strong>{qcCheckItems.length}/{qcRecords.length}</strong>
+                    <span>质控配置/记录</span>
+                  </div>
+                </div>
+              </div>
+              <div className="data-stats">
+                <div className="data-stat-item">
+                  <Clock size={24} />
+                  <div>
+                    <strong>{collabTimeline.length}</strong>
+                    <span>协作时间线</span>
+                  </div>
+                </div>
+              </div>
+              <button type="button" className="primary" onClick={exportData} style={{ width: '100%', marginTop: 16 }}>
+                <Upload size={16} /> 导出完整备份包
+              </button>
+            </div>
+          </div>
+
+          <div className="panel data-panel" style={{ marginTop: 20 }}>
+            <div className="panel-title">
+              <ArrowLeftRight size={18} />
+              <h2>数据导入</h2>
+            </div>
+            <p className="data-description">
+              选择从本系统导出的完整备份包 JSON 文件进行数据导入。导入前会按数据类型展示详细的新增、覆盖和跳过统计，确认后才会执行合并，并保持各类记录之间的关联关系。
+            </p>
+
+            {!importPreview ? (
+              <div className="import-area">
+                <label className="import-label">
+                  <Upload size={32} style={{ color: 'var(--accent)' }} />
+                  <span>点击选择 JSON 备份文件或拖拽到此处</span>
+                  <span className="import-filename" style={{ fontWeight: 400, fontSize: 12 }}>
+                    仅支持由本系统导出的完整备份包文件
+                  </span>
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleImportFile}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="import-preview">
+                <div className="import-preview-header">
+                  <CheckCircle2 size={20} style={{ color: '#059669' }} />
+                  <h3>备份文件解析成功</h3>
+                  {importFileName && <span className="import-filename">{importFileName}</span>}
+                </div>
+
+                <div className="import-stats">
+                  <div className="import-stat-card">
+                    <h4>牙色记录</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <strong>{importPreview.totalRecords}</strong>
+                        <span className="label">总计</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#059669' }}>{importPreview.newRecords}</strong>
+                        <span className="label">新增</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#d97706' }}>{importPreview.overwrittenRecords}</strong>
+                        <span className="label">覆盖</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>患者档案</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <strong>{importPreview.totalPatients}</strong>
+                        <span className="label">总计</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#059669' }}>{importPreview.newPatients}</strong>
+                        <span className="label">新增</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#d97706' }}>{importPreview.overwrittenPatients}</strong>
+                        <span className="label">覆盖</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>色号库</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <strong>{importPreview.totalShades}</strong>
+                        <span className="label">总计</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#059669' }}>{importPreview.newShades}</strong>
+                        <span className="label">新增</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#d97706' }}>{importPreview.overwrittenShades}</strong>
+                        <span className="label">覆盖</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>拍照流程</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <strong>{importPreview.totalPhotoProcesses}</strong>
+                        <span className="label">总计</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#059669' }}>{importPreview.newPhotoProcesses}</strong>
+                        <span className="label">新增</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#d97706' }}>{importPreview.overwrittenPhotoProcesses}</strong>
+                        <span className="label">覆盖</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>交接单</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <strong>{importPreview.totalDeliveryOrders}</strong>
+                        <span className="label">总计</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#059669' }}>{importPreview.newDeliveryOrders}</strong>
+                        <span className="label">新增</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#d97706' }}>{importPreview.overwrittenDeliveryOrders}</strong>
+                        <span className="label">覆盖</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>质控配置</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <strong>{importPreview.totalQcCheckItems}</strong>
+                        <span className="label">总计</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#059669' }}>{importPreview.newQcCheckItems}</strong>
+                        <span className="label">新增</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#d97706' }}>{importPreview.overwrittenQcCheckItems}</strong>
+                        <span className="label">覆盖</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>质控记录</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <strong>{importPreview.totalQcRecords}</strong>
+                        <span className="label">总计</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#059669' }}>{importPreview.newQcRecords}</strong>
+                        <span className="label">新增</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#d97706' }}>{importPreview.overwrittenQcRecords}</strong>
+                        <span className="label">覆盖</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#6b7280' }}>{importPreview.skippedQcRecords}</strong>
+                        <span className="label">跳过</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="import-stat-card">
+                    <h4>协作时间线</h4>
+                    <div className="import-stat-grid">
+                      <div className="import-stat-item">
+                        <strong>{importPreview.totalCollabTimeline}</strong>
+                        <span className="label">总计</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#059669' }}>{importPreview.newCollabTimeline}</strong>
+                        <span className="label">新增</span>
+                      </div>
+                      <div className="import-stat-item">
+                        <strong style={{ color: '#6b7280' }}>{importPreview.skippedCollabTimeline}</strong>
+                        <span className="label">跳过</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                  <button type="button" className="secondary" onClick={cancelImport} style={{ flex: 1 }}>
+                    <X size={16} /> 取消
+                  </button>
+                  <button type="button" className="primary" onClick={confirmImport} style={{ flex: 1 }}>
+                    <CheckCheck size={16} /> 确认合并导入
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </>
       )}
 
