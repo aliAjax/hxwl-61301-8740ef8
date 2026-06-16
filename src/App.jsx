@@ -1,27 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Download, Database, HardDriveUpload, ShieldCheck, ShieldAlert, Monitor, Tablet, RefreshCw, Copy, Zap, History, GitMerge, ArrowUp, ArrowDown, Printer, XCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange } from 'lucide-react';
 import './App.css';
-import {
-  DATA_CATEGORIES,
-  CATEGORY_NAMES,
-  CURRENT_SCHEMA_VERSION,
-  loadUnifiedData,
-  saveCategory,
-  getDataStatus,
-  clearMigrationAndRecoveryLogs,
-  withIds,
-  withPatientIds,
-  migrateShadeLibrary,
-  normalizeQcItems,
-  MERGE_ENTITY_FIELDS,
-  MERGE_ENTITY_NAMES,
-  diffEntityFields,
-  matchEntities,
-  detectDuplicatePatients,
-  detectOrphanPhotoProcesses,
-  repairIdReferences,
-  shallowEqual,
-} from './dataStore';
 
 const appConfig = {
   "id": "hxwl-61301",
@@ -35,18 +14,7 @@ const appConfig = {
   "shadeLibraryStorage": "hxwl-61301-shade-library",
   "photoProcessStorage": "hxwl-61301-photo-process",
   "deliveryOrderStorage": "hxwl-61301-delivery-orders",
-  "qcCheckItemConfigStorage": "hxwl-61301-qc-check-items",
-  "qcStorage": "hxwl-61301-qc",
-  "collabStorage": "hxwl-61301-collab",
-  "collabTimelineStorage": "hxwl-61301-collab-timeline",
   "accent": "#0f766e",
-  "devices": [
-    { "id": "tablet-1", "name": "诊室A平板", "room": "1号诊室", "color": "#0f766e" },
-    { "id": "tablet-2", "name": "诊室B平板", "room": "2号诊室", "color": "#7c3aed" },
-    { "id": "tablet-3", "name": "诊室C平板", "room": "3号诊室", "color": "#2563eb" },
-    { "id": "tablet-4", "name": "前台Pad", "room": "前台", "color": "#db2777" }
-  ],
-  "defaultDeviceId": "tablet-1",
   "deliveryOrderStatuses": [
     "待发送",
     "已发送",
@@ -118,10 +86,7 @@ const appConfig = {
       "shade": "A2",
       "photoNote": "自然光下正面照，颈部略深",
       "followUp": "2026-06-13",
-      "status": "待修复",
-      "deviceId": "tablet-1",
-      "lastModified": "2026-06-13T09:15:00.000Z",
-      "version": 1
+      "status": "待修复"
     },
     {
       "id": "zhou-hang-21",
@@ -130,10 +95,7 @@ const appConfig = {
       "shade": "B1",
       "photoNote": "临时冠试戴后复拍",
       "followUp": "2026-06-13",
-      "status": "制作中",
-      "deviceId": "tablet-1",
-      "lastModified": "2026-06-13T10:30:00.000Z",
-      "version": 2
+      "status": "制作中"
     },
     {
       "id": "chen-cheng-36",
@@ -142,10 +104,7 @@ const appConfig = {
       "shade": "A3",
       "photoNote": "后牙咬合面补充照",
       "followUp": "2026-06-14",
-      "status": "已完成修复",
-      "deviceId": "tablet-1",
-      "lastModified": "2026-06-13T14:00:00.000Z",
-      "version": 1
+      "status": "已完成修复"
     }
   ],
   "patientSeed": [
@@ -179,57 +138,43 @@ const appConfig = {
       "code": "A1",
       "description": "最浅的A系列色号，呈现明亮的乳白色调，透明度较高。",
       "scenario": "适用于年轻患者、皮肤白皙的患者，或前牙美学修复需求较高的病例。常见于青少年及年轻成年人的天然牙色。",
-      "notes": "选色时需注意颈部与切端的色差，建议在自然光下进行比色。瓷修复体烧结后颜色可能略深，比色时可适当偏浅一号。",
-      "isBuiltIn": true,
-      "order": 0
+      "notes": "选色时需注意颈部与切端的色差，建议在自然光下进行比色。瓷修复体烧结后颜色可能略深，比色时可适当偏浅一号。"
     },
     {
       "code": "A2",
       "description": "A系列中最常用的色号，呈现自然的浅黄棕色，是多数人天然牙的平均颜色。",
       "scenario": "适用于大多数成年患者的前后牙修复，是临床最常选择的基准色号。尤其适合中等肤色患者。",
-      "notes": "A2色号适用范围广，但仍需结合患者年龄、性别和肤色综合判断。注意与邻牙的协调过渡。",
-      "isBuiltIn": true,
-      "order": 1
+      "notes": "A2色号适用范围广，但仍需结合患者年龄、性别和肤色综合判断。注意与邻牙的协调过渡。"
     },
     {
       "code": "A3",
       "description": "A系列中等偏深的色号，呈现较明显的黄棕色，饱和度适中。",
       "scenario": "适用于中老年患者、肤色偏黄或健康肤色的患者。后牙修复时选用较多，咀嚼功能区的自然色泽。",
-      "notes": "后牙修复时可选用A3作为主体色，颈部适当加深以模拟天然牙的色彩渐变。",
-      "isBuiltIn": true,
-      "order": 2
+      "notes": "后牙修复时可选用A3作为主体色，颈部适当加深以模拟天然牙的色彩渐变。"
     },
     {
       "code": "B1",
       "description": "B系列中最浅的色号，偏冷色调，呈现灰白感，比A1更偏白但饱和度较低。",
       "scenario": "适用于肤色偏冷白的患者，或追求较白修复效果的年轻患者。漂白后牙齿的常见色号。",
-      "notes": "B系列色号偏灰，选色时需谨慎，避免修复体显得不自然。建议与A系列色号交叉比对。",
-      "isBuiltIn": true,
-      "order": 3
+      "notes": "B系列色号偏灰，选色时需谨慎，避免修复体显得不自然。建议与A系列色号交叉比对。"
     },
     {
       "code": "B2",
       "description": "B系列中等色号，呈现偏灰的黄棕色，色调较A系列更冷。",
       "scenario": "适用于肤色偏黄偏暗的患者，天然牙偏灰的病例。对于年龄较大、牙齿有磨耗着色的患者较为适用。",
-      "notes": "B系列色号在不同光照下色差可能较大，建议在多种光源下比色确认。",
-      "isBuiltIn": true,
-      "order": 4
+      "notes": "B系列色号在不同光照下色差可能较大，建议在多种光源下比色确认。"
     },
     {
       "code": "C1",
       "description": "C系列浅色号，呈现明显的灰色调，是所有色号中最偏灰的浅色。",
       "scenario": "适用于天然牙偏灰的患者，常见于四环素牙轻度着色、或年龄增长导致的牙齿灰暗。",
-      "notes": "灰色调牙齿修复难度较大，可能需要内染色或特殊饰瓷技术。建议制作诊断蜡型或试戴牙片确认效果。",
-      "isBuiltIn": true,
-      "order": 5
+      "notes": "灰色调牙齿修复难度较大，可能需要内染色或特殊饰瓷技术。建议制作诊断蜡型或试戴牙片确认效果。"
     },
     {
       "code": "D2",
       "description": "D系列中等色号，呈现偏棕灰色调，介于A系列和C系列之间的色泽。",
       "scenario": "适用于天然牙颜色偏暗偏棕的患者，中老年患者多见。后牙及磨牙区域修复较为常用。",
-      "notes": "D系列色号饱和度适中，适合大多数后牙修复。注意与牙龈颜色的协调搭配。",
-      "isBuiltIn": true,
-      "order": 6
+      "notes": "D系列色号饱和度适中，适合大多数后牙修复。注意与牙龈颜色的协调搭配。"
     }
   ],
   "photoSteps": [
@@ -319,10 +264,10 @@ const appConfig = {
   "photoProcessDefaultValues": {
     "recordId": "",
     "steps": {
-      "front": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "", "fileSize": 0 },
-      "side": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "", "fileSize": 0 },
-      "natural": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "", "fileSize": 0 },
-      "confirm": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "", "fileSize": 0 }
+      "front": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
+      "side": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
+      "natural": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" },
+      "confirm": { "remark": "", "environment": "", "confirmed": false, "imageUrl": "" }
     },
     "currentStep": 0,
     "completed": false
@@ -344,61 +289,7 @@ const appConfig = {
       "sentAt": "2026-06-13T10:30:00.000Z",
       "receivedAt": null
     }
-  ],
-  "qcCheckItems": [
-    {
-      "key": "initialShade",
-      "label": "初次比色",
-      "icon": "Palette",
-      "requiredFor": ["待修复", "制作中", "已完成修复"],
-      "description": "完成患者牙位比色，确认色号选择准确",
-      "order": 1,
-      "critical": true
-    },
-    {
-      "key": "photoConfirm",
-      "label": "照片确认",
-      "icon": "Camera",
-      "requiredFor": ["待修复", "制作中", "已完成修复"],
-      "description": "完成拍照流程，确认照片质量符合比色要求",
-      "order": 2,
-      "critical": true
-    },
-    {
-      "key": "labHandover",
-      "label": "技工所交接",
-      "icon": "ArrowLeftRight",
-      "requiredFor": ["制作中", "已完成修复"],
-      "description": "完成与技工所的交接单发送与确认回收",
-      "order": 3,
-      "critical": true
-    },
-    {
-      "key": "tryOnFeedback",
-      "label": "试戴反馈",
-      "icon": "Stethoscope",
-      "requiredFor": ["已完成修复"],
-      "description": "患者试戴修复体，记录反馈意见与调整需求",
-      "order": 4,
-      "critical": true
-    },
-    {
-      "key": "finalRetake",
-      "label": "最终复拍",
-      "icon": "CheckCircle2",
-      "requiredFor": ["已完成修复"],
-      "description": "完成修复后复拍，存档比对照片确认修复效果",
-      "order": 5,
-      "critical": false
-    }
-  ],
-  "qcDefaultItemValues": {
-    "initialShade": { "checked": false, "remark": "", "checkedAt": null },
-    "photoConfirm": { "checked": false, "remark": "", "checkedAt": null },
-    "labHandover": { "checked": false, "remark": "", "checkedAt": null },
-    "tryOnFeedback": { "checked": false, "remark": "", "checkedAt": null },
-    "finalRetake": { "checked": false, "remark": "", "checkedAt": null }
-  }
+  ]
 };
 
 function getLocalDateString(d = new Date()) {
@@ -457,74 +348,76 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function getDeviceInfo(deviceId) {
-  return appConfig.devices.find(d => d.id === deviceId) || { id: deviceId, name: deviceId, room: '未知', color: '#6b7280' };
+function withIds(items) {
+  return items.map((item) => ({
+    id: item.id || uid(),
+    timeline: item.timeline || [{ status: item.status, at: today, by: '系统' }],
+    ...item
+  }));
 }
 
-function getRooms() {
-  const roomSet = new Set();
-  const rooms = [];
-  appConfig.devices.forEach(d => {
-    if (!roomSet.has(d.room)) {
-      roomSet.add(d.room);
-      rooms.push({ name: d.room, color: d.color });
+function loadRecords() {
+  const raw = localStorage.getItem(appConfig.storage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return withIds(appConfig.seed);
     }
-  });
-  return rooms;
-}
-
-function getRoomInfo(roomName) {
-  const room = getRooms().find(r => r.name === roomName);
-  return room || { name: roomName || '未安排', color: '#6b7280' };
-}
-
-function formatDateTime(isoStr) {
-  try {
-    const d = new Date(isoStr);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const h = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${y}-${m}-${day} ${h}:${min}`;
-  } catch {
-    return isoStr;
   }
+  return withIds(appConfig.seed);
 }
 
-function detectConflicts(localRecords, importRecords) {
-  const conflicts = [];
-  const added = [];
-  const conflictKeys = new Set();
-
-  importRecords.forEach(importRec => {
-    const matchLocal = localRecords.find(lr =>
-      lr.patient === importRec.patient && lr.tooth === importRec.tooth
-    );
-    const key = `${importRec.patient}-${importRec.tooth}`;
-
-    if (matchLocal) {
-      const isSameVersion = matchLocal.version === importRec.version &&
-        matchLocal.lastModified === importRec.lastModified;
-      if (!isSameVersion && !conflictKeys.has(key)) {
-        conflictKeys.add(key);
-        const fieldDiffs = diffEntityFields(matchLocal, importRec, 'records');
-        conflicts.push({
-          key,
-          patient: importRec.patient,
-          tooth: importRec.tooth,
-          local: matchLocal,
-          import: importRec,
-          fieldDiffs,
-          resolution: null
-        });
-      }
-    } else {
-      added.push(importRec);
+function loadPatients() {
+  const raw = localStorage.getItem(appConfig.patientStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return withPatientIds(appConfig.patientSeed);
     }
-  });
+  }
+  return withPatientIds(appConfig.patientSeed);
+}
 
-  return { conflicts, added };
+function withPatientIds(patients) {
+  return patients.map((p) => ({ id: p.id || uid(), createdAt: new Date().toISOString(), ...p }));
+}
+
+function loadShadeLibrary() {
+  const raw = localStorage.getItem(appConfig.shadeLibraryStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return appConfig.shadeLibrarySeed;
+    }
+  }
+  return appConfig.shadeLibrarySeed;
+}
+
+function loadPhotoProcesses() {
+  const raw = localStorage.getItem(appConfig.photoProcessStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function loadDeliveryOrders() {
+  const raw = localStorage.getItem(appConfig.deliveryOrderStorage);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return appConfig.deliveryOrderSeed;
+    }
+  }
+  return appConfig.deliveryOrderSeed;
 }
 
 function generateOrderNo() {
@@ -538,78 +431,15 @@ function deliveryOrderStatusClass(status) {
   return ['do-status-a', 'do-status-b', 'do-status-c'][index] || 'do-status-a';
 }
 
-function formatFileSize(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function compressImage(file, maxSizeKB = 500, quality = 0.75, maxDimension = 1920) {
-  return new Promise((resolve, reject) => {
-    const originalSize = file.size;
-    if (originalSize <= maxSizeKB * 1024) {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve({ dataUrl: e.target.result, size: originalSize, compressed: false });
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        const base64Str = dataUrl.split(',')[1];
-        const compressedSize = Math.round((base64Str.length * 3) / 4);
-
-        resolve({ dataUrl, size: compressedSize, compressed: true, originalSize });
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function getStepPhotoStatus(stepData) {
-  if (!stepData) return 'missing';
-  if (stepData.imageUrl && stepData.imageUrl.length > 0) return 'has-photo';
-  if (stepData.remark && stepData.remark.trim().length > 0) return 'only-note';
-  return 'missing';
-}
-
 function createEmptyPhotoProcess(recordId) {
   return {
     id: uid(),
     recordId,
     steps: {
-      front: { remark: "", environment: "", confirmed: false, imageUrl: "", fileSize: 0 },
-      side: { remark: "", environment: "", confirmed: false, imageUrl: "", fileSize: 0 },
-      natural: { remark: "", environment: "", confirmed: false, imageUrl: "", fileSize: 0 },
-      confirm: { remark: "", environment: "", confirmed: false, imageUrl: "", fileSize: 0 }
+      front: { remark: "", environment: "", confirmed: false, imageUrl: "" },
+      side: { remark: "", environment: "", confirmed: false, imageUrl: "" },
+      natural: { remark: "", environment: "", confirmed: false, imageUrl: "" },
+      confirm: { remark: "", environment: "", confirmed: false, imageUrl: "" }
     },
     currentStep: 0,
     completed: false,
@@ -623,125 +453,14 @@ function statusClass(status) {
   return ['status-a', 'status-b', 'status-c', 'status-d'][index] || 'status-a';
 }
 
-function toothRecordStatusClass(status) {
-  const index = appConfig.statuses.indexOf(status);
-  return ['tooth-status-a', 'tooth-status-b', 'tooth-status-c'][index] || '';
-}
-
-const ADULT_TOOTH_QUADRANTS = {
-  upperRight: ['18', '17', '16', '15', '14', '13', '12', '11'],
-  upperLeft: ['21', '22', '23', '24', '25', '26', '27', '28'],
-  lowerLeft: ['31', '32', '33', '34', '35', '36', '37', '38'],
-  lowerRight: ['48', '47', '46', '45', '44', '43', '42', '41'],
-};
-
-function ToothChart({ value, onChange, enabledTeeth, records }) {
-  const toothRecordsMap = useMemo(() => {
-    const map = {};
-    records.forEach((r) => {
-      if (r.tooth) {
-        if (!map[r.tooth]) {
-          map[r.tooth] = [];
-        }
-        map[r.tooth].push(r);
-      }
-    });
-    return map;
-  }, [records]);
-
-  const getToothStatus = (tooth) => {
-    const toothRecords = toothRecordsMap[tooth] || [];
-    if (toothRecords.length === 0) return null;
-    const statusPriority = ['待修复', '制作中', '已完成修复'];
-    for (const status of statusPriority) {
-      if (toothRecords.some((r) => r.status === status)) return status;
-    }
-    return toothRecords[0].status;
-  };
-
-  const renderTooth = (tooth) => {
-    const isEnabled = enabledTeeth.includes(tooth);
-    const isSelected = value === tooth;
-    const recordStatus = getToothStatus(tooth);
-    const statusCls = recordStatus ? toothRecordStatusClass(recordStatus) : '';
-
-    let className = 'tooth-item';
-    if (!isEnabled) className += ' tooth-disabled';
-    if (isSelected) className += ' tooth-selected';
-    if (statusCls) className += ' ' + statusCls;
-
-    return (
-      <button
-        key={tooth}
-        type="button"
-        className={className}
-        disabled={!isEnabled}
-        onClick={() => isEnabled && onChange(tooth)}
-        title={recordStatus ? `${tooth} - ${recordStatus} (${toothRecordsMap[tooth].length}条记录)` : tooth}
-      >
-        <span className="tooth-number">{tooth}</span>
-        {recordStatus && <span className="tooth-record-dot" />}
-      </button>
-    );
-  };
-
-  return (
-    <div className="tooth-chart">
-      <div className="tooth-chart-row">
-        <div className="tooth-quadrant">
-          {ADULT_TOOTH_QUADRANTS.upperRight.map(renderTooth)}
-        </div>
-        <div className="tooth-quadrant">
-          {ADULT_TOOTH_QUADRANTS.upperLeft.map(renderTooth)}
-        </div>
-      </div>
-      <div className="tooth-midline">
-        <span>上颚</span>
-        <div className="tooth-midline-line" />
-        <span>下颚</span>
-      </div>
-      <div className="tooth-chart-row">
-        <div className="tooth-quadrant">
-          {ADULT_TOOTH_QUADRANTS.lowerRight.map(renderTooth)}
-        </div>
-        <div className="tooth-quadrant">
-          {ADULT_TOOTH_QUADRANTS.lowerLeft.map(renderTooth)}
-        </div>
-      </div>
-      <div className="tooth-chart-legend">
-        <div className="tooth-legend-item">
-          <span className="tooth-legend-swatch tooth-selected" />
-          <span>已选中</span>
-        </div>
-        <div className="tooth-legend-item">
-          <span className="tooth-legend-swatch tooth-status-a" />
-          <span>待修复</span>
-        </div>
-        <div className="tooth-legend-item">
-          <span className="tooth-legend-swatch tooth-status-b" />
-          <span>制作中</span>
-        </div>
-        <div className="tooth-legend-item">
-          <span className="tooth-legend-swatch tooth-status-c" />
-          <span>已完成修复</span>
-        </div>
-        <div className="tooth-legend-item">
-          <span className="tooth-legend-swatch tooth-disabled" />
-          <span>暂未启用</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function App() {
   const [activeTab, setActiveTab] = useState('records');
-  const [records, setRecords] = useState([]);
-  const [patients, setPatients] = useState([]);
-  const [shadeLibrary, setShadeLibrary] = useState([]);
-  const [photoProcesses, setPhotoProcesses] = useState([]);
+  const [records, setRecords] = useState(loadRecords);
+  const [patients, setPatients] = useState(loadPatients);
+  const [shadeLibrary, setShadeLibrary] = useState(loadShadeLibrary);
+  const [photoProcesses, setPhotoProcesses] = useState(loadPhotoProcesses);
   const [form, setForm] = useState(appConfig.defaultValues);
-  const [filters, setFilters] = useState({ query: '', status: '全部', tooth: '全部', shade: '全部', followUpStatus: '全部' });
+  const [filters, setFilters] = useState({ query: '', status: '全部' });
   const [selected, setSelected] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientForm, setPatientForm] = useState(appConfig.patientDefaultValues);
@@ -749,1474 +468,43 @@ function App() {
   const [patientQuery, setPatientQuery] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [editingShade, setEditingShade] = useState(null);
-  const [isAddingShade, setIsAddingShade] = useState(false);
   const [shadeDetailModal, setShadeDetailModal] = useState(null);
-  const [deleteShadeConfirm, setDeleteShadeConfirm] = useState(null);
   const [editingPhotoProcess, setEditingPhotoProcess] = useState(null);
-  const [compressMessage, setCompressMessage] = useState(null);
   const [selectedPhotoProcess, setSelectedPhotoProcess] = useState(null);
   const [photoProcessFilter, setPhotoProcessFilter] = useState('all');
-  const [deliveryOrders, setDeliveryOrders] = useState([]);
+  const [deliveryOrders, setDeliveryOrders] = useState(loadDeliveryOrders);
   const [deliveryOrderForm, setDeliveryOrderForm] = useState(appConfig.deliveryOrderDefaultValues);
   const [selectedDeliveryOrder, setSelectedDeliveryOrder] = useState(null);
-  const [showPrintSummary, setShowPrintSummary] = useState(false);
   const [deliveryOrderFilter, setDeliveryOrderFilter] = useState('全部');
   const [draggedRecordId, setDraggedRecordId] = useState(null);
   const [dragOverDate, setDragOverDate] = useState(null);
-  const [dragOverRoom, setDragOverRoom] = useState(null);
   const [boardSelectedRecord, setBoardSelectedRecord] = useState(null);
   const [editingFollowUpRecordId, setEditingFollowUpRecordId] = useState(null);
   const [boardFilterStatus, setBoardFilterStatus] = useState('全部');
-  const [importPreview, setImportPreview] = useState(null);
-  const [importFileName, setImportFileName] = useState('');
-  const [qcRecords, setQcRecords] = useState([]);
-  const [selectedQcRecord, setSelectedQcRecord] = useState(null);
-  const [qcFilter, setQcFilter] = useState('全部');
-  const [qcCheckItems, setQcCheckItems] = useState([]);
-  const [editingQcItem, setEditingQcItem] = useState(null);
-  const [showQcConfig, setShowQcConfig] = useState(false);
-  const [editingRecordId, setEditingRecordId] = useState(null);
-  const [editRecordForm, setEditRecordForm] = useState({
-    patient: '',
-    tooth: '',
-    shade: '',
-    photoNote: '',
-    followUp: '',
-    followUpRoom: ''
-  });
-  const [dataMigrationLog, setDataMigrationLog] = useState([]);
-  const [dataRecoveryLog, setDataRecoveryLog] = useState([]);
-  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
-  const [showRecoveryNotice, setShowRecoveryNotice] = useState(false);
-  const [dataInitialized, setDataInitialized] = useState(false);
-
-  useEffect(() => {
-    setEditingRecordId(null);
-    setEditRecordForm({ patient: '', tooth: '', shade: '', photoNote: '', followUp: '', followUpRoom: '' });
-  }, [selected]);
-
-  const [currentDeviceId, setCurrentDeviceId] = useState(appConfig.defaultDeviceId);
-  const [collabTimeline, setCollabTimeline] = useState([]);
-
-  useEffect(() => {
-    const result = loadUnifiedData(appConfig);
-    const data = result.data.data;
-
-    setRecords(data.records);
-    setPatients(data.patients);
-    setShadeLibrary(data.shadeLibrary);
-    setPhotoProcesses(data.photoProcesses);
-    setDeliveryOrders(data.deliveryOrders);
-    setQcCheckItems(data.qcCheckItems);
-    setQcRecords(data.qcRecords.map(qc => ({
-      ...qc,
-      items: normalizeQcItems(qc.items, data.qcCheckItems)
-    })));
-    setCurrentDeviceId(data.collab.currentDeviceId);
-    setCollabTimeline(data.collabTimeline);
-
-    setDataMigrationLog(result.migrationLog);
-    setDataRecoveryLog(result.recoveryLog);
-
-    if (result.migrationLog.length > 0) {
-      setShowMigrationNotice(true);
-    }
-    if (result.recoveryLog.length > 0) {
-      setShowRecoveryNotice(true);
-    }
-
-    setDataInitialized(true);
-  }, []);
-  const [collabConflicts, setCollabConflicts] = useState(null);
-  const [collabImportPreview, setCollabImportPreview] = useState(null);
-  const [collabImportFileName, setCollabImportFileName] = useState('');
-  const [crossEntityResolutions, setCrossEntityResolutions] = useState({});
-  const [collabSimulateDevice, setCollabSimulateDevice] = useState('tablet-2');
-  const [collabForm, setCollabForm] = useState({
-    patient: '林雨',
-    tooth: '11',
-    shade: 'A2',
-    photoNote: '',
-    followUp: '',
-    status: '待修复'
-  });
 
   function persistRecords(next) {
     setRecords(next);
-    saveCategory(DATA_CATEGORIES.records, next, appConfig);
+    localStorage.setItem(appConfig.storage, JSON.stringify(next));
   }
 
   function persistPatients(next) {
     setPatients(next);
-    saveCategory(DATA_CATEGORIES.patients, next, appConfig);
+    localStorage.setItem(appConfig.patientStorage, JSON.stringify(next));
   }
 
   function persistShadeLibrary(next) {
     setShadeLibrary(next);
-    saveCategory(DATA_CATEGORIES.shadeLibrary, next, appConfig);
+    localStorage.setItem(appConfig.shadeLibraryStorage, JSON.stringify(next));
   }
 
   function persistPhotoProcesses(next) {
     setPhotoProcesses(next);
-    saveCategory(DATA_CATEGORIES.photoProcesses, next, appConfig);
+    localStorage.setItem(appConfig.photoProcessStorage, JSON.stringify(next));
   }
 
   function persistDeliveryOrders(next) {
     setDeliveryOrders(next);
-    saveCategory(DATA_CATEGORIES.deliveryOrders, next, appConfig);
-  }
-
-  function persistQcRecords(next) {
-    setQcRecords(next);
-    saveCategory(DATA_CATEGORIES.qcRecords, next, appConfig);
-  }
-
-  function persistQcCheckItems(next) {
-    setQcCheckItems(next);
-    saveCategory(DATA_CATEGORIES.qcCheckItems, next, appConfig);
-    const migrated = qcRecords.map((qc) => ({
-      ...qc,
-      items: normalizeQcItems(qc.items, next),
-      updatedAt: new Date().toISOString()
-    }));
-    persistQcRecords(migrated);
-    if (selectedQcRecord?.recordId) {
-      const updatedQc = migrated.find((q) => q.recordId === selectedQcRecord.recordId);
-      const record = records.find((r) => r.id === selectedQcRecord.recordId);
-      if (updatedQc && record) {
-        setSelectedQcRecord({
-          record,
-          qc: updatedQc,
-          progress: getQcProgressByQc(updatedQc, record.status),
-          missing: getMissingQcItemsByQc(updatedQc, record.status)
-        });
-      }
-    }
-  }
-
-  function persistCurrentDevice(deviceId) {
-    setCurrentDeviceId(deviceId);
-    saveCategory(DATA_CATEGORIES.collab, { currentDeviceId: deviceId }, appConfig);
-  }
-
-  function persistCollabTimeline(timeline) {
-    setCollabTimeline(timeline);
-    saveCategory(DATA_CATEGORIES.collabTimeline, timeline, appConfig);
-  }
-
-  function saveQcItemConfig(item) {
-    if (!item.key || !item.label) return;
-    const existing = qcCheckItems.find((ci) => ci.key === item.key);
-    let next;
-    if (existing) {
-      next = qcCheckItems.map((ci) => ci.key === item.key ? item : ci);
-    } else {
-      next = [...qcCheckItems, { ...item, order: item.order ?? (qcCheckItems.length + 1) }];
-    }
-    persistQcCheckItems(next);
-    setEditingQcItem(null);
-  }
-
-  function removeQcItemConfig(key) {
-    const next = qcCheckItems.filter((ci) => ci.key !== key);
-    persistQcCheckItems(next);
-  }
-
-  function resetQcItemConfig() {
-    const defaults = appConfig.qcCheckItems.map((ci) => ({ ...ci }));
-    persistQcCheckItems(defaults);
-  }
-
-  function addCollabTimelineEntry(entry) {
-    const newEntry = {
-      id: uid(),
-      at: new Date().toISOString(),
-      ...entry
-    };
-    const next = [newEntry, ...collabTimeline];
-    setCollabTimeline(next);
-    persistCollabTimeline(next);
-  }
-
-  function addCollabTimelineEntries(entries) {
-    if (!entries.length) return;
-    const newEntries = entries.map(entry => ({
-      id: uid(),
-      at: new Date().toISOString(),
-      ...entry
-    }));
-    const next = [...newEntries, ...collabTimeline];
-    setCollabTimeline(next);
-    persistCollabTimeline(next);
-  }
-
-  function switchDevice(deviceId) {
-    setCurrentDeviceId(deviceId);
-    persistCurrentDevice(deviceId);
-    addCollabTimelineEntry({
-      type: 'device-switch',
-      deviceId,
-      title: '切换设备',
-      detail: `切换至 ${getDeviceInfo(deviceId).name}（${getDeviceInfo(deviceId).room}）`
-    });
-  }
-
-  function exportCollabData() {
-    const exportObj = {
-      version: '3.0',
-      exportedAt: new Date().toISOString(),
-      sourceDeviceId: currentDeviceId,
-      sourceDeviceName: getDeviceInfo(currentDeviceId).name,
-      records: records.map(r => ({ ...r })),
-      patients: patients.map(p => ({ ...p })),
-      shadeLibrary: shadeLibrary.map(s => ({ ...s })),
-      photoProcesses: photoProcesses.map(pp => ({ ...pp })),
-      deliveryOrders: deliveryOrders.map(d => ({ ...d })),
-      qcCheckItems: qcCheckItems.map(ci => ({ ...ci })),
-      qcRecords: qcRecords.map(qc => ({ ...qc })),
-      collabTimeline: collabTimeline.map(t => ({ ...t })),
-      meta: {
-        recordCount: records.length,
-        patientCount: patients.length,
-        shadeCount: shadeLibrary.length,
-        photoProcessCount: photoProcesses.length,
-        deliveryOrderCount: deliveryOrders.length,
-        qcCheckItemCount: qcCheckItems.length,
-        qcRecordCount: qcRecords.length,
-        collabTimelineCount: collabTimeline.length,
-      }
-    };
-    const jsonStr = JSON.stringify(exportObj, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const deviceName = getDeviceInfo(currentDeviceId).name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
-    const dateStr = getLocalDateString().replace(/-/g, '');
-    a.download = `collab-full-${deviceName}-${dateStr}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    addCollabTimelineEntry({
-      type: 'export',
-      deviceId: currentDeviceId,
-      title: '导出完整备份',
-      detail: `从 ${getDeviceInfo(currentDeviceId).name} 导出完整备份（${records.length} 条记录、${patients.length} 位患者、${deliveryOrders.length} 份交接单）`
-    });
-  }
-
-  function analyzeCollabImport(importData) {
-    const importRecords = importData.records || [];
-    const importPatients = importData.patients || [];
-    const importShadeLibrary = importData.shadeLibrary || [];
-    const importPhotoProcesses = importData.photoProcesses || [];
-    const importDeliveryOrders = importData.deliveryOrders || [];
-    const importQcCheckItems = importData.qcCheckItems || [];
-    const importQcRecords = importData.qcRecords || [];
-    const importCollabTimeline = importData.collabTimeline || [];
-    const sourceDeviceId = importData.sourceDeviceId || 'unknown';
-    const sourceDeviceName = importData.sourceDeviceName || '未知设备';
-
-    const { conflicts, added } = detectConflicts(records, importRecords);
-
-    const recordsMatch = matchEntities(records, importRecords, 'records');
-    const patientsMatch = matchEntities(patients, importPatients, 'patients');
-    const photoMatch = matchEntities(photoProcesses, importPhotoProcesses, 'photoProcesses');
-    const deliveryMatch = matchEntities(deliveryOrders, importDeliveryOrders, 'deliveryOrders');
-    const qcMatch = matchEntities(qcRecords, importQcRecords, 'qcRecords');
-
-    const duplicatePatients = detectDuplicatePatients(patients, importPatients);
-
-    const existingPatientIds = new Set(patients.map(p => p.id));
-    const newPatients = importPatients.filter(p => !existingPatientIds.has(p.id));
-    const overwrittenPatients = importPatients.filter(p => existingPatientIds.has(p.id));
-
-    const existingShadeCodes = new Set(shadeLibrary.map(s => s.code));
-    const newShades = importShadeLibrary.filter(s => !existingShadeCodes.has(s.code));
-    const existingImportShades = importShadeLibrary.filter(s => existingShadeCodes.has(s.code));
-
-    const existingPhotoProcessIds = new Set(photoProcesses.map(p => p.id));
-    const newPhotoProcesses = importPhotoProcesses.filter(p => !existingPhotoProcessIds.has(p.id));
-    const overwrittenPhotoProcesses = importPhotoProcesses.filter(p => existingPhotoProcessIds.has(p.id));
-
-    const existingDeliveryOrderIds = new Set(deliveryOrders.map(d => d.id));
-    const newDeliveryOrders = importDeliveryOrders.filter(d => !existingDeliveryOrderIds.has(d.id));
-    const overwrittenDeliveryOrders = importDeliveryOrders.filter(d => existingDeliveryOrderIds.has(d.id));
-
-    const existingQcCheckItemKeys = new Set(qcCheckItems.map(c => c.key));
-    const newQcCheckItems = importQcCheckItems.filter(c => !existingQcCheckItemKeys.has(c.key));
-    const overwrittenQcCheckItems = importQcCheckItems.filter(c => existingQcCheckItemKeys.has(c.key));
-
-    const reachableRecordIds = new Set([
-      ...records.map(r => r.id),
-      ...importRecords.map(r => r.id)
-    ]);
-    const importableQcRecords = importQcRecords.filter(q => !q.recordId || reachableRecordIds.has(q.recordId));
-    const skippedQcRecords = importQcRecords.filter(q => q.recordId && !reachableRecordIds.has(q.recordId));
-    const existingQcRecordIds = new Set(qcRecords.map(q => q.id));
-    const newQcRecords = importableQcRecords.filter(q => !existingQcRecordIds.has(q.id));
-    const overwrittenQcRecords = importableQcRecords.filter(q => existingQcRecordIds.has(q.id));
-
-    const existingCollabTimelineIds = new Set(collabTimeline.map(t => t.id));
-    const newCollabTimeline = importCollabTimeline.filter(t => !existingCollabTimelineIds.has(t.id));
-
-    const crossEntityConflicts = {
-      records: recordsMatch.matched
-        .filter(m => m.fieldDiffs.length > 0)
-        .map(m => ({
-          local: m.local,
-          import: m.import,
-          fieldDiffs: m.fieldDiffs,
-          entityKey: `record-${m.local.id}`,
-        })),
-      patients: patientsMatch.matched
-        .filter(m => m.fieldDiffs.length > 0)
-        .map(m => ({
-          local: m.local,
-          import: m.import,
-          fieldDiffs: m.fieldDiffs,
-          entityKey: `patient-${m.local.id}`,
-        })),
-      photoProcesses: photoMatch.matched
-        .filter(m => m.fieldDiffs.length > 0)
-        .map(m => ({
-          local: m.local,
-          import: m.import,
-          fieldDiffs: m.fieldDiffs,
-          entityKey: `photo-${m.local.id}`,
-        })),
-      deliveryOrders: deliveryMatch.matched
-        .filter(m => m.fieldDiffs.length > 0)
-        .map(m => ({
-          local: m.local,
-          import: m.import,
-          fieldDiffs: m.fieldDiffs,
-          entityKey: `delivery-${m.local.id}`,
-        })),
-      qcRecords: qcMatch.matched
-        .filter(m => m.fieldDiffs.length > 0)
-        .map(m => ({
-          local: m.local,
-          import: m.import,
-          fieldDiffs: m.fieldDiffs,
-          entityKey: `qc-${m.local.id}`,
-        })),
-    };
-
-    const potentialOrphans = detectOrphanPhotoProcesses(
-      [...photoProcesses, ...importPhotoProcesses],
-      [...records, ...importRecords]
-    );
-
-    return {
-      sourceDeviceId,
-      sourceDeviceName,
-      exportedAt: importData.exportedAt,
-      totalRecords: importRecords.length,
-      totalPatients: importPatients.length,
-      totalShades: importShadeLibrary.length,
-      totalPhotoProcesses: importPhotoProcesses.length,
-      totalDeliveryOrders: importDeliveryOrders.length,
-      totalQcCheckItems: importQcCheckItems.length,
-      totalQcRecords: importQcRecords.length,
-      totalCollabTimeline: importCollabTimeline.length,
-      conflicts,
-      addedRecords: added,
-      newPatients,
-      overwrittenPatients,
-      newShades,
-      existingImportShades,
-      newPhotoProcesses,
-      overwrittenPhotoProcesses,
-      newDeliveryOrders,
-      overwrittenDeliveryOrders,
-      newQcCheckItems,
-      overwrittenQcCheckItems,
-      newQcRecords,
-      overwrittenQcRecords,
-      skippedQcRecords,
-      newCollabTimeline,
-      crossEntityConflicts,
-      recordsMatch,
-      patientsMatch,
-      photoMatch,
-      deliveryMatch,
-      qcMatch,
-      duplicatePatients,
-      potentialOrphans,
-      importData
-    };
-  }
-
-  function handleCollabImportFile(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setCollabImportFileName(file.name);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result;
-        if (typeof content !== 'string') throw new Error('文件格式错误');
-        const data = JSON.parse(content);
-        if (!data.records) {
-          throw new Error('未找到有效的记录数据');
-        }
-        const analysis = analyzeCollabImport(data);
-        setCollabImportPreview(analysis);
-        if (analysis.conflicts.length > 0) {
-          setCollabConflicts(analysis.conflicts.map(c => ({
-            ...c,
-            resolution: 'keepLocal',
-            fieldResolutions: c.fieldDiffs
-              ? c.fieldDiffs.map(fd => ({ ...fd, resolution: 'import' }))
-              : undefined,
-          })));
-        } else {
-          setCollabConflicts(null);
-        }
-        if (analysis.crossEntityConflicts) {
-          const ceResolutions = {};
-          Object.entries(analysis.crossEntityConflicts).forEach(([entityType, items]) => {
-            items.forEach(item => {
-              ceResolutions[item.entityKey] = {
-                resolution: 'keepLocal',
-                fieldResolutions: item.fieldDiffs.map(fd => ({ ...fd, resolution: 'import' })),
-              };
-            });
-          });
-          setCrossEntityResolutions(ceResolutions);
-        }
-      } catch (err) {
-        alert('导入失败：' + (err.message || '文件格式错误'));
-        cancelCollabImport();
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  }
-
-  function setConflictResolution(key, resolution) {
-    if (!collabConflicts) return;
-    setCollabConflicts(collabConflicts.map(c => {
-      if (c.key !== key) return c;
-      const fieldResolutions = c.fieldDiffs
-        ? c.fieldDiffs.map(fd => ({
-          ...fd,
-          resolution: resolution === 'fieldMerge' ? fd.resolution : resolution,
-        }))
-        : undefined;
-      return { ...c, resolution, fieldResolutions };
-    }));
-  }
-
-  function setFieldResolution(conflictKey, fieldKey, resolution) {
-    if (!collabConflicts) return;
-    setCollabConflicts(collabConflicts.map(c => {
-      if (c.key !== conflictKey || !c.fieldResolutions) return c;
-      return {
-        ...c,
-        resolution: 'fieldMerge',
-        fieldResolutions: c.fieldResolutions.map(fr =>
-          fr.fieldKey === fieldKey ? { ...fr, resolution } : fr
-        ),
-      };
-    }));
-  }
-
-  function setCrossEntityResolution(entityKey, resolution) {
-    setCrossEntityResolutions(prev => {
-      const existing = prev[entityKey];
-      if (!existing) return prev;
-      return {
-        ...prev,
-        [entityKey]: {
-          ...existing,
-          resolution,
-          fieldResolutions: existing.fieldResolutions.map(fr => ({
-            ...fr,
-            resolution: resolution === 'fieldMerge' ? fr.resolution : resolution,
-          })),
-        },
-      };
-    });
-  }
-
-  function setCrossEntityFieldResolution(entityKey, fieldKey, resolution) {
-    setCrossEntityResolutions(prev => {
-      const existing = prev[entityKey];
-      if (!existing) return prev;
-      return {
-        ...prev,
-        [entityKey]: {
-          ...existing,
-          resolution: 'fieldMerge',
-          fieldResolutions: existing.fieldResolutions.map(fr =>
-            fr.fieldKey === fieldKey ? { ...fr, resolution } : fr
-          ),
-        },
-      };
-    });
-  }
-
-  function confirmCollabImport() {
-    if (!collabImportPreview) return;
-    const { importData, sourceDeviceId, sourceDeviceName } = collabImportPreview;
-
-    let mergedRecords = [...records];
-    let mergedPatients = [...patients];
-    let mergedPhotoProcesses = [...photoProcesses];
-    let mergedDeliveryOrders = [...deliveryOrders];
-    let mergedQcRecords = [...qcRecords];
-    const timelineEntries = [];
-    const recordIdMap = new Map();
-
-    if (collabConflicts && collabConflicts.length > 0) {
-      const unresolved = collabConflicts.filter(c => !c.resolution);
-      if (unresolved.length > 0) {
-        alert('请为所有冲突选择处理方式！');
-        return;
-      }
-
-      collabConflicts.forEach(conflict => {
-        const { local, import: imp, resolution, patient, tooth, fieldResolutions } = conflict;
-        const now = new Date().toISOString();
-
-        if (resolution === 'keepLocal') {
-          timelineEntries.push({
-            type: 'conflict-resolve-keep',
-            deviceId: sourceDeviceId,
-            title: '冲突处理：保留本地',
-            detail: `${patient} - ${tooth} 牙位，保留本地版本（v${local.version}），忽略导入版本（v${imp.version}）`
-          });
-          mergedRecords = mergedRecords.map(r => r.id === local.id ? {
-            ...r,
-            timeline: [...(r.timeline || []), {
-              status: `冲突处理：保留本地，忽略${sourceDeviceName}导入`,
-              at: today,
-              by: '冲突合并'
-            }]
-          } : r);
-        } else if (resolution === 'useImport') {
-          timelineEntries.push({
-            type: 'conflict-resolve-import',
-            deviceId: sourceDeviceId,
-            title: '冲突处理：采用导入',
-            detail: `${patient} - ${tooth} 牙位，采用${sourceDeviceName}版本（v${imp.version}），覆盖本地版本（v${local.version}）`
-          });
-          const importedRecord = {
-            ...imp,
-            id: local.id,
-            lastModified: now,
-            version: Math.max(local.version || 1, imp.version || 1) + 1,
-            timeline: [
-              ...(local.timeline || []),
-              ...(imp.timeline || []).slice(-2),
-              {
-                status: `从${sourceDeviceName}合并，覆盖本地数据`,
-                at: today,
-                by: '冲突合并'
-              }
-            ]
-          };
-          recordIdMap.set(imp.id, local.id);
-          mergedRecords = mergedRecords.map(r => r.id === local.id ? importedRecord : r);
-        } else if (resolution === 'makeCopy') {
-          timelineEntries.push({
-            type: 'conflict-resolve-copy',
-            deviceId: sourceDeviceId,
-            title: '冲突处理：生成副本',
-            detail: `${patient} - ${tooth} 牙位，保留本地版本（v${local.version}）并新增${sourceDeviceName}版本（v${imp.version}）作为副本`
-          });
-          const copyRecordId = uid();
-          const copyRecord = {
-            ...imp,
-            id: copyRecordId,
-            lastModified: now,
-            version: 1,
-            timeline: [
-              ...(imp.timeline || []),
-              {
-                status: `从${sourceDeviceName}合并，作为副本保存`,
-                at: today,
-                by: '冲突合并'
-              }
-            ]
-          };
-          recordIdMap.set(imp.id, copyRecordId);
-          mergedRecords.unshift(copyRecord);
-        } else if (resolution === 'fieldMerge' && fieldResolutions) {
-          let mergedRecord = { ...local };
-          fieldResolutions.forEach(fr => {
-            if (fr.resolution === 'import') {
-              mergedRecord[fr.fieldKey] = fr.importValue;
-            } else if (fr.resolution === 'local') {
-              mergedRecord[fr.fieldKey] = fr.localValue;
-            }
-          });
-          mergedRecord.lastModified = now;
-          mergedRecord.version = Math.max(local.version || 1, imp.version || 1) + 1;
-          mergedRecord.timeline = [
-            ...(local.timeline || []),
-            {
-              status: `字段级合并：从${sourceDeviceName}选择性合并 ${fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段`,
-              at: today,
-              by: '冲突合并'
-            }
-          ];
-          recordIdMap.set(imp.id, local.id);
-          mergedRecords = mergedRecords.map(r => r.id === local.id ? mergedRecord : r);
-          timelineEntries.push({
-            type: 'conflict-resolve-merge',
-            deviceId: sourceDeviceId,
-            title: '冲突处理：字段级合并',
-            detail: `${patient} - ${tooth} 牙位，字段级合并，${fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用导入值`
-          });
-        }
-      });
-    }
-
-    if (collabImportPreview.crossEntityConflicts && crossEntityResolutions) {
-      const ceConflicts = collabImportPreview.crossEntityConflicts;
-
-      if (ceConflicts.patients && ceConflicts.patients.length > 0) {
-        const now = new Date().toISOString();
-        ceConflicts.patients.forEach(item => {
-          const res = crossEntityResolutions[item.entityKey];
-          if (!res) return;
-          if (res.resolution === 'keepLocal') {
-            mergedPatients = mergedPatients.map(p => p.id === item.local.id ? {
-              ...p,
-              timeline: [...(p.timeline || []), { status: `跨实体合并：保留本地患者档案，忽略${sourceDeviceName}版本`, at: today, by: '跨实体合并' }]
-            } : p);
-          } else if (res.resolution === 'useImport') {
-            mergedPatients = mergedPatients.map(p => p.id === item.local.id ? {
-              ...item.import,
-              id: item.local.id,
-              createdAt: p.createdAt || item.import.createdAt || now,
-              timeline: [
-                ...(p.timeline || []),
-                ...(item.import.timeline || []).slice(-2),
-                { status: `跨实体合并：采用${sourceDeviceName}版本覆盖`, at: today, by: '跨实体合并' }
-              ]
-            } : p);
-          } else if (res.resolution === 'makeCopy') {
-            const copyId = uid();
-            mergedPatients.push({
-              ...item.import,
-              id: copyId,
-              createdAt: now,
-              timeline: [
-                ...(item.import.timeline || []),
-                { status: `跨实体合并：从${sourceDeviceName}导入为副本`, at: today, by: '跨实体合并' }
-              ]
-            });
-          } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
-            let mergedItem = { ...item.local };
-            res.fieldResolutions.forEach(fr => {
-              if (fr.resolution === 'import') {
-                mergedItem[fr.fieldKey] = fr.importValue;
-              } else if (fr.resolution === 'local') {
-                mergedItem[fr.fieldKey] = fr.localValue;
-              }
-            });
-            mergedItem.timeline = [
-              ...(item.local.timeline || []),
-              {
-                status: `跨实体合并：字段级合并，${res.fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用${sourceDeviceName}值`,
-                at: today,
-                by: '跨实体合并'
-              }
-            ];
-            mergedPatients = mergedPatients.map(p => p.id === item.local.id ? mergedItem : p);
-          }
-        });
-        timelineEntries.push({
-          type: 'cross-entity-patients',
-          deviceId: sourceDeviceId,
-          title: '患者档案跨实体合并',
-          detail: `从${sourceDeviceName}合并 ${ceConflicts.patients.length} 条患者档案冲突`
-        });
-      }
-
-      if (ceConflicts.photoProcesses && ceConflicts.photoProcesses.length > 0) {
-        const now = new Date().toISOString();
-        ceConflicts.photoProcesses.forEach(item => {
-          const res = crossEntityResolutions[item.entityKey];
-          if (!res) return;
-          if (res.resolution === 'keepLocal') {
-            mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? {
-              ...p,
-              lastModified: now,
-              timeline: [...(p.timeline || []), { status: `跨实体合并：保留本地拍照流程`, at: today, by: '跨实体合并' }]
-            } : p);
-          } else if (res.resolution === 'useImport') {
-            mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? {
-              ...item.import,
-              id: item.local.id,
-              lastModified: now,
-              timeline: [
-                ...(p.timeline || []),
-                ...(item.import.timeline || []).slice(-2),
-                { status: `跨实体合并：采用${sourceDeviceName}拍照流程`, at: today, by: '跨实体合并' }
-              ]
-            } : p);
-          } else if (res.resolution === 'makeCopy') {
-            const copyId = uid();
-            mergedPhotoProcesses.push({
-              ...item.import,
-              id: copyId,
-              lastModified: now,
-              timeline: [
-                ...(item.import.timeline || []),
-                { status: `跨实体合并：从${sourceDeviceName}导入拍照流程副本`, at: today, by: '跨实体合并' }
-              ]
-            });
-          } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
-            let mergedItem = { ...item.local };
-            res.fieldResolutions.forEach(fr => {
-              if (fr.resolution === 'import') {
-                mergedItem[fr.fieldKey] = fr.importValue;
-              } else if (fr.resolution === 'local') {
-                mergedItem[fr.fieldKey] = fr.localValue;
-              }
-            });
-            mergedItem.lastModified = now;
-            mergedItem.timeline = [
-              ...(item.local.timeline || []),
-              {
-                status: `跨实体合并：字段级合并拍照流程，${res.fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用${sourceDeviceName}值`,
-                at: today,
-                by: '跨实体合并'
-              }
-            ];
-            mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === item.local.id ? mergedItem : p);
-          }
-        });
-        timelineEntries.push({
-          type: 'cross-entity-photo',
-          deviceId: sourceDeviceId,
-          title: '拍照流程跨实体合并',
-          detail: `从${sourceDeviceName}合并 ${ceConflicts.photoProcesses.length} 条拍照流程冲突`
-        });
-      }
-
-      if (ceConflicts.deliveryOrders && ceConflicts.deliveryOrders.length > 0) {
-        const now = new Date().toISOString();
-        ceConflicts.deliveryOrders.forEach(item => {
-          const res = crossEntityResolutions[item.entityKey];
-          if (!res) return;
-          if (res.resolution === 'keepLocal') {
-            mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? {
-              ...d,
-              lastModified: now,
-              timeline: [...(d.timeline || []), { status: `跨实体合并：保留本地交接单`, at: today, by: '跨实体合并' }]
-            } : d);
-          } else if (res.resolution === 'useImport') {
-            mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? {
-              ...item.import,
-              id: item.local.id,
-              lastModified: now,
-              timeline: [
-                ...(d.timeline || []),
-                ...(item.import.timeline || []).slice(-2),
-                { status: `跨实体合并：采用${sourceDeviceName}交接单`, at: today, by: '跨实体合并' }
-              ]
-            } : d);
-          } else if (res.resolution === 'makeCopy') {
-            const copyId = uid();
-            mergedDeliveryOrders.push({
-              ...item.import,
-              id: copyId,
-              lastModified: now,
-              timeline: [
-                ...(item.import.timeline || []),
-                { status: `跨实体合并：从${sourceDeviceName}导入交接单副本`, at: today, by: '跨实体合并' }
-              ]
-            });
-          } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
-            let mergedItem = { ...item.local };
-            res.fieldResolutions.forEach(fr => {
-              if (fr.resolution === 'import') {
-                mergedItem[fr.fieldKey] = fr.importValue;
-              } else if (fr.resolution === 'local') {
-                mergedItem[fr.fieldKey] = fr.localValue;
-              }
-            });
-            mergedItem.lastModified = now;
-            mergedItem.timeline = [
-              ...(item.local.timeline || []),
-              {
-                status: `跨实体合并：字段级合并交接单，${res.fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用${sourceDeviceName}值`,
-                at: today,
-                by: '跨实体合并'
-              }
-            ];
-            mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === item.local.id ? mergedItem : d);
-          }
-        });
-        timelineEntries.push({
-          type: 'cross-entity-delivery',
-          deviceId: sourceDeviceId,
-          title: '交接单跨实体合并',
-          detail: `从${sourceDeviceName}合并 ${ceConflicts.deliveryOrders.length} 条交接单冲突`
-        });
-      }
-
-      if (ceConflicts.qcRecords && ceConflicts.qcRecords.length > 0) {
-        const now = new Date().toISOString();
-        ceConflicts.qcRecords.forEach(item => {
-          const res = crossEntityResolutions[item.entityKey];
-          if (!res) return;
-          if (res.resolution === 'keepLocal') {
-            mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? {
-              ...q,
-              lastModified: now,
-              timeline: [...(q.timeline || []), { status: `跨实体合并：保留本地质控记录`, at: today, by: '跨实体合并' }]
-            } : q);
-          } else if (res.resolution === 'useImport') {
-            mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? {
-              ...item.import,
-              id: item.local.id,
-              lastModified: now,
-              timeline: [
-                ...(q.timeline || []),
-                ...(item.import.timeline || []).slice(-2),
-                { status: `跨实体合并：采用${sourceDeviceName}质控记录`, at: today, by: '跨实体合并' }
-              ]
-            } : q);
-          } else if (res.resolution === 'makeCopy') {
-            const copyId = uid();
-            mergedQcRecords.push({
-              ...item.import,
-              id: copyId,
-              lastModified: now,
-              timeline: [
-                ...(item.import.timeline || []),
-                { status: `跨实体合并：从${sourceDeviceName}导入质控记录副本`, at: today, by: '跨实体合并' }
-              ]
-            });
-          } else if (res.resolution === 'fieldMerge' && res.fieldResolutions) {
-            let mergedItem = { ...item.local };
-            res.fieldResolutions.forEach(fr => {
-              if (fr.resolution === 'import') {
-                mergedItem[fr.fieldKey] = fr.importValue;
-              } else if (fr.resolution === 'local') {
-                mergedItem[fr.fieldKey] = fr.localValue;
-              }
-            });
-            mergedItem.lastModified = now;
-            mergedItem.timeline = [
-              ...(item.local.timeline || []),
-              {
-                status: `跨实体合并：字段级合并质控记录，${res.fieldResolutions.filter(fr => fr.resolution === 'import').length} 个字段采用${sourceDeviceName}值`,
-                at: today,
-                by: '跨实体合并'
-              }
-            ];
-            mergedQcRecords = mergedQcRecords.map(q => q.id === item.local.id ? mergedItem : q);
-          }
-        });
-        timelineEntries.push({
-          type: 'cross-entity-qc',
-          deviceId: sourceDeviceId,
-          title: '质控记录跨实体合并',
-          detail: `从${sourceDeviceName}合并 ${ceConflicts.qcRecords.length} 条质控记录冲突`
-        });
-      }
-    }
-
-    const mergedRecordIds = new Set(mergedRecords.map(r => r.id));
-
-    if (collabImportPreview.addedRecords && collabImportPreview.addedRecords.length > 0) {
-      const now = new Date().toISOString();
-      collabImportPreview.addedRecords.forEach(ar => {
-        const importedRecordId = uid();
-        recordIdMap.set(ar.id, importedRecordId);
-        mergedRecords.unshift({
-          ...ar,
-          id: importedRecordId,
-          lastModified: now,
-          version: 1,
-          timeline: [
-            ...(ar.timeline || []),
-            { status: `从${sourceDeviceName}导入新增记录`, at: today, by: '数据合并' }
-          ]
-        });
-        mergedRecordIds.add(importedRecordId);
-      });
-      timelineEntries.push({
-        type: 'import-added',
-        deviceId: sourceDeviceId,
-        title: '导入新增记录',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.addedRecords.length} 条新记录`
-      });
-    }
-
-    if (collabImportPreview.newPatients && collabImportPreview.newPatients.length > 0) {
-      const dpNames = new Set();
-      if (collabImportPreview.duplicatePatients) {
-        collabImportPreview.duplicatePatients.forEach(dp => dpNames.add(dp.import.name));
-      }
-      collabImportPreview.newPatients.forEach(np => {
-        if (dpNames.has(np.name)) {
-          mergedPatients.push({
-            ...np,
-            id: uid(),
-            name: `${np.name}（导入副本）`,
-            createdAt: new Date().toISOString(),
-          });
-          timelineEntries.push({
-            type: 'duplicate-patient-copy',
-            deviceId: sourceDeviceId,
-            title: '重复患者：生成副本',
-            detail: `患者"${np.name}"已存在，导入为副本"${np.name}（导入副本）"`
-          });
-        } else {
-          mergedPatients.push(np);
-        }
-      });
-    }
-
-    if (collabImportPreview.overwrittenPatients && collabImportPreview.overwrittenPatients.length > 0) {
-      const handledPatientIds = new Set();
-      if (collabImportPreview.crossEntityConflicts?.patients) {
-        collabImportPreview.crossEntityConflicts.patients.forEach(item => {
-          handledPatientIds.add(item.local.id);
-        });
-      }
-      const overwrittenPatientIds = new Set(
-        collabImportPreview.overwrittenPatients
-          .filter(p => !handledPatientIds.has(p.id))
-          .map(p => p.id)
-      );
-      mergedPatients = mergedPatients.map(p =>
-        overwrittenPatientIds.has(p.id)
-          ? collabImportPreview.overwrittenPatients.find(op => op.id === p.id) || p
-          : p
-      );
-    }
-
-    if (collabImportPreview.newPatients?.length > 0 || collabImportPreview.overwrittenPatients?.length > 0) {
-      timelineEntries.push({
-        type: 'import-patients',
-        deviceId: sourceDeviceId,
-        title: '导入患者档案',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newPatients?.length || 0} 位新增患者，${collabImportPreview.overwrittenPatients?.length || 0} 位覆盖`
-      });
-    }
-
-    const hasNewShades = collabImportPreview.newShades && collabImportPreview.newShades.length > 0;
-    const hasOverwrittenShades = collabImportPreview.existingImportShades && collabImportPreview.existingImportShades.length > 0;
-
-    if (hasNewShades || hasOverwrittenShades) {
-      const maxOrder = shadeLibrary.length > 0 ? Math.max(...shadeLibrary.map((s) => s.order)) : -1;
-      let mergedShades = [...shadeLibrary];
-      if (hasNewShades) {
-        const newShadesWithOrder = collabImportPreview.newShades.map((s, i) => ({
-          ...s,
-          order: maxOrder + i + 1
-        }));
-        mergedShades = [...mergedShades, ...newShadesWithOrder];
-      }
-      if (hasOverwrittenShades) {
-        const overwrittenShadeCodes = new Set(collabImportPreview.existingImportShades.map(s => s.code));
-        mergedShades = mergedShades.map(s => overwrittenShadeCodes.has(s.code) ? { ...(collabImportPreview.existingImportShades.find(is => is.code === s.code) || s), order: s.order } : s);
-      }
-      persistShadeLibrary(mergedShades);
-      timelineEntries.push({
-        type: 'import-shades',
-        deviceId: sourceDeviceId,
-        title: '导入色号库',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newShades?.length || 0} 个新增色号，${collabImportPreview.existingImportShades?.length || 0} 个覆盖色号`
-      });
-    }
-
-    if (collabImportPreview.newPhotoProcesses && collabImportPreview.newPhotoProcesses.length > 0) {
-      mergedPhotoProcesses = [...mergedPhotoProcesses, ...collabImportPreview.newPhotoProcesses.map(pp => {
-        const mappedRecordId = recordIdMap.get(pp.recordId);
-        return mappedRecordId ? { ...pp, recordId: mappedRecordId } : pp;
-      })];
-    }
-
-    const orphanCheck = detectOrphanPhotoProcesses(mergedPhotoProcesses, mergedRecords);
-    if (orphanCheck.length > 0) {
-      const orphanIds = new Set(orphanCheck.map(o => o.id));
-      mergedPhotoProcesses = mergedPhotoProcesses.filter(pp => !orphanIds.has(pp.id));
-      timelineEntries.push({
-        type: 'orphan-cleanup',
-        deviceId: sourceDeviceId,
-        title: '孤立拍照流程清理',
-        detail: `移除 ${orphanCheck.length} 个无关联比色记录的孤立拍照流程`
-      });
-    }
-
-    if (collabImportPreview.newPhotoProcesses?.length > 0 || collabImportPreview.overwrittenPhotoProcesses?.length > 0) {
-      persistPhotoProcesses(mergedPhotoProcesses);
-      timelineEntries.push({
-        type: 'import-photo-processes',
-        deviceId: sourceDeviceId,
-        title: '导入拍照流程',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newPhotoProcesses?.length || 0} 个新增拍照流程，${collabImportPreview.overwrittenPhotoProcesses?.length || 0} 个覆盖`
-      });
-    }
-
-    if (collabImportPreview.newDeliveryOrders && collabImportPreview.newDeliveryOrders.length > 0) {
-      mergedDeliveryOrders = [...mergedDeliveryOrders, ...collabImportPreview.newDeliveryOrders.map(d => {
-        if (!d.recordIds || !Array.isArray(d.recordIds)) return d;
-        const newRecordIds = d.recordIds.map(rid => recordIdMap.get(rid) || rid);
-        return { ...d, recordIds: newRecordIds };
-      })];
-    }
-
-    if (collabImportPreview.newDeliveryOrders?.length > 0 || collabImportPreview.overwrittenDeliveryOrders?.length > 0) {
-      persistDeliveryOrders(mergedDeliveryOrders);
-      timelineEntries.push({
-        type: 'import-delivery-orders',
-        deviceId: sourceDeviceId,
-        title: '导入交接单',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newDeliveryOrders?.length || 0} 份新增交接单，${collabImportPreview.overwrittenDeliveryOrders?.length || 0} 份覆盖`
-      });
-    }
-
-    const hasNewQCI = collabImportPreview.newQcCheckItems && collabImportPreview.newQcCheckItems.length > 0;
-    const hasOverwrittenQCI = collabImportPreview.overwrittenQcCheckItems && collabImportPreview.overwrittenQcCheckItems.length > 0;
-
-    if (hasNewQCI || hasOverwrittenQCI) {
-      let mergedQcCheckItems = [...qcCheckItems];
-      if (hasNewQCI) {
-        mergedQcCheckItems = [...mergedQcCheckItems, ...collabImportPreview.newQcCheckItems.map((ci, i) => ({
-          ...ci,
-          order: ci.order ?? (qcCheckItems.length + i + 1)
-        }))];
-      }
-      if (hasOverwrittenQCI) {
-        const overwrittenCIKeys = new Set(collabImportPreview.overwrittenQcCheckItems.map(c => c.key));
-        mergedQcCheckItems = mergedQcCheckItems.map(c => overwrittenCIKeys.has(c.key) ? { ...(collabImportPreview.overwrittenQcCheckItems.find(oci => oci.key === c.key) || c), order: c.order } : c);
-      }
-      persistQcCheckItems(mergedQcCheckItems);
-      timelineEntries.push({
-        type: 'import-qc-config',
-        deviceId: sourceDeviceId,
-        title: '导入质控配置',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcCheckItems?.length || 0} 项新增质控配置，${collabImportPreview.overwrittenQcCheckItems?.length || 0} 项覆盖`
-      });
-    }
-
-    if (collabImportPreview.newQcRecords && collabImportPreview.newQcRecords.length > 0) {
-      collabImportPreview.newQcRecords.forEach(nqr => {
-        const mappedRecordId = recordIdMap.has(nqr.recordId) ? recordIdMap.get(nqr.recordId) : nqr.recordId;
-        const mappedQc = mappedRecordId === nqr.recordId ? nqr : { ...nqr, recordId: mappedRecordId };
-        if (mappedQc.recordId && !mergedRecordIds.has(mappedQc.recordId)) return;
-        mergedQcRecords.push(mappedQc);
-      });
-    }
-
-    if (collabImportPreview.newQcRecords?.length > 0 || collabImportPreview.overwrittenQcRecords?.length > 0) {
-      persistQcRecords(mergedQcRecords);
-      timelineEntries.push({
-        type: 'import-qc-records',
-        deviceId: sourceDeviceId,
-        title: '导入质控记录',
-        detail: `从${sourceDeviceName}导入 ${collabImportPreview.newQcRecords?.length || 0} 条新增质控记录，${collabImportPreview.overwrittenQcRecords?.length || 0} 条覆盖，${collabImportPreview.skippedQcRecords?.length || 0} 条跳过`
-      });
-    }
-
-    if (collabImportPreview.newCollabTimeline && collabImportPreview.newCollabTimeline.length > 0) {
-      const mergedTimeline = [...collabImportPreview.newCollabTimeline, ...collabTimeline];
-      setCollabTimeline(mergedTimeline);
-      persistCollabTimeline(mergedTimeline);
-    }
-
-    const repairResult = repairIdReferences({
-      records: mergedRecords,
-      photoProcesses: mergedPhotoProcesses,
-      qcRecords: mergedQcRecords,
-      deliveryOrders: mergedDeliveryOrders,
-    }, recordIdMap);
-    mergedPhotoProcesses = repairResult.photoProcesses || mergedPhotoProcesses;
-    mergedQcRecords = repairResult.qcRecords || mergedQcRecords;
-    mergedDeliveryOrders = repairResult.deliveryOrders || mergedDeliveryOrders;
-
-    persistRecords(mergedRecords);
-    persistPatients(mergedPatients);
-    persistPhotoProcesses(mergedPhotoProcesses);
-    persistDeliveryOrders(mergedDeliveryOrders);
-    persistQcRecords(mergedQcRecords);
-
-    addCollabTimelineEntries(timelineEntries);
-
-    const totalCeConflicts = collabImportPreview.crossEntityConflicts
-      ? Object.values(collabImportPreview.crossEntityConflicts).reduce((sum, items) => sum + items.length, 0)
-      : 0;
-
-    const summaryMsg = [
-      `导入来源：${sourceDeviceName}`,
-      `新增记录：${collabImportPreview.addedRecords?.length || 0} 条`,
-      `冲突记录：${collabConflicts?.length || 0} 条`,
-      collabConflicts ? ` - 保留本地：${collabConflicts.filter(c => c.resolution === 'keepLocal').length} 条` : '',
-      collabConflicts ? ` - 采用导入：${collabConflicts.filter(c => c.resolution === 'useImport').length} 条` : '',
-      collabConflicts ? ` - 生成副本：${collabConflicts.filter(c => c.resolution === 'makeCopy').length} 条` : '',
-      collabConflicts ? ` - 字段级合并：${collabConflicts.filter(c => c.resolution === 'fieldMerge').length} 条` : '',
-      `跨实体冲突：${totalCeConflicts} 条`,
-      `患者档案：新增 ${collabImportPreview.newPatients?.length || 0} 位，覆盖 ${collabImportPreview.overwrittenPatients?.length || 0} 位`,
-      collabImportPreview.duplicatePatients?.length > 0 ? ` - 同名患者检测：${collabImportPreview.duplicatePatients.length} 位` : '',
-      `色号库：新增 ${collabImportPreview.newShades?.length || 0} 个`,
-      `拍照流程：新增 ${collabImportPreview.newPhotoProcesses?.length || 0} 个，覆盖 ${collabImportPreview.overwrittenPhotoProcesses?.length || 0} 个`,
-      orphanCheck?.length > 0 ? ` - 孤立流程清理：${orphanCheck.length} 个` : '',
-      `交接单：新增 ${collabImportPreview.newDeliveryOrders?.length || 0} 份，覆盖 ${collabImportPreview.overwrittenDeliveryOrders?.length || 0} 份`,
-      `质控配置：新增 ${collabImportPreview.newQcCheckItems?.length || 0} 项，覆盖 ${collabImportPreview.overwrittenQcCheckItems?.length || 0} 项`,
-      `质控记录：新增 ${collabImportPreview.newQcRecords?.length || 0} 条，覆盖 ${collabImportPreview.overwrittenQcRecords?.length || 0} 条，跳过 ${collabImportPreview.skippedQcRecords?.length || 0} 条`,
-      `关联ID修复：${recordIdMap.size} 条映射`,
-    ].filter(Boolean).join('\n');
-    alert(summaryMsg);
-
-    cancelCollabImport();
-  }
-
-  function cancelCollabImport() {
-    setCollabImportPreview(null);
-    setCollabImportFileName('');
-    setCollabConflicts(null);
-    setCrossEntityResolutions({});
-  }
-
-  function simulateAddRecord() {
-    const now = new Date().toISOString();
-    const simulatedRecord = {
-      id: uid(),
-      ...collabForm,
-      status: collabForm.status || appConfig.primaryStatus,
-      createdAt: now,
-      deviceId: collabSimulateDevice,
-      lastModified: now,
-      version: 1,
-      timeline: [{ status: collabForm.status || appConfig.primaryStatus, at: today, by: getDeviceInfo(collabSimulateDevice).name }]
-    };
-    const simulatedData = {
-      version: '2.0',
-      exportedAt: now,
-      sourceDeviceId: collabSimulateDevice,
-      sourceDeviceName: getDeviceInfo(collabSimulateDevice).name,
-      records: [simulatedRecord],
-      patients: [],
-      meta: {
-        recordCount: 1,
-        patientCount: 0
-      }
-    };
-
-    const analysis = analyzeCollabImport(simulatedData);
-    setCollabImportPreview(analysis);
-    if (analysis.conflicts.length > 0) {
-      setCollabConflicts(analysis.conflicts.map(c => ({ ...c, resolution: 'keepLocal' })));
-    } else {
-      setCollabConflicts(null);
-    }
-    setCollabImportFileName(`模拟-${getDeviceInfo(collabSimulateDevice).name}-1条记录.json`);
-
-    addCollabTimelineEntry({
-      type: 'simulate',
-      deviceId: collabSimulateDevice,
-      title: '模拟设备录入',
-      detail: `模拟${getDeviceInfo(collabSimulateDevice).name}录入：${collabForm.patient} ${collabForm.tooth} 牙位，色号${collabForm.shade}`
-    });
-  }
-
-  function exportData() {
-    const exportObj = {
-      version: '2.0',
-      exportedAt: new Date().toISOString(),
-      records: records,
-      patients: patients,
-      shadeLibrary: shadeLibrary,
-      photoProcesses: photoProcesses,
-      deliveryOrders: deliveryOrders,
-      qcCheckItems: qcCheckItems,
-      qcRecords: qcRecords,
-      collabTimeline: collabTimeline,
-      meta: {
-        recordCount: records.length,
-        patientCount: patients.length,
-        shadeCount: shadeLibrary.length,
-        photoProcessCount: photoProcesses.length,
-        deliveryOrderCount: deliveryOrders.length,
-        qcCheckItemCount: qcCheckItems.length,
-        qcRecordCount: qcRecords.length,
-        collabTimelineCount: collabTimeline.length,
-      }
-    };
-    const jsonStr = JSON.stringify(exportObj, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const dateStr = getLocalDateString().replace(/-/g, '');
-    a.download = `dental-full-backup-${dateStr}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  function analyzeImportData(importData) {
-    const existingRecordIds = new Set(records.map(r => r.id));
-    const existingPatientIds = new Set(patients.map(p => p.id));
-    const existingPatientNames = new Set(patients.map(p => p.name));
-    const existingShadeCodes = new Set(shadeLibrary.map(s => s.code));
-    const existingPhotoProcessIds = new Set(photoProcesses.map(p => p.id));
-    const existingDeliveryOrderIds = new Set(deliveryOrders.map(d => d.id));
-    const existingQcRecordIds = new Set(qcRecords.map(q => q.id));
-    const existingQcCheckItemKeys = new Set(qcCheckItems.map(c => c.key));
-    const existingCollabTimelineIds = new Set(collabTimeline.map(t => t.id));
-
-    const importRecords = importData.records || [];
-    const importPatients = importData.patients || [];
-    const importShadeLibrary = importData.shadeLibrary || [];
-    const importPhotoProcesses = importData.photoProcesses || [];
-    const importDeliveryOrders = importData.deliveryOrders || [];
-    const importQcCheckItems = importData.qcCheckItems || [];
-    const importQcRecords = importData.qcRecords || [];
-    const importCollabTimeline = importData.collabTimeline || [];
-
-    const duplicateRecordIds = importRecords.filter(r => existingRecordIds.has(r.id)).map(r => r.id);
-    const newRecords = importRecords.filter(r => !existingRecordIds.has(r.id));
-    const overwrittenRecords = importRecords.filter(r => existingRecordIds.has(r.id));
-
-    const duplicatePatientIds = importPatients.filter(p => existingPatientIds.has(p.id)).map(p => p.id);
-    const duplicatePatientNames = importPatients.filter(p => existingPatientNames.has(p.name)).map(p => p.name);
-    const newPatients = importPatients.filter(p => !existingPatientIds.has(p.id));
-    const overwrittenPatients = importPatients.filter(p => existingPatientIds.has(p.id));
-
-    const newShades = importShadeLibrary.filter(s => !existingShadeCodes.has(s.code));
-    const overwrittenShades = importShadeLibrary.filter(s => existingShadeCodes.has(s.code));
-
-    const newPhotoProcesses = importPhotoProcesses.filter(p => !existingPhotoProcessIds.has(p.id));
-    const overwrittenPhotoProcesses = importPhotoProcesses.filter(p => existingPhotoProcessIds.has(p.id));
-
-    const newDeliveryOrders = importDeliveryOrders.filter(d => !existingDeliveryOrderIds.has(d.id));
-    const overwrittenDeliveryOrders = importDeliveryOrders.filter(d => existingDeliveryOrderIds.has(d.id));
-
-    const newQcCheckItems = importQcCheckItems.filter(c => !existingQcCheckItemKeys.has(c.key));
-    const overwrittenQcCheckItems = importQcCheckItems.filter(c => existingQcCheckItemKeys.has(c.key));
-
-    const newQcRecords = importQcRecords.filter(q => !existingQcRecordIds.has(q.id));
-    const overwrittenQcRecords = importQcRecords.filter(q => existingQcRecordIds.has(q.id));
-    const skippedQcRecords = importQcRecords.filter(q => {
-      if (!q.recordId) return false;
-      const localRecordExists = existingRecordIds.has(q.recordId) || newRecords.some(r => r.id === q.recordId);
-      return !localRecordExists;
-    });
-
-    const newCollabTimeline = importCollabTimeline.filter(t => !existingCollabTimelineIds.has(t.id));
-    const skippedCollabTimeline = importCollabTimeline.filter(t => existingCollabTimelineIds.has(t.id));
-
-    return {
-      totalRecords: importRecords.length,
-      totalPatients: importPatients.length,
-      totalShades: importShadeLibrary.length,
-      totalPhotoProcesses: importPhotoProcesses.length,
-      totalDeliveryOrders: importDeliveryOrders.length,
-      totalQcCheckItems: importQcCheckItems.length,
-      totalQcRecords: importQcRecords.length,
-      totalCollabTimeline: importCollabTimeline.length,
-      newRecords: newRecords.length,
-      overwrittenRecords: overwrittenRecords.length,
-      skippedRecords: 0,
-      duplicateRecordIds,
-      newPatients: newPatients.length,
-      overwrittenPatients: overwrittenPatients.length,
-      skippedPatients: 0,
-      duplicatePatientIds,
-      duplicatePatientNames,
-      newShades: newShades.length,
-      overwrittenShades: overwrittenShades.length,
-      skippedShades: 0,
-      newPhotoProcesses: newPhotoProcesses.length,
-      overwrittenPhotoProcesses: overwrittenPhotoProcesses.length,
-      skippedPhotoProcesses: 0,
-      newDeliveryOrders: newDeliveryOrders.length,
-      overwrittenDeliveryOrders: overwrittenDeliveryOrders.length,
-      skippedDeliveryOrders: 0,
-      newQcCheckItems: newQcCheckItems.length,
-      overwrittenQcCheckItems: overwrittenQcCheckItems.length,
-      skippedQcCheckItems: 0,
-      newQcRecords: newQcRecords.length,
-      overwrittenQcRecords: overwrittenQcRecords.length,
-      skippedQcRecords: skippedQcRecords.length,
-      newCollabTimeline: newCollabTimeline.length,
-      overwrittenCollabTimeline: 0,
-      skippedCollabTimeline: skippedCollabTimeline.length,
-      importData
-    };
-  }
-
-  function handleImportFile(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setImportFileName(file.name);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result;
-        if (typeof content !== 'string') throw new Error('文件格式错误');
-        const data = JSON.parse(content);
-        const hasData = data.records || data.patients || data.shadeLibrary
-          || data.photoProcesses || data.deliveryOrders || data.qcCheckItems
-          || data.qcRecords || data.collabTimeline;
-        if (!hasData) {
-          throw new Error('未找到有效的备份数据');
-        }
-        const analysis = analyzeImportData(data);
-        setImportPreview(analysis);
-      } catch (err) {
-        alert('导入失败：' + (err.message || '文件格式错误'));
-        setImportPreview(null);
-        setImportFileName('');
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  }
-
-  function confirmImport() {
-    if (!importPreview) return;
-    const { importData } = importPreview;
-
-    const existingRecordIds = new Set(records.map(r => r.id));
-    const existingPatientIds = new Set(patients.map(p => p.id));
-
-    const importRecords = importData.records || [];
-    const importPatients = importData.patients || [];
-    const importShadeLibrary = importData.shadeLibrary || [];
-    const importPhotoProcesses = importData.photoProcesses || [];
-    const importDeliveryOrders = importData.deliveryOrders || [];
-    const importQcCheckItems = importData.qcCheckItems || [];
-    const importQcRecords = importData.qcRecords || [];
-    const importCollabTimeline = importData.collabTimeline || [];
-
-    const mergedRecordIds = new Set();
-    let mergedRecords = [...records];
-    importRecords.forEach(ir => {
-      if (existingRecordIds.has(ir.id)) {
-        mergedRecords = mergedRecords.map(r => r.id === ir.id ? ir : r);
-      } else {
-        mergedRecords.push(ir);
-      }
-      mergedRecordIds.add(ir.id);
-    });
-    records.forEach(r => mergedRecordIds.add(r.id));
-
-    let mergedPatients = [...patients];
-    importPatients.forEach(ip => {
-      if (existingPatientIds.has(ip.id)) {
-        mergedPatients = mergedPatients.map(p => p.id === ip.id ? ip : p);
-      } else {
-        mergedPatients.push(ip);
-      }
-    });
-
-    if (importShadeLibrary.length > 0) {
-      const existingShadeCodes = new Set(shadeLibrary.map(s => s.code));
-      let mergedShades = [...shadeLibrary];
-      importShadeLibrary.forEach(is => {
-        if (existingShadeCodes.has(is.code)) {
-          mergedShades = mergedShades.map(s => s.code === is.code ? { ...is, order: s.order } : s);
-        } else {
-          const maxOrder = mergedShades.length > 0 ? Math.max(...mergedShades.map(s => s.order)) : -1;
-          mergedShades.push({ ...is, order: maxOrder + 1 });
-        }
-      });
-      persistShadeLibrary(mergedShades);
-    }
-
-    if (importPhotoProcesses.length > 0) {
-      const existingPhotoProcessIds = new Set(photoProcesses.map(p => p.id));
-      let mergedPhotoProcesses = [...photoProcesses];
-      importPhotoProcesses.forEach(ipp => {
-        if (existingPhotoProcessIds.has(ipp.id)) {
-          mergedPhotoProcesses = mergedPhotoProcesses.map(p => p.id === ipp.id ? ipp : p);
-        } else {
-          mergedPhotoProcesses.push(ipp);
-        }
-      });
-      persistPhotoProcesses(mergedPhotoProcesses);
-    }
-
-    if (importDeliveryOrders.length > 0) {
-      const existingDeliveryOrderIds = new Set(deliveryOrders.map(d => d.id));
-      let mergedDeliveryOrders = [...deliveryOrders];
-      importDeliveryOrders.forEach(ido => {
-        if (existingDeliveryOrderIds.has(ido.id)) {
-          mergedDeliveryOrders = mergedDeliveryOrders.map(d => d.id === ido.id ? ido : d);
-        } else {
-          mergedDeliveryOrders.push(ido);
-        }
-      });
-      persistDeliveryOrders(mergedDeliveryOrders);
-    }
-
-    if (importQcCheckItems.length > 0) {
-      const existingQcCheckItemKeys = new Set(qcCheckItems.map(c => c.key));
-      let mergedQcCheckItems = [...qcCheckItems];
-      importQcCheckItems.forEach(ici => {
-        if (existingQcCheckItemKeys.has(ici.key)) {
-          mergedQcCheckItems = mergedQcCheckItems.map(c => c.key === ici.key ? { ...c, ...ici, order: c.order } : c);
-        } else {
-          const maxOrder = mergedQcCheckItems.length > 0 ? Math.max(...mergedQcCheckItems.map(c => c.order || 0)) : 0;
-          mergedQcCheckItems.push({ ...ici, order: ici.order ?? (maxOrder + 1) });
-        }
-      });
-      persistQcCheckItems(mergedQcCheckItems);
-    }
-
-    if (importQcRecords.length > 0) {
-      const existingQcRecordIds = new Set(qcRecords.map(q => q.id));
-      let mergedQcRecords = [...qcRecords];
-      importQcRecords.forEach(iqr => {
-        if (!iqr.recordId || !mergedRecordIds.has(iqr.recordId)) return;
-        if (existingQcRecordIds.has(iqr.id)) {
-          mergedQcRecords = mergedQcRecords.map(q => q.id === iqr.id ? iqr : q);
-        } else {
-          mergedQcRecords.push(iqr);
-        }
-      });
-      persistQcRecords(mergedQcRecords);
-    }
-
-    if (importCollabTimeline.length > 0) {
-      const existingCollabTimelineIds = new Set(collabTimeline.map(t => t.id));
-      const newTimelineEntries = importCollabTimeline.filter(t => !existingCollabTimelineIds.has(t.id));
-      if (newTimelineEntries.length > 0) {
-        const mergedTimeline = [...newTimelineEntries, ...collabTimeline];
-        setCollabTimeline(mergedTimeline);
-        persistCollabTimeline(mergedTimeline);
-      }
-    }
-
-    persistRecords(mergedRecords);
-    persistPatients(mergedPatients);
-
-    const summaryLines = [
-      `牙色记录：新增 ${importPreview.newRecords} 条，覆盖 ${importPreview.overwrittenRecords} 条`,
-      `患者档案：新增 ${importPreview.newPatients} 人，覆盖 ${importPreview.overwrittenPatients} 人`,
-      `色号库：新增 ${importPreview.newShades} 个，覆盖 ${importPreview.overwrittenShades} 个`,
-      `拍照流程：新增 ${importPreview.newPhotoProcesses} 个，覆盖 ${importPreview.overwrittenPhotoProcesses} 个`,
-      `交接单：新增 ${importPreview.newDeliveryOrders} 份，覆盖 ${importPreview.overwrittenDeliveryOrders} 份`,
-      `质控配置：新增 ${importPreview.newQcCheckItems} 项，覆盖 ${importPreview.overwrittenQcCheckItems} 项`,
-      `质控记录：新增 ${importPreview.newQcRecords} 条，覆盖 ${importPreview.overwrittenQcRecords} 条，跳过 ${importPreview.skippedQcRecords} 条（关联记录缺失）`,
-      `协作时间线：新增 ${importPreview.newCollabTimeline} 条，跳过 ${importPreview.skippedCollabTimeline} 条（ID 重复）`,
-    ].filter(l => !l.includes('新增 0') || l.includes('覆盖') || l.includes('跳过'));
-    alert(`导入成功！\n${summaryLines.join('\n')}`);
-    cancelImport();
-  }
-
-  function cancelImport() {
-    setImportPreview(null);
-    setImportFileName('');
+    localStorage.setItem(appConfig.deliveryOrderStorage, JSON.stringify(next));
   }
 
   function getPhotoProcessByRecordId(recordId) {
@@ -2252,25 +540,20 @@ function App() {
     }
   }
 
-  function updatePhotoProcessStep(stepKey, fieldOrFields, value) {
-    setEditingPhotoProcess((prev) => {
-      if (!prev) return prev;
-      const fieldsPatch =
-        typeof fieldOrFields === 'string'
-          ? { [fieldOrFields]: value }
-          : fieldOrFields;
-      return {
-        ...prev,
-        steps: {
-          ...prev.steps,
-          [stepKey]: {
-            ...prev.steps[stepKey],
-            ...fieldsPatch
-          }
-        },
-        updatedAt: new Date().toISOString()
-      };
-    });
+  function updatePhotoProcessStep(stepKey, field, value) {
+    if (!editingPhotoProcess) return;
+    const next = {
+      ...editingPhotoProcess,
+      steps: {
+        ...editingPhotoProcess.steps,
+        [stepKey]: {
+          ...editingPhotoProcess.steps[stepKey],
+          [field]: value
+        }
+      },
+      updatedAt: new Date().toISOString()
+    };
+    setEditingPhotoProcess(next);
   }
 
   function goToStep(stepIndex) {
@@ -2290,162 +573,49 @@ function App() {
     setEditingPhotoProcess({ ...editingPhotoProcess, currentStep: prevIndex });
   }
 
-  async function handleImageUpload(stepKey, event) {
+  function handleImageUpload(stepKey, event) {
     const file = event.target.files?.[0];
-    if (!file) return;
-
-    setCompressMessage({ type: 'loading', text: '正在处理图片...' });
-
-    try {
-      const result = await compressImage(file, 500, 0.75, 1920);
-      updatePhotoProcessStep(stepKey, {
-        imageUrl: result.dataUrl,
-        fileSize: result.size
-      });
-
-      if (result.compressed) {
-        const savedKB = Math.round((result.originalSize - result.size) / 1024);
-        const savedPercent = Math.round((savedKB * 1024 / result.originalSize) * 100);
-        setCompressMessage({
-          type: 'success',
-          text: `图片已压缩：${formatFileSize(result.originalSize)} → ${formatFileSize(result.size)}（节省 ${savedPercent}%）`
-        });
-      } else {
-        setCompressMessage({
-          type: 'info',
-          text: `图片大小正常：${formatFileSize(result.size)}`
-        });
-      }
-
-      setTimeout(() => setCompressMessage(null), 4000);
-    } catch (err) {
-      console.error('图片处理失败:', err);
-      setCompressMessage({ type: 'error', text: '图片处理失败，请重试' });
-      setTimeout(() => setCompressMessage(null), 4000);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        updatePhotoProcessStep(stepKey, 'imageUrl', e.target?.result || '');
+      };
+      reader.readAsDataURL(file);
     }
   }
 
   function removeImage(stepKey) {
-    updatePhotoProcessStep(stepKey, {
-      imageUrl: '',
-      fileSize: 0
-    });
+    updatePhotoProcessStep(stepKey, 'imageUrl', '');
   }
 
   function getShadeInfo(code) {
     return shadeLibrary.find((s) => s.code === code);
   }
 
-  function getShadeOptions() {
-    return [...shadeLibrary].sort((a, b) => a.order - b.order).map((s) => s.code);
-  }
-
-  function getShadeSwatchClass(code) {
-    if (!code) return 'shade-default';
-    const first = code.charAt(0);
-    return first.match(/[a-d]/i) ? 'shade-' + first.toLowerCase() : 'shade-default';
-  }
-
-  function startAddShade() {
-    const maxOrder = shadeLibrary.length > 0 ? Math.max(...shadeLibrary.map((s) => s.order)) : -1;
-    setEditingShade({
-      code: '',
-      description: '',
-      scenario: '',
-      notes: '',
-      isBuiltIn: false,
-      order: maxOrder + 1
-    });
-    setIsAddingShade(true);
-  }
-
   function editShade(shade) {
     setEditingShade({ ...shade });
-    setIsAddingShade(false);
   }
 
   function saveShade() {
     if (!editingShade || !editingShade.code) return;
-    const code = editingShade.code.trim();
-    if (!code) return;
-    if (isAddingShade) {
-      if (shadeLibrary.some((s) => s.code === code)) {
-        alert('该色号已存在，请使用其他色号名称。');
-        return;
-      }
-      const maxOrder = shadeLibrary.length > 0 ? Math.max(...shadeLibrary.map((s) => s.order)) : -1;
-      const newShade = { ...editingShade, code, order: maxOrder + 1, isBuiltIn: false };
-      persistShadeLibrary([...shadeLibrary, newShade]);
-    } else {
-      const next = shadeLibrary.map((s) =>
-        s.code === editingShade.code ? editingShade : s
-      );
-      persistShadeLibrary(next);
-    }
+    const next = shadeLibrary.map((s) =>
+      s.code === editingShade.code ? editingShade : s
+    );
+    persistShadeLibrary(next);
     setEditingShade(null);
-    setIsAddingShade(false);
   }
 
   function cancelEditShade() {
     setEditingShade(null);
-    setIsAddingShade(false);
-  }
-
-  function deleteShade(code) {
-    const usedByRecords = records.filter((r) => r.shade === code);
-    if (usedByRecords.length > 0) {
-      setDeleteShadeConfirm({ code, usedByCount: usedByRecords.length });
-    } else {
-      confirmDeleteShade(code);
-    }
-  }
-
-  function confirmDeleteShade(code) {
-    const next = shadeLibrary.filter((s) => s.code !== code);
-    const renumbered = next
-      .sort((a, b) => a.order - b.order)
-      .map((s, i) => ({ ...s, order: i }));
-    persistShadeLibrary(renumbered);
-    setDeleteShadeConfirm(null);
-    if (editingShade && editingShade.code === code) {
-      setEditingShade(null);
-      setIsAddingShade(false);
-    }
-  }
-
-  function cancelDeleteShade() {
-    setDeleteShadeConfirm(null);
-  }
-
-  function moveShadeUp(code) {
-    const sorted = [...shadeLibrary].sort((a, b) => a.order - b.order);
-    const idx = sorted.findIndex((s) => s.code === code);
-    if (idx <= 0) return;
-    [sorted[idx - 1], sorted[idx]] = [sorted[idx], sorted[idx - 1]];
-    const renumbered = sorted.map((s, i) => ({ ...s, order: i }));
-    persistShadeLibrary(renumbered);
-  }
-
-  function moveShadeDown(code) {
-    const sorted = [...shadeLibrary].sort((a, b) => a.order - b.order);
-    const idx = sorted.findIndex((s) => s.code === code);
-    if (idx < 0 || idx >= sorted.length - 1) return;
-    [sorted[idx], sorted[idx + 1]] = [sorted[idx + 1], sorted[idx]];
-    const renumbered = sorted.map((s, i) => ({ ...s, order: i }));
-    persistShadeLibrary(renumbered);
   }
 
   function addRecord(event) {
     event.preventDefault();
-    const now = new Date().toISOString();
     const nextRecord = {
       id: uid(),
       ...form,
       status: form.status || appConfig.primaryStatus,
-      createdAt: now,
-      deviceId: currentDeviceId,
-      lastModified: now,
-      version: 1,
+      createdAt: new Date().toISOString(),
       timeline: [{ status: form.status || appConfig.primaryStatus, at: today, by: '录入' }]
     };
 
@@ -2473,90 +643,15 @@ function App() {
     setSelected(nextRecord);
   }
 
-  function getStatusOrder(status) {
-    const idx = appConfig.statuses.indexOf(status);
-    return idx === -1 ? 999 : idx;
-  }
-
-  function getTransitionInfo(record, targetStatus) {
-    if (!record || !targetStatus) return { disabled: true, title: '—', showBlockedIcon: false, showOptionalIcon: false };
-    const currentStatus = record.status;
-    if (currentStatus === targetStatus) {
-      return { disabled: true, title: '当前状态', showBlockedIcon: false, showOptionalIcon: false };
-    }
-    const currentOrder = getStatusOrder(currentStatus);
-    const targetOrder = getStatusOrder(targetStatus);
-    const isForward = targetOrder > currentOrder;
-    if (!isForward) {
-      return { disabled: false, title: `回退至「${targetStatus}」`, showBlockedIcon: false, showOptionalIcon: false };
-    }
-    const criticalMissing = getCriticalMissingQcItems(record.id, currentStatus);
-    const allMissing = getMissingQcItems(record.id, currentStatus);
-    if (criticalMissing.length > 0) {
-      return {
-        disabled: true,
-        title: `当前阶段关键步骤未完成: ${criticalMissing.map((m) => m.label).join('、')}`,
-        showBlockedIcon: true,
-        showOptionalIcon: false
-      };
-    }
-    if (allMissing.length > 0) {
-      return {
-        disabled: false,
-        title: `非关键步骤未完成（可确认跳过）: ${allMissing.map((m) => m.label).join('、')}`,
-        showBlockedIcon: false,
-        showOptionalIcon: true
-      };
-    }
-    return { disabled: false, title: `推进至「${targetStatus}」`, showBlockedIcon: false, showOptionalIcon: false };
-  }
-
   function updateStatus(id, status) {
-    const record = records.find((r) => r.id === id);
-    if (!record) return;
-    const currentStatus = record.status;
-    const currentOrder = getStatusOrder(currentStatus);
-    const targetOrder = getStatusOrder(status);
-    const isForward = targetOrder > currentOrder;
-
-    let criticalMissing = [];
-    let allMissing = [];
-
-    if (isForward) {
-      criticalMissing = getCriticalMissingQcItems(id, currentStatus);
-      allMissing = getMissingQcItems(id, currentStatus);
-    }
-
-    if (criticalMissing.length > 0) {
-      const labels = criticalMissing.map((m) => m.label).join('、');
-      alert(`无法从「${currentStatus}」推进至「${status}」：当前阶段以下关键检查项尚未完成\n\n${labels}\n\n缺少关键步骤不能推进，请先完成这些检查项。`);
-      return;
-    }
-    if (allMissing.length > 0 && criticalMissing.length === 0) {
-      const labels = allMissing.map((m) => m.label).join('、');
-      const confirmed = window.confirm(`从「${currentStatus}」推进至「${status}」时，当前阶段以下非关键检查项尚未完成：\n\n${labels}\n\n是否仍然继续？（跳过的步骤可稍后补做，但请知晓未做的是当前阶段内的工作内容）`);
-      if (!confirmed) return;
-    }
     const next = records.map((item) => item.id === id ? {
       ...item,
       status,
-      lastModified: new Date().toISOString(),
-      version: (item.version || 1) + 1,
       timeline: [...(item.timeline || []), { status, at: today, by: '操作员' }]
     } : item);
     persistRecords(next);
-    const updatedRecord = next.find((item) => item.id === id);
-    if (selected?.id === id) setSelected(updatedRecord);
-    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(updatedRecord);
-    if (selectedQcRecord?.recordId === id || selectedQcRecord?.record?.id === id) {
-      const qc = getQcByRecordId(id) || ensureQcForRecord(id);
-      setSelectedQcRecord({
-        record: updatedRecord,
-        qc,
-        progress: getQcProgressByQc(qc, status),
-        missing: getMissingQcItemsByQc(qc, status)
-      });
-    }
+    if (selected?.id === id) setSelected(next.find((item) => item.id === id));
+    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
   }
 
   function updateFollowUpDate(id, newDate) {
@@ -2566,8 +661,6 @@ function App() {
     const next = records.map((item) => item.id === id ? {
       ...item,
       followUp: newDate,
-      lastModified: new Date().toISOString(),
-      version: (item.version || 1) + 1,
       timeline: [...(item.timeline || []), { status: `复诊日期调整: ${oldDate} → ${newDate}`, at: today, by: '排期调整' }]
     } : item);
     persistRecords(next);
@@ -2575,159 +668,33 @@ function App() {
     if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
   }
 
-  function updateFollowUpRoom(id, newRoom) {
-    const record = records.find((r) => r.id === id);
-    if (!record) return;
-    const oldRoom = record.followUpRoom || '未安排';
-    const next = records.map((item) => item.id === id ? {
-      ...item,
-      followUpRoom: newRoom,
-      lastModified: new Date().toISOString(),
-      version: (item.version || 1) + 1,
-      timeline: [...(item.timeline || []), { status: `复诊诊室调整: ${oldRoom} → ${newRoom || '未安排'}`, at: today, by: '排期调整' }]
-    } : item);
-    persistRecords(next);
-    if (selected?.id === id) setSelected(next.find((item) => item.id === id));
-    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
-  }
-
-  function updateFollowUpDateAndRoom(id, newDate, newRoom) {
-    const record = records.find((r) => r.id === id);
-    if (!record) return;
-    const oldDate = record.followUp || '未排期';
-    const oldRoom = record.followUpRoom || '未安排';
-    const next = records.map((item) => item.id === id ? {
-      ...item,
-      followUp: newDate,
-      followUpRoom: newRoom,
-      lastModified: new Date().toISOString(),
-      version: (item.version || 1) + 1,
-      timeline: [...(item.timeline || []), { status: `复诊调整: 日期 ${oldDate} → ${newDate}，诊室 ${oldRoom} → ${newRoom || '未安排'}`, at: today, by: '排期调整' }]
-    } : item);
-    persistRecords(next);
-    if (selected?.id === id) setSelected(next.find((item) => item.id === id));
-    if (boardSelectedRecord?.id === id) setBoardSelectedRecord(next.find((item) => item.id === id));
-  }
-
-  function startEditRecord(record) {
-    setEditingRecordId(record.id);
-    setEditRecordForm({
-      patient: record.patient || '',
-      tooth: record.tooth || '',
-      shade: record.shade || '',
-      photoNote: record.photoNote || '',
-      followUp: record.followUp || '',
-      followUpRoom: record.followUpRoom || ''
-    });
-  }
-
-  function cancelEditRecord() {
-    setEditingRecordId(null);
-    setEditRecordForm({
-      patient: '',
-      tooth: '',
-      shade: '',
-      photoNote: '',
-      followUp: '',
-      followUpRoom: ''
-    });
-  }
-
-  function saveRecordEdit() {
-    const record = records.find((r) => r.id === editingRecordId);
-    if (!record) return;
-
-    const changes = [];
-    if (editRecordForm.patient !== record.patient) {
-      changes.push(`患者姓名: ${record.patient || '无'} → ${editRecordForm.patient || '无'}`);
-    }
-    if (editRecordForm.tooth !== record.tooth) {
-      changes.push(`牙位: ${record.tooth || '无'} → ${editRecordForm.tooth || '无'}`);
-    }
-    if (editRecordForm.shade !== record.shade) {
-      changes.push(`色号: ${record.shade || '无'} → ${editRecordForm.shade || '无'}`);
-    }
-    if (editRecordForm.photoNote !== record.photoNote) {
-      changes.push(`拍照备注已更新`);
-    }
-    if (editRecordForm.followUp !== record.followUp) {
-      changes.push(`复诊日期: ${record.followUp || '未排期'} → ${editRecordForm.followUp || '未排期'}`);
-    }
-    if (editRecordForm.followUpRoom !== (record.followUpRoom || '')) {
-      changes.push(`复诊诊室: ${record.followUpRoom || '未安排'} → ${editRecordForm.followUpRoom || '未安排'}`);
-    }
-
-    if (changes.length === 0) {
-      cancelEditRecord();
-      return;
-    }
-
-    const timelineEntry = `编辑记录: ${changes.join('；')}`;
-    const next = records.map((item) => item.id === editingRecordId ? {
-      ...item,
-      patient: editRecordForm.patient,
-      tooth: editRecordForm.tooth,
-      shade: editRecordForm.shade,
-      photoNote: editRecordForm.photoNote,
-      followUp: editRecordForm.followUp,
-      followUpRoom: editRecordForm.followUpRoom || null,
-      lastModified: new Date().toISOString(),
-      version: (item.version || 1) + 1,
-      timeline: [...(item.timeline || []), { status: timelineEntry, at: today, by: '编辑修改' }]
-    } : item);
-    persistRecords(next);
-    const updatedRecord = next.find((item) => item.id === editingRecordId);
-    if (selected?.id === editingRecordId) setSelected(updatedRecord);
-    if (boardSelectedRecord?.id === editingRecordId) setBoardSelectedRecord(updatedRecord);
-    if (selectedQcRecord?.recordId === editingRecordId || selectedQcRecord?.record?.id === editingRecordId) {
-      const qc = getQcByRecordId(editingRecordId) || ensureQcForRecord(editingRecordId);
-      setSelectedQcRecord({
-        record: updatedRecord,
-        qc,
-        progress: getQcProgressByQc(qc, updatedRecord.status),
-        missing: getMissingQcItemsByQc(qc, updatedRecord.status)
-      });
-    }
-    cancelEditRecord();
-  }
-
   function handleDragStart(e, recordId) {
     setDraggedRecordId(recordId);
     e.dataTransfer.effectAllowed = 'move';
   }
 
-  function handleDragOver(e, date, room = null) {
+  function handleDragOver(e, date) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverDate(date);
-    if (room !== null) {
-      setDragOverRoom(room);
-    }
   }
 
   function handleDragLeave() {
     setDragOverDate(null);
-    setDragOverRoom(null);
   }
 
-  function handleDrop(e, date, room = null) {
+  function handleDrop(e, date) {
     e.preventDefault();
     if (draggedRecordId) {
-      if (room !== null) {
-        updateFollowUpDateAndRoom(draggedRecordId, date, room);
-      } else {
-        updateFollowUpDate(draggedRecordId, date);
-      }
+      updateFollowUpDate(draggedRecordId, date);
     }
     setDraggedRecordId(null);
     setDragOverDate(null);
-    setDragOverRoom(null);
   }
 
   function handleDragEnd() {
     setDraggedRecordId(null);
     setDragOverDate(null);
-    setDragOverRoom(null);
   }
 
   function removeRecord(id) {
@@ -2737,188 +704,14 @@ function App() {
     if (nextPhotoProcesses.length !== photoProcesses.length) {
       persistPhotoProcesses(nextPhotoProcesses);
     }
-    const nextQcRecords = qcRecords.filter((qc) => qc.recordId !== id);
-    if (nextQcRecords.length !== qcRecords.length) {
-      persistQcRecords(nextQcRecords);
-    }
     if (selected?.id === id) setSelected(null);
     if (selectedPhotoProcess?.recordId === id) setSelectedPhotoProcess(null);
-    if (selectedQcRecord?.recordId === id) setSelectedQcRecord(null);
   }
 
   function duplicateRecord(item) {
-    const now = new Date().toISOString();
-    const copied = {
-      ...item,
-      id: uid(),
-      status: appConfig.primaryStatus,
-      deviceId: currentDeviceId,
-      lastModified: now,
-      version: 1,
-      timeline: [{ status: appConfig.primaryStatus, at: today, by: '复制' }]
-    };
+    const copied = { ...item, id: uid(), status: appConfig.primaryStatus, timeline: [{ status: appConfig.primaryStatus, at: today, by: '复制' }] };
     persistRecords([copied, ...records]);
     setSelected(copied);
-  }
-
-  function getQcByRecordId(recordId) {
-    return qcRecords.find((qc) => qc.recordId === recordId) || null;
-  }
-
-  function ensureQcForRecord(recordId) {
-    const existing = getQcByRecordId(recordId);
-    if (existing) return existing;
-    const newQc = {
-      id: uid(),
-      recordId,
-      items: normalizeQcItems(null, qcCheckItems),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    persistQcRecords([newQc, ...qcRecords]);
-    return newQc;
-  }
-
-  function markQcItemsAsSeen(recordId) {
-    let qc = getQcByRecordId(recordId);
-    if (!qc) return null;
-    const hasNewItems = Object.values(qc.items).some((item) => item.isNew);
-    if (!hasNewItems) return qc;
-    const updatedItems = {};
-    Object.keys(qc.items).forEach((key) => {
-      updatedItems[key] = { ...qc.items[key], isNew: false };
-    });
-    const updated = { ...qc, items: updatedItems, updatedAt: new Date().toISOString() };
-    const next = qcRecords.map((q) => (q.id === updated.id ? updated : q));
-    persistQcRecords(next);
-    return updated;
-  }
-
-  function getMissingQcItemsByQc(qc, targetStatus) {
-    return qcCheckItems
-      .filter((ci) => ci.requiredFor.includes(targetStatus))
-      .filter((ci) => !qc?.items[ci.key]?.checked);
-  }
-
-  function getCriticalMissingQcItemsByQc(qc, targetStatus) {
-    return qcCheckItems
-      .filter((ci) => ci.requiredFor.includes(targetStatus) && ci.critical)
-      .filter((ci) => !qc?.items[ci.key]?.checked);
-  }
-
-  function getQcProgressByQc(qc, status) {
-    const required = qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
-    if (required.length === 0) return 100;
-    const done = required.filter((ci) => qc?.items[ci.key]?.checked).length;
-    return Math.round((done / required.length) * 100);
-  }
-
-  function refreshSelectedQcRecord(recordId, qcOverride) {
-    if (!selectedQcRecord) return;
-    const matchByRecord = selectedQcRecord.record?.id === recordId || selectedQcRecord.recordId === recordId;
-    const matchByQc = selectedQcRecord.qc?.id && qcOverride && selectedQcRecord.qc.id === qcOverride.id;
-    if (matchByRecord || matchByQc) {
-      const record = records.find((r) => r.id === recordId) || selectedQcRecord.record;
-      const qc = qcOverride || getQcByRecordId(recordId) || selectedQcRecord.qc;
-      if (!record || !qc) return;
-      setSelectedQcRecord({
-        record,
-        qc,
-        progress: getQcProgressByQc(qc, record.status),
-        missing: getMissingQcItemsByQc(qc, record.status)
-      });
-    }
-  }
-
-  function toggleQcItem(recordId, itemKey, remark) {
-    let qc = getQcByRecordId(recordId);
-    if (!qc) {
-      qc = ensureQcForRecord(recordId);
-    }
-    const isChecked = !qc.items[itemKey]?.checked;
-    const updated = {
-      ...qc,
-      items: {
-        ...qc.items,
-        [itemKey]: {
-          checked: isChecked,
-          remark: remark !== undefined ? remark : (qc.items[itemKey]?.remark || ''),
-          checkedAt: isChecked ? new Date().toISOString() : null
-        }
-      },
-      updatedAt: new Date().toISOString()
-    };
-    const next = qcRecords.map((q) => (q.id === updated.id ? updated : q));
-    if (!qcRecords.find((q) => q.id === updated.id)) {
-      next.unshift(updated);
-    }
-    persistQcRecords(next);
-    refreshSelectedQcRecord(recordId, updated);
-    return updated;
-  }
-
-  function updateQcRemark(recordId, itemKey, remark) {
-    let qc = getQcByRecordId(recordId);
-    if (!qc) {
-      qc = ensureQcForRecord(recordId);
-    }
-    const updated = {
-      ...qc,
-      items: {
-        ...qc.items,
-        [itemKey]: {
-          ...qc.items[itemKey],
-          remark
-        }
-      },
-      updatedAt: new Date().toISOString()
-    };
-    const next = qcRecords.map((q) => (q.id === updated.id ? updated : q));
-    if (!qcRecords.find((q) => q.id === updated.id)) {
-      next.unshift(updated);
-    }
-    persistQcRecords(next);
-    refreshSelectedQcRecord(recordId, updated);
-    return updated;
-  }
-
-  function getMissingQcItems(recordId, targetStatus) {
-    const qc = getQcByRecordId(recordId);
-    return getMissingQcItemsByQc(qc, targetStatus);
-  }
-
-  function getCurrentStatusMissingQcItems(recordId) {
-    const record = getRecordById(recordId);
-    const status = record?.status || appConfig.primaryStatus;
-    return getMissingQcItems(recordId, status);
-  }
-
-  function getQcProgress(recordId, status) {
-    const qc = getQcByRecordId(recordId);
-    return getQcProgressByQc(qc, status);
-  }
-
-  function getQcIcon(iconName) {
-    const icons = { Palette, Camera, ArrowLeftRight, Stethoscope, CheckCircle2 };
-    return icons[iconName] || ClipboardList;
-  }
-
-  function getCriticalMissingQcItems(recordId, targetStatus) {
-    const qc = getQcByRecordId(recordId);
-    return getCriticalMissingQcItemsByQc(qc, targetStatus);
-  }
-
-  function getTodoItemsForStatus(recordId, status) {
-    const qc = getQcByRecordId(recordId);
-    return qcCheckItems
-      .filter((ci) => ci.requiredFor.includes(status))
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      .map((ci) => ({
-        ...ci,
-        isChecked: !!qc?.items[ci.key]?.checked,
-        remark: qc?.items[ci.key]?.remark || '',
-        checkedAt: qc?.items[ci.key]?.checkedAt || null
-      }));
   }
 
   function addPatient(event) {
@@ -2974,9 +767,6 @@ function App() {
     return records
       .filter((item) => !filters.query || (item.patient || '').includes(filters.query))
       .filter((item) => filters.status === '全部' || item.status === filters.status)
-      .filter((item) => filters.tooth === '全部' || item.tooth === filters.tooth)
-      .filter((item) => filters.shade === '全部' || item.shade === filters.shade)
-      .filter((item) => filters.followUpStatus === '全部' || getFollowUpStatus(item.followUp).key === filters.followUpStatus)
       .sort((a, b) => {
         const aDate = a[appConfig.dateKey] || a.createdAt || '';
         const bDate = b[appConfig.dateKey] || b.createdAt || '';
@@ -2990,11 +780,11 @@ function App() {
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }, [patients, patientQuery]);
 
-  const metrics = useMemo(() => [
-    { label: "总记录", value: filteredRecords.length },
-    { label: "待处理", value: filteredRecords.filter((item) => item.status !== '已完成修复').length },
-    { label: "今日复诊", value: filteredRecords.filter((item) => item.followUp === today).length },
-  ], [filteredRecords, today]);
+  const metrics = [
+    { label: "总记录", value: records.length },
+    { label: "待处理", value: records.filter((item) => item.status !== '已完成修复').length },
+    { label: "今日复诊", value: records.filter((item) => item.followUp === today).length },
+  ];
 
   const patientMetrics = [
     { label: "患者总数", value: patients.length },
@@ -3145,38 +935,6 @@ function App() {
     return orders.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }, [deliveryOrders, deliveryOrderFilter]);
 
-  const qcMetrics = useMemo(() => {
-    const withQc = records.map((r) => ({
-      record: r,
-      qc: getQcByRecordId(r.id),
-      progress: getQcProgress(r.id, r.status),
-      missing: getMissingQcItems(r.id, r.status)
-    }));
-    const total = records.length;
-    const completed = withQc.filter((w) => w.progress === 100).length;
-    const incomplete = withQc.filter((w) => w.progress > 0 && w.progress < 100).length;
-    const notStarted = withQc.filter((w) => w.progress === 0).length;
-    return [
-      { label: '质控总览', value: total },
-      { label: '已达标', value: completed },
-      { label: '待完善', value: incomplete },
-      { label: '未开始', value: notStarted }
-    ];
-  }, [records, qcRecords, qcCheckItems]);
-
-  const filteredQcRecords = useMemo(() => {
-    let items = records.map((r) => ({
-      record: r,
-      qc: getQcByRecordId(r.id),
-      progress: getQcProgress(r.id, r.status),
-      missing: getMissingQcItems(r.id, r.status)
-    }));
-    if (qcFilter !== '全部') {
-      items = items.filter((w) => w.record.status === qcFilter);
-    }
-    return items.sort((a, b) => a.progress - b.progress || String(a.record.patient).localeCompare(String(b.record.patient)));
-  }, [records, qcRecords, qcFilter, qcCheckItems]);
-
   const next14Days = useMemo(() => getNext14Days(), [today]);
 
   const boardRecords = useMemo(() => {
@@ -3219,22 +977,6 @@ function App() {
     if (boardFilterStatus === '全部') return boardRecords;
     return boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === boardFilterStatus);
   }, [boardRecords, boardFilterStatus]);
-
-  const patientShadeRecords = useMemo(() => {
-    if (!selectedPatient) return [];
-    return records
-      .filter((r) => r.patient === selectedPatient.name)
-      .sort((a, b) => {
-        const aDate = a.followUp || a.createdAt || a.lastModified || '';
-        const bDate = b.followUp || b.createdAt || b.lastModified || '';
-        return String(bDate).localeCompare(String(aDate));
-      });
-  }, [records, selectedPatient]);
-
-  function handleViewShadeRecord(record) {
-    setSelected(record);
-    setActiveTab('records');
-  }
 
   return (
     <main className="shell" style={{ '--accent': appConfig.accent }}>
@@ -3307,32 +1049,6 @@ function App() {
               {boardRecords.filter((r) => getFollowUpStatus(r.followUp).key === 'overdue').length}
             </span>
           )}
-        </button>
-        <button
-          className={'tab ' + (activeTab === 'dataManagement' ? 'active' : '')}
-          onClick={() => setActiveTab('dataManagement')}
-        >
-          <Database size={16} />
-          数据管理
-        </button>
-        <button
-          className={'tab ' + (activeTab === 'qualityControl' ? 'active' : '')}
-          onClick={() => setActiveTab('qualityControl')}
-        >
-          <ShieldCheck size={16} />
-          牙色复诊闭环质控
-          {records.filter((r) => getMissingQcItems(r.id, r.status).length > 0).length > 0 && (
-            <span className="tab-badge">
-              {records.filter((r) => getMissingQcItems(r.id, r.status).length > 0).length}
-            </span>
-          )}
-        </button>
-        <button
-          className={'tab ' + (activeTab === 'multiClinicCollab' ? 'active' : '')}
-          onClick={() => setActiveTab('multiClinicCollab')}
-        >
-          <GitMerge size={16} />
-          多诊室离线协作
         </button>
       </div>
 
@@ -3408,28 +1124,29 @@ function App() {
                     <label key={field.key} className="wide">
                       <span>{field.label}</span>
                       <select value={form[field.key] || ''} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}>
-                        {[...shadeLibrary].sort((a, b) => a.order - b.order).map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
+                        {field.options.map((option) => <option key={option}>{option}</option>)}
                       </select>
                       <div className="shade-picker">
-                        {[...shadeLibrary].sort((a, b) => a.order - b.order).map((shade) => {
+                        {field.options.map((option) => {
+                          const shadeInfo = getShadeInfo(option);
                           return (
                             <div
-                              key={shade.code}
-                              className={'shade-picker-item ' + (form.shade === shade.code ? 'active' : '')}
+                              key={option}
+                              className={'shade-picker-item ' + (form.shade === option ? 'active' : '')}
                               onClick={() => {
-                                setForm({ ...form, shade: shade.code });
-                                setShadeDetailModal(shade);
+                                setForm({ ...form, shade: option });
+                                setShadeDetailModal(shadeInfo || { code: option });
                               }}
                             >
-                              <div className={'shade-swatch-mini shade-' + (shade.code.charAt(0).match(/[a-d]/i) ? shade.code.charAt(0).toLowerCase() : 'default')}>
-                                <span>{shade.code}</span>
+                              <div className={'shade-swatch-mini shade-' + option.charAt(0).toLowerCase()}>
+                                <span>{option}</span>
                               </div>
                               <button
                                 type="button"
                                 className="shade-info-btn"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setShadeDetailModal(shade);
+                                  setShadeDetailModal(shadeInfo || { code: option });
                                 }}
                                 title="查看色号说明"
                               >
@@ -3439,16 +1156,6 @@ function App() {
                           );
                         })}
                       </div>
-                    </label>
-                  ) : field.key === 'tooth' ? (
-                    <label key={field.key} className="wide">
-                      <span>{field.label}</span>
-                      <ToothChart
-                        value={form[field.key] || ''}
-                        onChange={(tooth) => setForm({ ...form, [field.key]: tooth })}
-                        enabledTeeth={field.options}
-                        records={records}
-                      />
                     </label>
                   ) : (
                     <label key={field.key} className={field.type === 'textarea' ? 'wide' : ''}>
@@ -3486,22 +1193,6 @@ function App() {
                   <option>全部</option>
                   {appConfig.statuses.map((status) => <option key={status}>{status}</option>)}
                 </select>
-                <select value={filters.tooth} onChange={(event) => setFilters({ ...filters, tooth: event.target.value })}>
-                  <option value="全部">全部牙位</option>
-                  {appConfig.fields.find(f => f.key === 'tooth').options.map((tooth) => <option key={tooth}>{tooth}</option>)}
-                </select>
-                <select value={filters.shade} onChange={(event) => setFilters({ ...filters, shade: event.target.value })}>
-                  <option value="全部">全部色号</option>
-                  {[...shadeLibrary].sort((a, b) => a.order - b.order).map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
-                </select>
-                <select value={filters.followUpStatus} onChange={(event) => setFilters({ ...filters, followUpStatus: event.target.value })}>
-                  <option value="全部">全部复诊状态</option>
-                  <option value="none">未排期</option>
-                  <option value="overdue">逾期</option>
-                  <option value="today">今日</option>
-                  <option value="soon">即将到期</option>
-                  <option value="normal">已排期</option>
-                </select>
               </div>
 
               <div className="records">
@@ -3515,47 +1206,11 @@ function App() {
                       <span className={'status ' + statusClass(item.status)}>{item.status}</span>
                     </div>
                     <p className="record-detail">{item.photoNote}</p>
-                    <div className="qc-progress-bar record-qc-bar">
-                      {qcCheckItems.filter((ci) => ci.requiredFor.includes(item.status)).map((ci) => {
-                        const qc = getQcByRecordId(item.id);
-                        const isChecked = qc?.items[ci.key]?.checked;
-                        return (
-                          <div
-                            key={ci.key}
-                            className={'qc-progress-dot ' + (isChecked ? 'done' : 'pending')}
-                            title={`${ci.label}${isChecked ? '（已完成）' : '（待完成）'}`}
-                          />
-                        );
-                      })}
-                      <span className="qc-progress-text">
-                        {getQcProgress(item.id, item.status)}%
-                      </span>
-                    </div>
-                    {getMissingQcItems(item.id, item.status).length > 0 && (
-                      <div className="qc-missing-inline">
-                        <ShieldAlert size={12} />
-                        待完成：{getMissingQcItems(item.id, item.status).slice(0, 2).map((m) => m.label).join('、')}
-                        {getMissingQcItems(item.id, item.status).length > 2 && ` 等${getMissingQcItems(item.id, item.status).length}项`}
-                      </div>
-                    )}
                     {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
                     <div className="actions" onClick={(event) => event.stopPropagation()}>
-                      {appConfig.statuses.map((status) => {
-                        const transition = getTransitionInfo(item, status);
-                        return (
-                          <button
-                            key={status}
-                            type="button"
-                            onClick={() => updateStatus(item.id, status)}
-                            disabled={transition.disabled}
-                            title={transition.title}
-                          >
-                            {status}
-                            {transition.showBlockedIcon && <ShieldAlert size={10} style={{ marginLeft: 2 }} />}
-                            {transition.showOptionalIcon && <ShieldAlert size={10} style={{ marginLeft: 2 }} />}
-                          </button>
-                        );
-                      })}
+                      {appConfig.statuses.map((status) => (
+                        <button key={status} type="button" onClick={() => updateStatus(item.id, status)}>{status}</button>
+                      ))}
                       <button type="button" onClick={() => duplicateRecord(item)}><RotateCcw size={14} />复制</button>
                       <button className="ghost-danger" type="button" onClick={() => removeRecord(item.id)}><Trash2 size={14} /></button>
                     </div>
@@ -3585,175 +1240,29 @@ function App() {
               <div className="panel-title">
                 <CheckCircle2 size={18} />
                 <h2>详情</h2>
-                {selected && !editingRecordId && (
-                  <button
-                    type="button"
-                    className="link-btn"
-                    style={{ marginLeft: 'auto' }}
-                    onClick={() => startEditRecord(selected)}
-                  >
-                    <Edit3 size={14} /> 编辑
-                  </button>
-                )}
-                {selected && editingRecordId === selected.id && (
-                  <span style={{ marginLeft: 'auto', color: 'var(--accent)', fontSize: '12px', fontWeight: '600' }}>
-                    编辑模式
-                  </span>
-                )}
               </div>
               {selected ? (
                 <div className="detail">
-                  {editingRecordId === selected.id ? (
-                    <div className="edit-form-container">
-                      <div className="form-grid" style={{ gridTemplateColumns: '1fr', gap: '12px' }}>
-                        <label className="wide">
-                          <span>患者姓名</span>
-                          <input
-                            type="text"
-                            value={editRecordForm.patient}
-                            onChange={(e) => setEditRecordForm({ ...editRecordForm, patient: e.target.value })}
-                            placeholder="请输入患者姓名"
-                            required
-                          />
-                        </label>
-                        <label className="wide">
-                          <span>牙位</span>
-                          <select
-                            value={editRecordForm.tooth}
-                            onChange={(e) => setEditRecordForm({ ...editRecordForm, tooth: e.target.value })}
-                          >
-                            {appConfig.fields.find(f => f.key === 'tooth').options.map((tooth) => (
-                              <option key={tooth}>{tooth}</option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="wide">
-                          <span>色号</span>
-                          <select
-                            value={editRecordForm.shade}
-                            onChange={(e) => setEditRecordForm({ ...editRecordForm, shade: e.target.value })}
-                          >
-                            {getShadeOptions().map((shade) => (
-                              <option key={shade}>{shade}</option>
-                            ))}
-                          </select>
-                          <div className="shade-picker" style={{ marginTop: '8px' }}>
-                            {getShadeOptions().map((option) => {
-                              const shadeInfo = getShadeInfo(option);
-                              return (
-                                <div
-                                  key={option}
-                                  className={'shade-picker-item ' + (editRecordForm.shade === option ? 'active' : '')}
-                                  onClick={() => {
-                                    setEditRecordForm({ ...editRecordForm, shade: option });
-                                  }}
-                                >
-                                  <div className={'shade-swatch-mini ' + getShadeSwatchClass(option)}>
-                                    <span>{option}</span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="shade-info-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setShadeDetailModal(shadeInfo || { code: option });
-                                    }}
-                                    title="查看色号说明"
-                                  >
-                                    <Info size={12} />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </label>
-                        <label className="wide">
-                          <span>拍照备注</span>
-                          <textarea
-                            value={editRecordForm.photoNote}
-                            onChange={(e) => setEditRecordForm({ ...editRecordForm, photoNote: e.target.value })}
-                            placeholder="如：自然光下正面照，颈部略深"
-                            rows={3}
-                          />
-                        </label>
-                        <label className="wide">
-                          <span>复诊日期</span>
-                          <input
-                            type="date"
-                            value={editRecordForm.followUp}
-                            onChange={(e) => setEditRecordForm({ ...editRecordForm, followUp: e.target.value })}
-                          />
-                        </label>
-                        <label className="wide">
-                          <span>复诊诊室</span>
-                          <select
-                            value={editRecordForm.followUpRoom || ''}
-                            onChange={(e) => setEditRecordForm({ ...editRecordForm, followUpRoom: e.target.value })}
-                          >
-                            <option value="">未安排</option>
-                            {getRooms().map((room) => (
-                              <option key={room.name} value={room.name}>{room.name}</option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                      <div className="detail-actions" style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
-                        <button
-                          type="button"
-                          className="primary"
-                          onClick={saveRecordEdit}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                        >
-                          <Save size={14} /> 保存修改
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary"
-                          onClick={cancelEditRecord}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                        >
-                          <X size={14} /> 取消编辑
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h3>{selected.patient}</h3>
-                      <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
-                      <p>{selected.photoNote}</p>
-                      {selected.followUp && (
-                        <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
-                          <CalendarCheck size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                          复诊日期：{selected.followUp}
-                        </p>
-                      )}
-                      {selected.followUpRoom && (
-                        <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
-                          <Stethoscope size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                          复诊诊室：{selected.followUpRoom}
-                        </p>
-                      )}
-                    </>
-                  )}
+                  <h3>{selected.patient}</h3>
+                  <p>{`牙位 ${selected.tooth} · ${selected.shade}`}</p>
+                  <p>{selected.photoNote}</p>
 
-                  {!editingRecordId && (
-                    <>
-                      <div className="detail-actions" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                        <button
-                          className="primary"
-                          type="button"
-                          onClick={() => startPhotoProcess(selected.id)}
-                        >
-                          <Camera size={16} />
-                          {getPhotoProcessByRecordId(selected.id) ? '继续拍照流程' : '开始拍照流程'}
-                        </button>
-                        {getPhotoProcessByRecordId(selected.id) && (
-                          <p className="photo-process-start-hint">
-                            <CheckCircle2 size={14} />
-                            进度：{getPhotoProcessProgress(getPhotoProcessByRecordId(selected.id))}%
-                          </p>
-                        )}
-                      </div>
+                  <div className="detail-actions" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                    <button
+                      className="primary"
+                      type="button"
+                      onClick={() => startPhotoProcess(selected.id)}
+                    >
+                      <Camera size={16} />
+                      {getPhotoProcessByRecordId(selected.id) ? '继续拍照流程' : '开始拍照流程'}
+                    </button>
+                    {getPhotoProcessByRecordId(selected.id) && (
+                      <p className="photo-process-start-hint">
+                        <CheckCircle2 size={14} />
+                        进度：{getPhotoProcessProgress(getPhotoProcessByRecordId(selected.id))}%
+                      </p>
+                    )}
+                  </div>
 
                   {getPhotoProcessByRecordId(selected.id) && (
                     <>
@@ -3766,18 +1275,8 @@ function App() {
                           const stepData = getPhotoProcessByRecordId(selected.id)?.steps[step.key];
                           const StepIcon = getStepIcon(step.icon);
                           const isChecked = stepData?.confirmed;
-                          const stepStatus = getStepPhotoStatus(stepData);
                           return (
                             <div key={step.key} className={'checklist-item ' + (isChecked ? 'checked' : '')}>
-                              <div className="checklist-thumb">
-                                {stepData?.imageUrl ? (
-                                  <img src={stepData.imageUrl} alt="" className="checklist-thumb-img" />
-                                ) : (
-                                  <div className="checklist-thumb-placeholder">
-                                    <StepIcon size={18} style={{ color: '#9ca3af' }} />
-                                  </div>
-                                )}
-                              </div>
                               <div className="checklist-icon">
                                 {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
                               </div>
@@ -3786,27 +1285,17 @@ function App() {
                                   <StepIcon size={16} />
                                   <strong>步骤 {idx + 1}：{step.label}</strong>
                                   {isChecked && <span className="checklist-badge">已确认</span>}
-                                  {stepStatus === 'has-photo' && <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />有照片</span>}
-                                  {stepStatus === 'only-note' && <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />只有备注</span>}
-                                  {stepStatus === 'missing' && <span className="photo-status-tag status-missing"><AlertCircle size={12} />缺失</span>}
                                 </div>
                                 {stepData?.remark ? (
                                   <p className="checklist-note">{stepData.remark}</p>
                                 ) : (
                                   <p className="checklist-empty">暂无备注</p>
                                 )}
-                                <div className="checklist-meta">
-                                  {stepData?.environment && (
-                                    <span className="checklist-env">
-                                      <Sun size={12} /> {stepData.environment}
-                                    </span>
-                                  )}
-                                  {stepData?.fileSize > 0 && (
-                                    <span className="file-size-tag-inline">
-                                      <HardDriveUpload size={12} /> {formatFileSize(stepData.fileSize)}
-                                    </span>
-                                  )}
-                                </div>
+                                {stepData?.environment && (
+                                  <span className="checklist-env">
+                                    <Sun size={12} /> {stepData.environment}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
@@ -3822,34 +1311,28 @@ function App() {
                     </>
                   )}
 
-                  {selected.shade && (
+                  {getShadeInfo(selected.shade) && (
                     <div className="shade-detail-card">
                       <div className="shade-detail-header">
-                        <div className={'shade-swatch-sm ' + getShadeSwatchClass(selected.shade)}>
+                        <div className={'shade-swatch-sm shade-' + selected.shade.charAt(0).toLowerCase()}>
                           <span>{selected.shade}</span>
                         </div>
                         <div>
                           <h4>色号 {selected.shade} 说明</h4>
-                          {getShadeInfo(selected.shade) ? (
-                            <button
-                              type="button"
-                              className="link-btn"
-                              onClick={() => setShadeDetailModal(getShadeInfo(selected.shade))}
-                            >
-                              查看完整说明
-                            </button>
-                          ) : (
-                            <span className="shade-deleted-hint">（该色号已从样本库移除，仅保留历史记录）</span>
-                          )}
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={() => setShadeDetailModal(getShadeInfo(selected.shade))}
+                          >
+                            查看完整说明
+                          </button>
                         </div>
                       </div>
-                      {getShadeInfo(selected.shade) && (
-                        <div className="shade-detail-content">
-                          <p><strong>文字说明：</strong>{getShadeInfo(selected.shade)?.description}</p>
-                          <p><strong>适用场景：</strong>{getShadeInfo(selected.shade)?.scenario}</p>
-                          <p><strong>注意事项：</strong>{getShadeInfo(selected.shade)?.notes}</p>
-                        </div>
-                      )}
+                      <div className="shade-detail-content">
+                        <p><strong>文字说明：</strong>{getShadeInfo(selected.shade)?.description}</p>
+                        <p><strong>适用场景：</strong>{getShadeInfo(selected.shade)?.scenario}</p>
+                        <p><strong>注意事项：</strong>{getShadeInfo(selected.shade)?.notes}</p>
+                      </div>
                     </div>
                   )}
 
@@ -3882,135 +1365,11 @@ function App() {
                     </div>
                   )}
 
-                  <div className="detail-section-divider">
-                    <ShieldCheck size={16} />
-                    质控检查（当前状态：{selected.status}）
+                  <div className="timeline">
+                    {(selected.timeline || []).map((step, index) => (
+                      <span key={index}>{step.at} · {step.status} · {step.by}</span>
+                    ))}
                   </div>
-                  <div className="qc-detail-progress record-detail-qc">
-                    <div className="qc-progress-ring">
-                      <svg viewBox="0 0 36 36" className="qc-ring-svg">
-                        <path
-                          className="qc-ring-bg"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                        <path
-                          className="qc-ring-fill"
-                          strokeDasharray={`${getQcProgress(selected.id, selected.status)}, 100`}
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                      </svg>
-                      <span className="qc-ring-text">{getQcProgress(selected.id, selected.status)}%</span>
-                    </div>
-                    <div className="qc-progress-summary">
-                      <strong>质控进度</strong>
-                      <p>
-                        {getQcProgress(selected.id, selected.status) === 100
-                          ? '所有必检项已完成'
-                          : `还需完成 ${getMissingQcItems(selected.id, selected.status).length} 项检查`}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="photo-checklist">
-                    {qcCheckItems.map((ci) => {
-                      const qc = getQcByRecordId(selected.id);
-                      const isRequired = ci.requiredFor.includes(selected.status);
-                      const isChecked = qc?.items[ci.key]?.checked;
-                      const remark = qc?.items[ci.key]?.remark || '';
-                      const checkedAt = qc?.items[ci.key]?.checkedAt;
-                      const QcIcon = getQcIcon(ci.icon);
-
-                      if (!isRequired && !isChecked) {
-                        return (
-                          <div key={ci.key} className="checklist-item qc-item-irrelevant">
-                            <div className="checklist-icon"><Square size={20} /></div>
-                            <div className="checklist-content">
-                              <div className="checklist-header">
-                                <QcIcon size={16} />
-                                <strong>{ci.label}</strong>
-                                <span className="qc-irrelevant-badge">当前状态无需</span>
-                              </div>
-                              <p className="checklist-empty">在更后续的状态中需要完成</p>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div key={ci.key} className={'checklist-item ' + (isChecked ? 'checked' : '') + (!isRequired ? ' qc-item-optional' : '')}>
-                          <div className="checklist-icon">
-                            {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
-                          </div>
-                          <div className="checklist-content">
-                            <div className="checklist-header">
-                              <QcIcon size={16} />
-                              <strong>{ci.label}</strong>
-                              {isChecked && <span className="checklist-badge">已确认</span>}
-                              {!isRequired && isChecked && <span className="qc-optional-badge">可选</span>}
-                              {isRequired && !isChecked && <span className="qc-required-badge">必检</span>}
-                            </div>
-                            <p className="qc-item-desc">{ci.description}</p>
-                            {isChecked && checkedAt && (
-                              <span className="checklist-env">
-                                <Clock size={12} /> 确认于 {new Date(checkedAt).toLocaleString('zh-CN')}
-                              </span>
-                            )}
-                            <div className="qc-remark-row" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="text"
-                                placeholder="添加备注..."
-                                value={remark}
-                                onChange={(e) => updateQcRemark(selected.id, ci.key, e.target.value)}
-                              />
-                              <button
-                                type="button"
-                                className={isChecked ? 'qc-toggle-btn qc-toggle-uncheck' : 'qc-toggle-btn qc-toggle-check'}
-                                onClick={() => toggleQcItem(selected.id, ci.key)}
-                              >
-                                {isChecked ? <><X size={14} />撤销</> : <><CheckCheck size={14} />确认</>}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {getMissingQcItems(selected.id, selected.status).length > 0 && (
-                    <div className="checklist-summary">
-                      <p className="checklist-progress">
-                        <ShieldAlert size={14} /> 缺少关键步骤：{getMissingQcItems(selected.id, selected.status).map((m) => m.label).join('、')}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="detail-actions" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                    <p className="hint">状态流转（缺少关键步骤不能直接标记完成）：</p>
-                    <div className="actions">
-                      {appConfig.statuses.map((status) => {
-                        const transition = getTransitionInfo(selected, status);
-                        return (
-                          <button
-                            key={status}
-                            type="button"
-                            onClick={() => updateStatus(selected.id, status)}
-                            disabled={transition.disabled}
-                            title={transition.title}
-                          >
-                            {status}
-                            {transition.showBlockedIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
-                            {transition.showOptionalIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                      <div className="timeline">
-                        {(selected.timeline || []).map((step, index) => (
-                          <span key={index}>{step.at} · {step.status} · {step.by}</span>
-                        ))}
-                      </div>
-                    </>
-                  )}
                 </div>
               ) : (
                 <p className="empty">点击任意记录查看详情和状态流转。</p>
@@ -4160,7 +1519,7 @@ function App() {
               </div>
             </div>
 
-            <aside className="panel detail-panel patient-detail-panel">
+            <aside className="panel detail-panel">
               <div className="panel-title">
                 <CheckCircle2 size={18} />
                 <h2>患者详情</h2>
@@ -4187,70 +1546,6 @@ function App() {
                   <div className="timeline">
                     <span>创建时间: {new Date(selectedPatient.createdAt).toLocaleDateString('zh-CN')}</span>
                   </div>
-
-                  <div className="detail-section-divider">
-                    <History size={16} />
-                    历史比色记录
-                  </div>
-
-                  {patientShadeRecords.length > 0 ? (
-                    <div className="patient-history-list">
-                      {patientShadeRecords.map((record) => {
-                        const photoProcess = getPhotoProcessByRecordId(record.id);
-                        const photoProgress = getPhotoProcessProgress(photoProcess);
-                        return (
-                          <div
-                            key={record.id}
-                            className="patient-history-item"
-                            onClick={() => handleViewShadeRecord(record)}
-                          >
-                            <div className="patient-history-main">
-                              <div className="patient-history-tooth-shade">
-                                <span className="history-tooth">牙位 {record.tooth}</span>
-                                <span className="history-shade">
-                                  <span className={'shade-swatch-tiny ' + getShadeSwatchClass(record.shade)}>
-                                    {record.shade}
-                                  </span>
-                                </span>
-                              </div>
-                              <span className={'status ' + statusClass(record.status)} style={{ fontSize: '12px', padding: '2px 8px' }}>
-                                {record.status}
-                              </span>
-                            </div>
-                            <div className="patient-history-meta">
-                              <span className="history-followup">
-                                <CalendarDays size={12} />
-                                {record.followUp || '未排期'}
-                              </span>
-                              <span className="history-photo-progress">
-                                <Camera size={12} />
-                                拍照 {photoProgress}%
-                              </span>
-                            </div>
-                            <div className="patient-history-progress-bar">
-                              {appConfig.photoSteps.map((step) => (
-                                <div
-                                  key={step.key}
-                                  className={'qc-progress-dot ' + (photoProcess?.steps[step.key]?.confirmed ? 'done' : 'pending')}
-                                  style={{ width: '100%' }}
-                                  title={step.label}
-                                />
-                              ))}
-                            </div>
-                            <div className="patient-history-action">
-                              <span>查看详情</span>
-                              <ChevronRight size={14} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="empty-state" style={{ padding: '24px 12px' }}>
-                      <ClipboardList size={32} style={{ color: '#d0d5dd' }} />
-                      <p className="empty" style={{ marginTop: '8px' }}>暂无历史比色记录</p>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <p className="empty">点击任意患者查看详细信息。</p>
@@ -4281,7 +1576,7 @@ function App() {
             <div className="panel form-panel">
               <div className="panel-title">
                 <Edit3 size={18} />
-                <h2>{editingShade ? (isAddingShade ? '新增自定义色号' : '编辑色号说明') : '色号详情'}</h2>
+                <h2>{editingShade ? '编辑色号说明' : '色号详情'}</h2>
               </div>
               {editingShade ? (
                 <div className="form-grid">
@@ -4290,12 +1585,9 @@ function App() {
                     <input
                       type="text"
                       value={editingShade.code}
-                      disabled={!isAddingShade}
-                      onChange={(e) => setEditingShade({ ...editingShade, code: e.target.value.toUpperCase() })}
-                      placeholder="如 A4、BL1 等"
-                      style={!isAddingShade ? { background: '#f9fafb', color: '#667085' } : {}}
+                      disabled
+                      style={{ background: '#f9fafb', color: '#667085' }}
                     />
-                    {isAddingShade && <span className="field-hint">请输入色号名称，保存后不可修改</span>}
                   </label>
                   <label className="wide">
                     <span>文字说明</span>
@@ -4329,16 +1621,16 @@ function App() {
                 <div className="shade-preview-empty">
                   <Palette size={48} style={{ color: '#d0d5dd' }} />
                   <p>点击左侧色号卡片查看详情</p>
-                  <p className="hint">或点击「编辑」按钮修改说明内容，或点击「新增色号」添加自定义色号</p>
+                  <p className="hint">或点击「编辑」按钮修改说明内容</p>
                 </div>
               )}
               {editingShade && (
                 <>
                   <button className="primary" type="button" onClick={saveShade}>
-                    <Save size={18} />{isAddingShade ? '保存新增' : '保存修改'}
+                    <Save size={18} />保存修改
                   </button>
                   <button type="button" className="secondary" onClick={cancelEditShade}>
-                    取消
+                    取消编辑
                   </button>
                 </>
               )}
@@ -4350,45 +1642,29 @@ function App() {
                   <Palette size={18} />
                   <h2>色号列表</h2>
                 </div>
-                <button type="button" className="primary small" onClick={startAddShade}>
-                  <Plus size={16} />新增色号
-                </button>
               </div>
 
               <div className="shade-cards">
-                {[...shadeLibrary].sort((a, b) => a.order - b.order).map((shade, idx, arr) => (
+                {shadeLibrary.map((shade) => (
                   <article
-                    className={'shade-card' + (shade.isBuiltIn ? ' built-in' : ' custom')}
+                    className="shade-card"
                     key={shade.code}
                   >
                     <div className="shade-card-header">
-                      <div className={'shade-swatch shade-' + (shade.code.charAt(0).match(/[a-d]/i) ? shade.code.charAt(0).toLowerCase() : 'default')}>
+                      <div className={'shade-swatch shade-' + shade.code.charAt(0).toLowerCase()}>
                         <span>{shade.code}</span>
                       </div>
                     </div>
                     <div className="shade-card-body">
-                      <div className="shade-card-title">
-                        <h3>{shade.code}</h3>
-                        {shade.isBuiltIn && <span className="shade-badge built-in-badge">内置</span>}
-                        {!shade.isBuiltIn && <span className="shade-badge custom-badge">自定义</span>}
-                      </div>
-                      <p className="shade-desc">{shade.description || '暂无说明'}</p>
+                      <h3>{shade.code}</h3>
+                      <p className="shade-desc">{shade.description}</p>
                     </div>
                     <div className="shade-card-footer">
-                      <button type="button" className="icon-btn" onClick={() => moveShadeUp(shade.code)} disabled={idx === 0} title="上移">
-                        <ArrowUp size={14} />
-                      </button>
-                      <button type="button" className="icon-btn" onClick={() => moveShadeDown(shade.code)} disabled={idx === arr.length - 1} title="下移">
-                        <ArrowDown size={14} />
-                      </button>
                       <button type="button" onClick={() => editShade(shade)}>
                         <Edit3 size={14} />编辑
                       </button>
                       <button type="button" onClick={() => setShadeDetailModal(shade)}>
-                        <Info size={14} />详情
-                      </button>
-                      <button type="button" className="danger-btn" onClick={() => deleteShade(shade.code)} title="删除色号">
-                        <Trash2 size={14} />
+                        <Info size={14} />查看详情
                       </button>
                     </div>
                   </article>
@@ -4424,111 +1700,44 @@ function App() {
               </div>
 
               {todayFollowUps.length > 0 ? (
-                <div className="today-followups-rooms">
-                  {getRooms().map((room) => {
-                    const roomRecords = todayFollowUps.filter(r => r.followUpRoom === room.name);
-                    if (roomRecords.length === 0) return null;
-                    return (
-                      <div key={room.name} className="today-room-group">
-                        <div className="today-room-header" style={{ borderLeftColor: room.color }}>
-                          <Stethoscope size={14} style={{ color: room.color }} />
-                          <span className="today-room-name">{room.name}</span>
-                          <span className="today-room-count">{roomRecords.length} 人</span>
+                <div className="records">
+                  {todayFollowUps.map((item) => (
+                    <article
+                      className={'record follow-up-record ' + (item.conflict ? 'conflict' : '')}
+                      key={item.id}
+                      onClick={() => setSelected(item)}
+                    >
+                      <div className="record-head">
+                        <div>
+                          <h3>{item.patient}</h3>
+                          <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
                         </div>
-                        <div className="records today-room-records">
-                          {roomRecords.map((item) => (
-                            <article
-                              className={'record follow-up-record ' + (item.conflict ? 'conflict' : '')}
-                              key={item.id}
-                              onClick={() => setSelected(item)}
-                              style={{ borderLeftColor: room.color }}
-                            >
-                              <div className="record-head">
-                                <div>
-                                  <h3>{item.patient}</h3>
-                                  <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
-                                </div>
-                                <span className={'status ' + statusClass(item.status)}>{item.status}</span>
-                              </div>
-                              <p className="record-detail">{item.photoNote}</p>
-                              {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
-                              <div className="actions quick-actions" onClick={(event) => event.stopPropagation()}>
-                                <button
-                                  type="button"
-                                  className="quick-action-btn"
-                                  onClick={() => updateStatus(item.id, '制作中')}
-                                  disabled={getTransitionInfo(item, '制作中').disabled}
-                                  title={getTransitionInfo(item, '制作中').title}
-                                >
-                                  <RotateCcw size={14} />
-                                  制作中
-                                </button>
-                                <button
-                                  type="button"
-                                  className="quick-action-btn primary-action"
-                                  onClick={() => updateStatus(item.id, '已完成修复')}
-                                  disabled={getTransitionInfo(item, '已完成修复').disabled}
-                                  title={getTransitionInfo(item, '已完成修复').title}
-                                >
-                                  <CheckCircle2 size={14} />
-                                  已完成
-                                </button>
-                              </div>
-                            </article>
-                          ))}
-                        </div>
+                        <span className={'status ' + statusClass(item.status)}>{item.status}</span>
                       </div>
-                    );
-                  })}
-                  {todayFollowUps.filter(r => !r.followUpRoom).length > 0 && (
-                    <div className="today-room-group">
-                      <div className="today-room-header today-room-unassigned">
-                        <span className="today-room-name">未安排诊室</span>
-                        <span className="today-room-count">{todayFollowUps.filter(r => !r.followUpRoom).length} 人</span>
+                      <p className="record-detail">{item.photoNote}</p>
+                      {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
+                      <div className="actions quick-actions" onClick={(event) => event.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="quick-action-btn"
+                          onClick={() => updateStatus(item.id, '制作中')}
+                          disabled={item.status === '制作中'}
+                        >
+                          <RotateCcw size={14} />
+                          制作中
+                        </button>
+                        <button
+                          type="button"
+                          className="quick-action-btn primary-action"
+                          onClick={() => updateStatus(item.id, '已完成修复')}
+                          disabled={item.status === '已完成修复'}
+                        >
+                          <CheckCircle2 size={14} />
+                          已完成
+                        </button>
                       </div>
-                      <div className="records today-room-records">
-                        {todayFollowUps.filter(r => !r.followUpRoom).map((item) => (
-                          <article
-                            className={'record follow-up-record ' + (item.conflict ? 'conflict' : '')}
-                            key={item.id}
-                            onClick={() => setSelected(item)}
-                          >
-                            <div className="record-head">
-                              <div>
-                                <h3>{item.patient}</h3>
-                                <p>{`牙位 ${item.tooth} · ${item.shade}`}</p>
-                              </div>
-                              <span className={'status ' + statusClass(item.status)}>{item.status}</span>
-                            </div>
-                            <p className="record-detail">{item.photoNote}</p>
-                            {item.conflict && <div className="warning"><AlertTriangle size={15} />发现冲突</div>}
-                            <div className="actions quick-actions" onClick={(event) => event.stopPropagation()}>
-                              <button
-                                type="button"
-                                className="quick-action-btn"
-                                onClick={() => updateStatus(item.id, '制作中')}
-                                disabled={getTransitionInfo(item, '制作中').disabled}
-                                title={getTransitionInfo(item, '制作中').title}
-                              >
-                                <RotateCcw size={14} />
-                                制作中
-                              </button>
-                              <button
-                                type="button"
-                                className="quick-action-btn primary-action"
-                                onClick={() => updateStatus(item.id, '已完成修复')}
-                                disabled={getTransitionInfo(item, '已完成修复').disabled}
-                                title={getTransitionInfo(item, '已完成修复').title}
-                              >
-                                <CheckCircle2 size={14} />
-                                已完成
-                              </button>
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    </article>
+                  ))}
                 </div>
               ) : (
                 <div className="empty-state">
@@ -4550,57 +1759,29 @@ function App() {
                   <h3>{selectedTodayFollowUp.patient}</h3>
                   <p>{`牙位 ${selectedTodayFollowUp.tooth} · ${selectedTodayFollowUp.shade}`}</p>
                   <p>{selectedTodayFollowUp.photoNote}</p>
-                  {selectedTodayFollowUp.followUpRoom && (
-                    <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
-                      <Stethoscope size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                      复诊诊室：{selectedTodayFollowUp.followUpRoom}
-                    </p>
-                  )}
-                  <div className="detail-section-divider">
-                    <Stethoscope size={16} />
-                    安排诊室
-                  </div>
-                  <label className="wide">
-                    <span>选择复诊诊室</span>
-                    <select
-                      value={selectedTodayFollowUp.followUpRoom || ''}
-                      onChange={(e) => updateFollowUpRoom(selectedTodayFollowUp.id, e.target.value || null)}
-                    >
-                      <option value="">未安排</option>
-                      {getRooms().map((room) => (
-                        <option key={room.name} value={room.name}>{room.name}</option>
-                      ))}
-                    </select>
-                  </label>
 
-                  {selectedTodayFollowUp.shade && (
+                  {getShadeInfo(selectedTodayFollowUp.shade) && (
                     <div className="shade-detail-card">
                       <div className="shade-detail-header">
-                        <div className={'shade-swatch-sm ' + getShadeSwatchClass(selectedTodayFollowUp.shade)}>
+                        <div className={'shade-swatch-sm shade-' + selectedTodayFollowUp.shade.charAt(0).toLowerCase()}>
                           <span>{selectedTodayFollowUp.shade}</span>
                         </div>
                         <div>
                           <h4>色号 {selectedTodayFollowUp.shade} 说明</h4>
-                          {getShadeInfo(selectedTodayFollowUp.shade) ? (
-                            <button
-                              type="button"
-                              className="link-btn"
-                              onClick={() => setShadeDetailModal(getShadeInfo(selectedTodayFollowUp.shade))}
-                            >
-                              查看完整说明
-                            </button>
-                          ) : (
-                            <span className="shade-deleted-hint">（该色号已从样本库移除，仅保留历史记录）</span>
-                          )}
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={() => setShadeDetailModal(getShadeInfo(selectedTodayFollowUp.shade))}
+                          >
+                            查看完整说明
+                          </button>
                         </div>
                       </div>
-                      {getShadeInfo(selectedTodayFollowUp.shade) && (
-                        <div className="shade-detail-content">
-                          <p><strong>文字说明：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.description}</p>
-                          <p><strong>适用场景：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.scenario}</p>
-                          <p><strong>注意事项：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.notes}</p>
-                        </div>
-                      )}
+                      <div className="shade-detail-content">
+                        <p><strong>文字说明：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.description}</p>
+                        <p><strong>适用场景：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.scenario}</p>
+                        <p><strong>注意事项：</strong>{getShadeInfo(selectedTodayFollowUp.shade)?.notes}</p>
+                      </div>
                     </div>
                   )}
 
@@ -4611,24 +1792,18 @@ function App() {
                   </div>
 
                   <div className="detail-actions">
-                    <p className="hint">快速更新状态（需满足质控条件）：</p>
+                    <p className="hint">快速更新状态：</p>
                     <div className="actions">
-                      {appConfig.statuses.map((status) => {
-                        const transition = getTransitionInfo(selectedTodayFollowUp, status);
-                        return (
-                          <button
-                            key={status}
-                            type="button"
-                            onClick={() => updateStatus(selectedTodayFollowUp.id, status)}
-                            disabled={transition.disabled}
-                            title={transition.title}
-                          >
-                            {status}
-                            {transition.showBlockedIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
-                            {transition.showOptionalIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
-                          </button>
-                        );
-                      })}
+                      {appConfig.statuses.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => updateStatus(selectedTodayFollowUp.id, status)}
+                          disabled={selectedTodayFollowUp.status === status}
+                        >
+                          {status}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -4673,10 +1848,6 @@ function App() {
                   {filteredPhotoProcesses.map((process) => {
                     const record = getRecordById(process.recordId);
                     const progress = getPhotoProcessProgress(process);
-                    const stepStatuses = appConfig.photoSteps.map((s) => getStepPhotoStatus(process.steps[s.key]));
-                    const hasPhotoCount = stepStatuses.filter((s) => s === 'has-photo').length;
-                    const onlyNoteCount = stepStatuses.filter((s) => s === 'only-note').length;
-                    const missingCount = stepStatuses.filter((s) => s === 'missing').length;
                     return (
                       <article
                         className={'record photo-process-record ' + (selectedPhotoProcess?.id === process.id ? 'selected' : '')}
@@ -4696,27 +1867,13 @@ function App() {
                           </span>
                         </div>
                         <div className="step-progress-bar" style={{ marginTop: '10px' }}>
-                          {appConfig.photoSteps.map((step, idx) => {
-                            const st = getStepPhotoStatus(process.steps[step.key]);
-                            return (
-                              <div
-                                key={step.key}
-                                className={'step-progress-dot ' + (process.steps[step.key]?.confirmed ? 'done' : '') + ' pstatus-' + st}
-                                title={`${step.label} - ${st === 'has-photo' ? '有照片' : st === 'only-note' ? '仅备注' : '待补充'}`}
-                              />
-                            );
-                          })}
-                        </div>
-                        <div className="photo-status-summary" style={{ marginTop: '10px' }}>
-                          {hasPhotoCount > 0 && (
-                            <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />{hasPhotoCount}张照片</span>
-                          )}
-                          {onlyNoteCount > 0 && (
-                            <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />{onlyNoteCount}仅备注</span>
-                          )}
-                          {missingCount > 0 && (
-                            <span className="photo-status-tag status-missing"><AlertCircle size={12} />{missingCount}待补充</span>
-                          )}
+                          {appConfig.photoSteps.map((step, idx) => (
+                            <div
+                              key={step.key}
+                              className={'step-progress-dot ' + (process.steps[step.key]?.confirmed ? 'done' : '')}
+                              title={step.label}
+                            />
+                          ))}
                         </div>
                         <p className="record-detail" style={{ marginTop: '8px' }}>
                           完成进度：{progress}% · 上次更新：{new Date(process.updatedAt).toLocaleDateString('zh-CN')}
@@ -4763,38 +1920,13 @@ function App() {
                     <strong>{getRecordById(selectedPhotoProcess.recordId)?.patient || '未知患者'}</strong>
                     <span>{getRecordById(selectedPhotoProcess.recordId) ? `牙位 ${getRecordById(selectedPhotoProcess.recordId).tooth} · ${getRecordById(selectedPhotoProcess.recordId).shade}` : '未关联记录'}</span>
                   </div>
-                  <div className="photo-status-summary" style={{ marginBottom: '12px' }}>
-                    {(() => {
-                      const ss = appConfig.photoSteps.map((s) => getStepPhotoStatus(selectedPhotoProcess.steps[s.key]));
-                      const hc = ss.filter((s) => s === 'has-photo').length;
-                      const oc = ss.filter((s) => s === 'only-note').length;
-                      const mc = ss.filter((s) => s === 'missing').length;
-                      return (
-                        <>
-                          {hc > 0 && <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />{hc}张照片</span>}
-                          {oc > 0 && <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />{oc}仅备注</span>}
-                          {mc > 0 && <span className="photo-status-tag status-missing"><AlertCircle size={12} />{mc}待补充</span>}
-                        </>
-                      );
-                    })()}
-                  </div>
                   <div className="photo-checklist">
                     {appConfig.photoSteps.map((step, idx) => {
                       const stepData = selectedPhotoProcess.steps[step.key];
                       const StepIcon = getStepIcon(step.icon);
                       const isChecked = stepData?.confirmed;
-                      const stepStatus = getStepPhotoStatus(stepData);
                       return (
                         <div key={step.key} className={'checklist-item ' + (isChecked ? 'checked' : '')}>
-                          <div className="checklist-thumb">
-                            {stepData?.imageUrl ? (
-                              <img src={stepData.imageUrl} alt="" className="checklist-thumb-img" />
-                            ) : (
-                              <div className="checklist-thumb-placeholder">
-                                <StepIcon size={18} style={{ color: '#9ca3af' }} />
-                              </div>
-                            )}
-                          </div>
                           <div className="checklist-icon">
                             {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
                           </div>
@@ -4803,27 +1935,17 @@ function App() {
                               <StepIcon size={16} />
                               <strong>步骤 {idx + 1}：{step.label}</strong>
                               {isChecked && <span className="checklist-badge">已确认</span>}
-                              {stepStatus === 'has-photo' && <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />有照片</span>}
-                              {stepStatus === 'only-note' && <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />只有备注</span>}
-                              {stepStatus === 'missing' && <span className="photo-status-tag status-missing"><AlertCircle size={12} />缺失</span>}
                             </div>
                             {stepData?.remark ? (
                               <p className="checklist-note">{stepData.remark}</p>
                             ) : (
                               <p className="checklist-empty">暂无备注</p>
                             )}
-                            <div className="checklist-meta">
-                              {stepData?.environment && (
-                                <span className="checklist-env">
-                                  <Sun size={12} /> {stepData.environment}
-                                </span>
-                              )}
-                              {stepData?.fileSize > 0 && (
-                                <span className="file-size-tag-inline">
-                                  <HardDriveUpload size={12} /> {formatFileSize(stepData.fileSize)}
-                                </span>
-                              )}
-                            </div>
+                            {stepData?.environment && (
+                              <span className="checklist-env">
+                                <Sun size={12} /> {stepData.environment}
+                              </span>
+                            )}
                           </div>
                         </div>
                       );
@@ -5105,19 +2227,6 @@ function App() {
                       ))}
                     </div>
                   </div>
-
-                  <div className="detail-actions">
-                    <p className="hint">交接单操作：</p>
-                    <div className="actions">
-                      <button
-                        type="button"
-                        className="primary"
-                        onClick={() => setShowPrintSummary(true)}
-                      >
-                        <Printer size={16} />打印交接摘要
-                      </button>
-                    </div>
-                  </div>
                 </div>
               ) : (
                 <p className="empty">点击任意交接单查看详情和关联记录。</p>
@@ -5246,21 +2355,10 @@ function App() {
                   const dayRecords = recordsByDate.grouped[dateStr] || [];
                   const isToday = dateStr === today;
                   const dayStatus = isToday ? 'today' : (diffDays(dateStr, today) <= 3 ? 'soon' : 'normal');
-                  const rooms = getRooms();
-                  const recordsByRoom = {};
-                  const unassignedRecords = [];
-                  dayRecords.forEach(r => {
-                    if (r.followUpRoom) {
-                      if (!recordsByRoom[r.followUpRoom]) recordsByRoom[r.followUpRoom] = [];
-                      recordsByRoom[r.followUpRoom].push(r);
-                    } else {
-                      unassignedRecords.push(r);
-                    }
-                  });
                   return (
                     <div
                       key={dateStr}
-                      className={'board-column ' + (dragOverDate === dateStr && !dragOverRoom ? 'drag-over' : '') + ' ' + (isToday ? 'board-column-today' : '')}
+                      className={'board-column ' + (dragOverDate === dateStr ? 'drag-over' : '') + ' ' + (isToday ? 'board-column-today' : '')}
                     >
                       <div className={'board-column-header board-header-' + dayStatus}>
                         <div>
@@ -5275,168 +2373,63 @@ function App() {
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, dateStr)}
                       >
-                        {rooms.map((room) => {
-                          const roomRecords = recordsByRoom[room.name] || [];
-                          const isRoomDragOver = dragOverDate === dateStr && dragOverRoom === room.name;
+                        {dayRecords.map((record) => {
+                          const status = getFollowUpStatus(record.followUp);
+                          const isFiltered = filteredBoardRecordsByStatus.find((r) => r.id === record.id);
+                          if (boardFilterStatus !== '全部' && !isFiltered) return null;
                           return (
-                            <div key={room.name} className={'board-room-group ' + (isRoomDragOver ? 'drag-over' : '')}>
-                              <div className="board-room-header" style={{ borderLeftColor: room.color }}>
-                                <span className="board-room-name">{room.name}</span>
-                                <span className="board-room-count">{roomRecords.length} 条</span>
+                            <div
+                              key={record.id}
+                              className={'board-card ' + status.class + ' ' + (boardSelectedRecord?.id === record.id ? 'selected' : '') + ' ' + (draggedRecordId === record.id ? 'dragging' : '')}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, record.id)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => setBoardSelectedRecord(record)}
+                            >
+                              <div className="board-card-header">
+                                <GripVertical size={14} className="drag-handle" />
+                                <h4>{record.patient}</h4>
+                                <span className={'status ' + statusClass(record.status)}>{record.status}</span>
                               </div>
-                              <div
-                                className="board-room-body"
-                                onDragOver={(e) => {
-                                  e.stopPropagation();
-                                  handleDragOver(e, dateStr, room.name);
-                                }}
-                                onDragLeave={(e) => {
-                                  e.stopPropagation();
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  const x = e.clientX;
-                                  const y = e.clientY;
-                                  if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-                                    setDragOverRoom(null);
-                                  }
-                                }}
-                                onDrop={(e) => {
-                                  e.stopPropagation();
-                                  handleDrop(e, dateStr, room.name);
-                                }}
-                              >
-                                {roomRecords.map((record) => {
-                                  const status = getFollowUpStatus(record.followUp);
-                                  const isFiltered = filteredBoardRecordsByStatus.find((r) => r.id === record.id);
-                                  if (boardFilterStatus !== '全部' && !isFiltered) return null;
-                                  return (
-                                    <div
-                                      key={record.id}
-                                      className={'board-card ' + status.class + ' ' + (boardSelectedRecord?.id === record.id ? 'selected' : '') + ' ' + (draggedRecordId === record.id ? 'dragging' : '')}
-                                      draggable
-                                      onDragStart={(e) => handleDragStart(e, record.id)}
-                                      onDragEnd={handleDragEnd}
-                                      onClick={() => setBoardSelectedRecord(record)}
-                                      style={{ borderLeftColor: room.color }}
-                                    >
-                                      <div className="board-card-header">
-                                        <GripVertical size={14} className="drag-handle" />
-                                        <h4>{record.patient}</h4>
-                                        <span className={'status ' + statusClass(record.status)}>{record.status}</span>
-                                      </div>
-                                      <div className="board-card-meta">
-                                        <span>牙位 {record.tooth} · {record.shade}</span>
-                                      </div>
-                                      <div className="board-card-footer">
-                                        <span className="board-followup-date">
-                                          <Clock size={12} />
-                                          {isToday ? '今日复诊' : `${diffDays(dateStr, today)}天后`}
-                                        </span>
-                                        <span className="board-room-tag" style={{ backgroundColor: room.color + '20', color: room.color }}>
-                                          {room.name}
-                                        </span>
-                                      </div>
-                                      {editingFollowUpRecordId === record.id ? (
-                                        <div className="board-card-date-picker" onClick={(e) => e.stopPropagation()}>
-                                          <input
-                                            type="date"
-                                            value={record.followUp || ''}
-                                            onChange={(e) => {
-                                              updateFollowUpDate(record.id, e.target.value);
-                                              setEditingFollowUpRecordId(null);
-                                            }}
-                                            autoFocus
-                                          />
-                                          <button type="button" onClick={() => setEditingFollowUpRecordId(null)}>
-                                            <X size={14} />
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          className="board-edit-date-btn"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingFollowUpRecordId(record.id);
-                                          }}
-                                        >
-                                          <Edit3 size={12} /> 调整日期
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                              <div className="board-card-meta">
+                                <span>牙位 {record.tooth} · {record.shade}</span>
                               </div>
+                              <div className="board-card-footer">
+                                <span className="board-followup-date">
+                                  <Clock size={12} />
+                                  {isToday ? '今日复诊' : `${diffDays(dateStr, today)}天后`}
+                                </span>
+                              </div>
+                              {editingFollowUpRecordId === record.id ? (
+                                <div className="board-card-date-picker" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="date"
+                                    value={record.followUp || ''}
+                                    onChange={(e) => {
+                                      updateFollowUpDate(record.id, e.target.value);
+                                      setEditingFollowUpRecordId(null);
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button type="button" onClick={() => setEditingFollowUpRecordId(null)}>
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="board-edit-date-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingFollowUpRecordId(record.id);
+                                  }}
+                                >
+                                  <Edit3 size={12} /> 调整日期
+                                </button>
+                              )}
                             </div>
                           );
                         })}
-
-                        {unassignedRecords.length > 0 && (
-                          <div className="board-room-group board-room-unassigned">
-                            <div className="board-room-header">
-                              <span className="board-room-name">未安排诊室</span>
-                              <span className="board-room-count">{unassignedRecords.length} 条</span>
-                            </div>
-                            <div className="board-room-body">
-                              {unassignedRecords.map((record) => {
-                                const status = getFollowUpStatus(record.followUp);
-                                const isFiltered = filteredBoardRecordsByStatus.find((r) => r.id === record.id);
-                                if (boardFilterStatus !== '全部' && !isFiltered) return null;
-                                return (
-                                  <div
-                                    key={record.id}
-                                    className={'board-card ' + status.class + ' ' + (boardSelectedRecord?.id === record.id ? 'selected' : '') + ' ' + (draggedRecordId === record.id ? 'dragging' : '')}
-                                    draggable
-                                    onDragStart={(e) => handleDragStart(e, record.id)}
-                                    onDragEnd={handleDragEnd}
-                                    onClick={() => setBoardSelectedRecord(record)}
-                                  >
-                                    <div className="board-card-header">
-                                      <GripVertical size={14} className="drag-handle" />
-                                      <h4>{record.patient}</h4>
-                                      <span className={'status ' + statusClass(record.status)}>{record.status}</span>
-                                    </div>
-                                    <div className="board-card-meta">
-                                      <span>牙位 {record.tooth} · {record.shade}</span>
-                                    </div>
-                                    <div className="board-card-footer">
-                                      <span className="board-followup-date">
-                                        <Clock size={12} />
-                                        {isToday ? '今日复诊' : `${diffDays(dateStr, today)}天后`}
-                                      </span>
-                                    </div>
-                                    {editingFollowUpRecordId === record.id ? (
-                                      <div className="board-card-date-picker" onClick={(e) => e.stopPropagation()}>
-                                        <input
-                                          type="date"
-                                          value={record.followUp || ''}
-                                          onChange={(e) => {
-                                            updateFollowUpDate(record.id, e.target.value);
-                                            setEditingFollowUpRecordId(null);
-                                          }}
-                                          autoFocus
-                                        />
-                                        <button type="button" onClick={() => setEditingFollowUpRecordId(null)}>
-                                          <X size={14} />
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        className="board-edit-date-btn"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingFollowUpRecordId(record.id);
-                                        }}
-                                      >
-                                        <Edit3 size={12} /> 调整日期
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
@@ -5484,12 +2477,6 @@ function App() {
                       <strong>{getFollowUpStatus(boardSelectedRecord.followUp).label}</strong>
                       <span>· 复诊日期：{boardSelectedRecord.followUp}</span>
                     </div>
-                    {boardSelectedRecord.followUpRoom && (
-                      <div className="followup-room-tag" style={{ borderColor: getRoomInfo(boardSelectedRecord.followUpRoom).color, backgroundColor: getRoomInfo(boardSelectedRecord.followUpRoom).color + '15' }}>
-                        <Stethoscope size={14} />
-                        <span>诊室：{boardSelectedRecord.followUpRoom}</span>
-                      </div>
-                    )}
                   </div>
                   <div className="detail-section-divider">
                     <Edit3 size={16} />
@@ -5503,51 +2490,29 @@ function App() {
                       onChange={(e) => updateFollowUpDate(boardSelectedRecord.id, e.target.value)}
                     />
                   </label>
-                  <div className="detail-section-divider">
-                    <Stethoscope size={16} />
-                    安排诊室
-                  </div>
-                  <label className="wide">
-                    <span>选择复诊诊室</span>
-                    <select
-                      value={boardSelectedRecord.followUpRoom || ''}
-                      onChange={(e) => updateFollowUpRoom(boardSelectedRecord.id, e.target.value || null)}
-                    >
-                      <option value="">未安排</option>
-                      {getRooms().map((room) => (
-                        <option key={room.name} value={room.name}>{room.name}</option>
-                      ))}
-                    </select>
-                  </label>
 
-                  {boardSelectedRecord.shade && (
+                  {getShadeInfo(boardSelectedRecord.shade) && (
                     <div className="shade-detail-card">
                       <div className="shade-detail-header">
-                        <div className={'shade-swatch-sm ' + getShadeSwatchClass(boardSelectedRecord.shade)}>
+                        <div className={'shade-swatch-sm shade-' + boardSelectedRecord.shade.charAt(0).toLowerCase()}>
                           <span>{boardSelectedRecord.shade}</span>
                         </div>
                         <div>
                           <h4>色号 {boardSelectedRecord.shade} 说明</h4>
-                          {getShadeInfo(boardSelectedRecord.shade) ? (
-                            <button
-                              type="button"
-                              className="link-btn"
-                              onClick={() => setShadeDetailModal(getShadeInfo(boardSelectedRecord.shade))}
-                            >
-                              查看完整说明
-                            </button>
-                          ) : (
-                            <span className="shade-deleted-hint">（该色号已从样本库移除，仅保留历史记录）</span>
-                          )}
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={() => setShadeDetailModal(getShadeInfo(boardSelectedRecord.shade))}
+                          >
+                            查看完整说明
+                          </button>
                         </div>
                       </div>
-                      {getShadeInfo(boardSelectedRecord.shade) && (
-                        <div className="shade-detail-content">
-                          <p><strong>文字说明：</strong>{getShadeInfo(boardSelectedRecord.shade)?.description}</p>
-                          <p><strong>适用场景：</strong>{getShadeInfo(boardSelectedRecord.shade)?.scenario}</p>
-                          <p><strong>注意事项：</strong>{getShadeInfo(boardSelectedRecord.shade)?.notes}</p>
-                        </div>
-                      )}
+                      <div className="shade-detail-content">
+                        <p><strong>文字说明：</strong>{getShadeInfo(boardSelectedRecord.shade)?.description}</p>
+                        <p><strong>适用场景：</strong>{getShadeInfo(boardSelectedRecord.shade)?.scenario}</p>
+                        <p><strong>注意事项：</strong>{getShadeInfo(boardSelectedRecord.shade)?.notes}</p>
+                      </div>
                     </div>
                   )}
 
@@ -5558,24 +2523,18 @@ function App() {
                   </div>
 
                   <div className="detail-actions">
-                    <p className="hint">快速更新修复状态（需满足质控条件）：</p>
+                    <p className="hint">快速更新修复状态：</p>
                     <div className="actions">
-                      {appConfig.statuses.map((status) => {
-                        const transition = getTransitionInfo(boardSelectedRecord, status);
-                        return (
-                          <button
-                            key={status}
-                            type="button"
-                            onClick={() => updateStatus(boardSelectedRecord.id, status)}
-                            disabled={transition.disabled}
-                            title={transition.title}
-                          >
-                            {status}
-                            {transition.showBlockedIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
-                            {transition.showOptionalIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
-                          </button>
-                        );
-                      })}
+                      {appConfig.statuses.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => updateStatus(boardSelectedRecord.id, status)}
+                          disabled={boardSelectedRecord.status === status}
+                        >
+                          {status}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -5629,45 +2588,10 @@ function App() {
                 })}
               </div>
 
-              <div className="photo-quality-overview">
-                {appConfig.photoSteps.map((step) => {
-                  const stepData = editingPhotoProcess.steps[step.key];
-                  const status = getStepPhotoStatus(stepData);
-                  const StepIcon = getStepIcon(step.icon);
-                  const statusConfig = {
-                    'has-photo': { label: '有照片', cls: 'status-has-photo', icon: <CheckCircle2 size={12} /> },
-                    'only-note': { label: '仅备注', cls: 'status-only-note', icon: <AlertTriangle size={12} /> },
-                    'missing': { label: '待补充', cls: 'status-missing', icon: <AlertCircle size={12} /> }
-                  }[status];
-                  return (
-                    <div
-                      key={step.key}
-                      className={'photo-quality-mini ' + (editingPhotoProcess.steps[step.key]?.confirmed ? 'confirmed' : '')}
-                      onClick={() => goToStep(appConfig.photoSteps.indexOf(step))}
-                    >
-                      <div className="pqm-thumb">
-                        {stepData?.imageUrl ? (
-                          <img src={stepData.imageUrl} alt="" />
-                        ) : (
-                          <StepIcon size={18} style={{ color: '#9ca3af' }} />
-                        )}
-                      </div>
-                      <div className="pqm-info">
-                        <div className="pqm-label">{step.label}</div>
-                        <span className={'photo-status-tag ' + statusConfig.cls}>
-                          {statusConfig.icon}{statusConfig.label}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
               {(() => {
                 const currentStepConfig = appConfig.photoSteps[editingPhotoProcess.currentStep];
                 const currentStepData = editingPhotoProcess.steps[currentStepConfig.key];
                 const StepIcon = getStepIcon(currentStepConfig.icon);
-                const stepStatus = getStepPhotoStatus(currentStepData);
                 return (
                   <div className="step-form">
                     <div className="step-form-header">
@@ -5681,7 +2605,7 @@ function App() {
                     <div className="step-form-image">
                       {currentStepData?.imageUrl ? (
                         <div className="image-preview-box">
-                          <img src={currentStepData.imageUrl} alt={currentStepConfig.label} className="step-thumbnail" />
+                          <img src={currentStepData.imageUrl} alt={currentStepConfig.label} />
                           <button
                             type="button"
                             className="image-remove-btn"
@@ -5694,7 +2618,7 @@ function App() {
                         <label className="image-upload-area">
                           <Upload size={32} style={{ color: '#9ca3af' }} />
                           <span>点击上传{currentStepConfig.label}</span>
-                          <p className="hint">支持 JPG、PNG 格式，超过 500KB 将自动压缩</p>
+                          <p className="hint">支持 JPG、PNG 格式</p>
                           <input
                             type="file"
                             accept="image/*"
@@ -5702,73 +2626,6 @@ function App() {
                             onChange={(e) => handleImageUpload(currentStepConfig.key, e)}
                           />
                         </label>
-                      )}
-                    </div>
-
-                    {compressMessage && (
-                      <div className={'compress-hint compress-' + compressMessage.type}>
-                        {compressMessage.type === 'loading' && <RefreshCw size={14} className="spin" />}
-                        {compressMessage.type === 'success' && <CheckCircle2 size={14} />}
-                        {compressMessage.type === 'info' && <Info size={14} />}
-                        {compressMessage.type === 'error' && <AlertTriangle size={14} />}
-                        <span>{compressMessage.text}</span>
-                      </div>
-                    )}
-
-                    <div className="photo-quality-card">
-                      <div className="pqc-header">
-                        <HardDriveUpload size={16} />
-                        <strong>照片质量检查</strong>
-                      </div>
-                      <div className="pqc-grid">
-                        <div className="pqc-item">
-                          <span className="pqc-label">文件大小</span>
-                          <span className="pqc-value file-size-tag">
-                            {currentStepData?.fileSize > 0 ? formatFileSize(currentStepData.fileSize) : '--'}
-                          </span>
-                        </div>
-                        <div className="pqc-item">
-                          <span className="pqc-label">拍摄环境</span>
-                          <span className="pqc-value">
-                            {currentStepData?.environment ? (
-                              <span className="checklist-env-inline">
-                                <Sun size={12} /> {currentStepData.environment}
-                              </span>
-                            ) : (
-                              <span className="pqc-empty">未选择</span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="pqc-item">
-                          <span className="pqc-label">确认状态</span>
-                          <span className="pqc-value">
-                            {currentStepData?.confirmed ? (
-                              <span className="pqc-confirmed"><CheckCheck size={14} />已确认</span>
-                            ) : (
-                              <span className="pqc-unconfirmed"><Square size={14} />待确认</span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="pqc-item">
-                          <span className="pqc-label">照片状态</span>
-                          <span className="pqc-value">
-                            {stepStatus === 'has-photo' && <span className="photo-status-tag status-has-photo"><CheckCircle2 size={12} />有照片</span>}
-                            {stepStatus === 'only-note' && <span className="photo-status-tag status-only-note"><AlertTriangle size={12} />只有备注</span>}
-                            {stepStatus === 'missing' && <span className="photo-status-tag status-missing"><AlertCircle size={12} />缺失</span>}
-                          </span>
-                        </div>
-                      </div>
-                      {stepStatus === 'missing' && (
-                        <div className="missing-warning">
-                          <AlertOctagon size={14} />
-                          <span>请上传照片或填写备注，完成本步骤的资料记录</span>
-                        </div>
-                      )}
-                      {stepStatus === 'only-note' && (
-                        <div className="missing-warning note-only">
-                          <AlertTriangle size={14} />
-                          <span>当前只有文字备注，建议补充照片资料</span>
-                        </div>
                       )}
                     </div>
 
@@ -5837,1784 +2694,12 @@ function App() {
         </div>
       )}
 
-      {activeTab === 'qualityControl' && (
-        <>
-          <section className="metrics" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-            {qcMetrics.map((metric) => (
-              <article className={'metric ' + (metric.label === '待完善' && metric.value > 0 ? 'metric-qc-incomplete' : '')} key={metric.label}>
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
-              </article>
-            ))}
-          </section>
-
-          <section className="workspace">
-            <section className="panel list-panel">
-              <div className="toolbar">
-                <div className="panel-title" style={{ marginBottom: 0, flex: 1 }}>
-                  <ShieldCheck size={18} />
-                  <h2>质控检查清单</h2>
-                </div>
-                <select value={qcFilter} onChange={(e) => setQcFilter(e.target.value)}>
-                  <option value="全部">全部状态</option>
-                  {appConfig.statuses.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="qc-legend">
-                {appConfig.statuses.map((status) => {
-                  const items = qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
-                  const criticalItems = items.filter((ci) => ci.critical);
-                  return (
-                    <div key={status} className="qc-legend-item">
-                      <span className={'status ' + statusClass(status)}>{status}</span>
-                      <span className="qc-legend-label">
-                        必检: {criticalItems.map((i) => i.label).join('、')}
-                        {criticalItems.length < items.length && (
-                          <span style={{ color: '#9ca3af', marginLeft: '4px' }}>
-                            (+可选: {items.filter((i) => !i.critical).map((i) => i.label).join('、')})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {filteredQcRecords.length > 0 ? (
-                <div className="records">
-                  {filteredQcRecords.map(({ record, qc, progress, missing }) => {
-                    const todoItems = getTodoItemsForStatus(record.id, record.status);
-                    const criticalMissing = missing.filter((m) => m.critical);
-                    const optionalMissing = missing.filter((m) => !m.critical);
-                    return (
-                      <article
-                        className={'record qc-record ' + (progress === 100 ? 'qc-complete' : progress > 0 ? 'qc-inprogress' : 'qc-notstarted') + ' ' + (selectedQcRecord?.recordId === record.id ? 'selected' : '')}
-                        key={record.id}
-                        onClick={() => {
-                          const currentQc = qc || ensureQcForRecord(record.id);
-                          const updatedQc = markQcItemsAsSeen(record.id) || currentQc;
-                          const newProgress = getQcProgress(record.id, record.status);
-                          const newMissing = getMissingQcItems(record.id, record.status);
-                          setSelectedQcRecord({ record, qc: updatedQc, progress: newProgress, missing: newMissing });
-                          setSelected(record);
-                        }}
-                      >
-                        <div className="record-head">
-                          <div>
-                            <h3>{record.patient}</h3>
-                            <p>{`牙位 ${record.tooth} · ${record.shade}`}</p>
-                          </div>
-                          <span className={'status ' + statusClass(record.status)}>{record.status}</span>
-                        </div>
-
-                        <div className="qc-progress-bar" style={{ marginTop: '10px' }}>
-                          {todoItems.map((ci) => (
-                            <div
-                              key={ci.key}
-                              className={'qc-progress-dot ' + (ci.isChecked ? 'done' : 'pending')}
-                              title={`${ci.label}${ci.critical ? ' ★关键' : ''}${ci.isChecked ? '（已完成）' : '（待完成）'}`}
-                            />
-                          ))}
-                        </div>
-
-                        <p className="record-detail" style={{ marginTop: '8px' }}>
-                          质控进度：{progress}%
-                          {criticalMissing.length > 0 && (
-                            <span className="qc-missing-tag">
-                              <AlertOctagon size={12} /> 关键缺: {criticalMissing.map((m) => m.label).join('、')}
-                            </span>
-                          )}
-                          {optionalMissing.length > 0 && criticalMissing.length === 0 && (
-                            <span className="qc-missing-inline" style={{ marginLeft: '4px' }}>
-                              <ShieldAlert size={12} /> 可选缺: {optionalMissing.map((m) => m.label).join('、')}
-                            </span>
-                          )}
-                        </p>
-
-                        <div className="qc-todo-list" onClick={(e) => e.stopPropagation()}>
-                          {todoItems.map((ci) => (
-                            <div
-                              key={ci.key}
-                              className={'qc-todo-item ' + (ci.isChecked ? 'qc-todo-done' : ci.critical ? 'qc-todo-critical' : 'qc-todo-optional')}
-                            >
-                              <button
-                                type="button"
-                                className="qc-todo-toggle"
-                                onClick={() => toggleQcItem(record.id, ci.key)}
-                                title={ci.isChecked ? '撤销' : '确认'}
-                              >
-                                {ci.isChecked ? <CheckCheck size={16} /> : <Square size={16} />}
-                              </button>
-                              <div className="qc-todo-content">
-                                <span className="qc-todo-label">{ci.label}</span>
-                                {ci.critical && !ci.isChecked && <span className="qc-critical-badge">关键</span>}
-                                {!ci.critical && <span className="qc-optional-tag">可选</span>}
-                                {ci.isChecked && ci.checkedAt && (
-                                  <span className="qc-todo-time">
-                                    <Clock size={10} /> {new Date(ci.checkedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <ShieldCheck size={48} style={{ color: '#d0d5dd' }} />
-                  <h3>暂无质控记录</h3>
-                  <p className="empty">在比色记录中添加记录后，质控检查会自动关联。</p>
-                </div>
-              )}
-            </section>
-
-            <aside className="panel detail-panel">
-              <div className="panel-title">
-                <ShieldCheck size={18} />
-                <h2>质控详情</h2>
-                <button
-                  type="button"
-                  className="qc-config-toggle"
-                  onClick={() => setShowQcConfig(!showQcConfig)}
-                  title={showQcConfig ? '关闭配置' : '检查项配置'}
-                >
-                  {showQcConfig ? <X size={14} /> : <Layers size={14} />}
-                  {showQcConfig ? '关闭配置' : '配置检查项'}
-                </button>
-              </div>
-
-              {showQcConfig ? (
-                <div className="qc-config-panel">
-                  <div className="qc-config-header">
-                    <p className="qc-config-desc">配置质控检查项：添加、编辑或删除检查项，调整每个状态下所需的检查项及关键性。</p>
-                  </div>
-
-                  <div className="qc-config-list">
-                    {qcCheckItems.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((ci, idx) => (
-                      <div key={ci.key} className="qc-config-item">
-                        <div className="qc-config-item-header">
-                          <span className="qc-config-order">{idx + 1}</span>
-                          <strong>{ci.label}</strong>
-                          <span className="qc-config-key">({ci.key})</span>
-                          {ci.critical && <span className="qc-critical-badge">关键</span>}
-                          {!ci.critical && <span className="qc-optional-tag">可选</span>}
-                          <div className="qc-config-item-actions">
-                            <button type="button" className="btn-icon" onClick={() => setEditingQcItem({ ...ci })} title="编辑">
-                              <Edit3 size={14} />
-                            </button>
-                            <button type="button" className="btn-icon" onClick={() => removeQcItemConfig(ci.key)} title="删除">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                        <p className="qc-config-item-desc">{ci.description}</p>
-                        <div className="qc-config-status-toggles">
-                          {appConfig.statuses.map((status) => {
-                            const isActive = ci.requiredFor.includes(status);
-                            return (
-                              <label key={status} className="qc-config-status-label">
-                                <input
-                                  type="checkbox"
-                                  checked={isActive}
-                                  onChange={(e) => {
-                                    const updated = {
-                                      ...ci,
-                                      requiredFor: e.target.checked
-                                        ? [...ci.requiredFor, status]
-                                        : ci.requiredFor.filter((s) => s !== status)
-                                    };
-                                    saveQcItemConfig(updated);
-                                  }}
-                                />
-                                <span className={'status ' + statusClass(status)} style={{ fontSize: '11px', padding: '2px 6px' }}>
-                                  {status}
-                                </span>
-                              </label>
-                            );
-                          })}
-                          <label className="qc-config-status-label">
-                            <input
-                              type="checkbox"
-                              checked={ci.critical}
-                              onChange={(e) => {
-                                saveQcItemConfig({ ...ci, critical: e.target.checked });
-                              }}
-                            />
-                            <span style={{ fontSize: '11px', fontWeight: '700', color: ci.critical ? '#b91c1c' : '#6b7280' }}>关键项</span>
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {editingQcItem && (
-                    <div className="qc-config-edit-form">
-                      <div className="qc-config-edit-header">
-                        <strong>{editingQcItem.key && qcCheckItems.find((c) => c.key === editingQcItem.key) ? '编辑检查项' : '新增检查项'}</strong>
-                        <button type="button" className="btn-icon" onClick={() => setEditingQcItem(null)}>
-                          <X size={14} />
-                        </button>
-                      </div>
-                      <div className="form-grid">
-                        <label>
-                          <span>检查项键名（英文）</span>
-                          <input
-                            type="text"
-                            value={editingQcItem.key || ''}
-                            onChange={(e) => setEditingQcItem({ ...editingQcItem, key: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
-                            placeholder="如：initialShade"
-                            disabled={!!qcCheckItems.find((c) => c.key === editingQcItem.key)}
-                          />
-                        </label>
-                        <label>
-                          <span>显示名称</span>
-                          <input
-                            type="text"
-                            value={editingQcItem.label || ''}
-                            onChange={(e) => setEditingQcItem({ ...editingQcItem, label: e.target.value })}
-                            placeholder="如：初次比色"
-                          />
-                        </label>
-                        <label className="wide">
-                          <span>描述说明</span>
-                          <input
-                            type="text"
-                            value={editingQcItem.description || ''}
-                            onChange={(e) => setEditingQcItem({ ...editingQcItem, description: e.target.value })}
-                            placeholder="如：完成患者牙位比色，确认色号选择准确"
-                          />
-                        </label>
-                        <label>
-                          <span>图标</span>
-                          <select
-                            value={editingQcItem.icon || 'ClipboardList'}
-                            onChange={(e) => setEditingQcItem({ ...editingQcItem, icon: e.target.value })}
-                          >
-                            <option value="Palette">调色板</option>
-                            <option value="Camera">相机</option>
-                            <option value="ArrowLeftRight">交接</option>
-                            <option value="Stethoscope">听诊器</option>
-                            <option value="CheckCircle2">完成</option>
-                            <option value="ClipboardList">清单</option>
-                          </select>
-                        </label>
-                        <label>
-                          <span>排序号</span>
-                          <input
-                            type="number"
-                            value={editingQcItem.order ?? 1}
-                            onChange={(e) => setEditingQcItem({ ...editingQcItem, order: parseInt(e.target.value) || 1 })}
-                            min={1}
-                          />
-                        </label>
-                      </div>
-                      <div className="qc-config-edit-actions">
-                        <button type="button" className="primary" onClick={() => saveQcItemConfig(editingQcItem)}>
-                          <Save size={14} /> 保存
-                        </button>
-                        <button type="button" className="secondary" onClick={() => setEditingQcItem(null)}>
-                          取消
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="qc-config-bottom-actions">
-                    <button type="button" className="secondary" onClick={() => setEditingQcItem({ key: '', label: '', icon: 'ClipboardList', requiredFor: [], description: '', order: qcCheckItems.length + 1, critical: false })}>
-                      <Plus size={14} /> 新增检查项
-                    </button>
-                    <button type="button" className="secondary" onClick={resetQcItemConfig}>
-                      <RotateCcw size={14} /> 恢复默认配置
-                    </button>
-                  </div>
-                </div>
-              ) : selectedQcRecord ? (
-                <div className="detail">
-                  <div className="qc-detail-header">
-                    <div>
-                      <h3>{selectedQcRecord.record.patient}</h3>
-                      <p>{`牙位 ${selectedQcRecord.record.tooth} · ${selectedQcRecord.record.shade}`}</p>
-                    </div>
-                    <span className={'status ' + statusClass(selectedQcRecord.record.status)}>
-                      {selectedQcRecord.record.status}
-                    </span>
-                  </div>
-
-                  <div className="qc-detail-progress">
-                    <div className="qc-progress-ring">
-                      <svg viewBox="0 0 36 36" className="qc-ring-svg">
-                        <path
-                          className="qc-ring-bg"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                        <path
-                          className="qc-ring-fill"
-                          strokeDasharray={`${selectedQcRecord.progress}, 100`}
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                      </svg>
-                      <span className="qc-ring-text">{selectedQcRecord.progress}%</span>
-                    </div>
-                    <div className="qc-progress-summary">
-                      <strong>当前状态质控进度</strong>
-                      <p>
-                        {selectedQcRecord.progress === 100
-                          ? '所有必检项已完成，可切换至下一状态'
-                          : `还需完成 ${selectedQcRecord.missing.length} 项检查`}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="detail-section-divider">
-                    <ClipboardList size={16} />
-                    待办项清单（当前状态：{selectedQcRecord.record.status}）
-                  </div>
-
-                  <div className="photo-checklist">
-                    {qcCheckItems.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((ci) => {
-                      const isRequired = ci.requiredFor.includes(selectedQcRecord.record.status);
-                      const isChecked = selectedQcRecord.qc?.items[ci.key]?.checked;
-                      const remark = selectedQcRecord.qc?.items[ci.key]?.remark || '';
-                      const checkedAt = selectedQcRecord.qc?.items[ci.key]?.checkedAt;
-                      const QcIcon = getQcIcon(ci.icon);
-
-                      if (!isRequired && !isChecked) {
-                        return (
-                          <div key={ci.key} className="checklist-item qc-item-irrelevant">
-                            <div className="checklist-icon"><Square size={20} /></div>
-                            <div className="checklist-content">
-                              <div className="checklist-header">
-                                <QcIcon size={16} />
-                                <strong>{ci.label}</strong>
-                                <span className="qc-irrelevant-badge">当前状态无需</span>
-                              </div>
-                              <p className="checklist-empty">在更后续的状态中需要完成</p>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div key={ci.key} className={'checklist-item ' + (isChecked ? 'checked' : '') + (!isRequired ? ' qc-item-optional' : '') + (ci.critical && !isChecked ? ' qc-item-critical' : '')}>
-                          <div className="checklist-icon">
-                            {isChecked ? <CheckCheck size={20} /> : <Square size={20} />}
-                          </div>
-                          <div className="checklist-content">
-                            <div className="checklist-header">
-                              <QcIcon size={16} />
-                              <strong>{ci.label}</strong>
-                              {isChecked && <span className="checklist-badge">已确认</span>}
-                              {!isRequired && isChecked && <span className="qc-optional-badge">可选</span>}
-                              {isRequired && !isChecked && ci.critical && <span className="qc-critical-badge">关键</span>}
-                              {isRequired && !isChecked && !ci.critical && <span className="qc-required-badge">必检</span>}
-                            </div>
-                            <p className="qc-item-desc">{ci.description}</p>
-                            {isChecked && checkedAt && (
-                              <span className="checklist-env">
-                                <Clock size={12} /> 确认于 {new Date(checkedAt).toLocaleString('zh-CN')}
-                              </span>
-                            )}
-                            <div className="qc-remark-row" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="text"
-                                placeholder="添加备注..."
-                                value={remark}
-                                onChange={(e) => {
-                                  const updated = updateQcRemark(selectedQcRecord.record.id, ci.key, e.target.value);
-                                  setSelectedQcRecord({
-                                    ...selectedQcRecord,
-                                    qc: updated,
-                                    progress: getQcProgressByQc(updated, selectedQcRecord.record.status),
-                                    missing: getMissingQcItemsByQc(updated, selectedQcRecord.record.status)
-                                  });
-                                }}
-                              />
-                              <button
-                                type="button"
-                                className={isChecked ? 'qc-toggle-btn qc-toggle-uncheck' : 'qc-toggle-btn qc-toggle-check'}
-                                onClick={() => {
-                                  const updated = toggleQcItem(selectedQcRecord.record.id, ci.key);
-                                  setSelectedQcRecord({
-                                    ...selectedQcRecord,
-                                    qc: updated,
-                                    progress: getQcProgressByQc(updated, selectedQcRecord.record.status),
-                                    missing: getMissingQcItemsByQc(updated, selectedQcRecord.record.status)
-                                  });
-                                }}
-                              >
-                                {isChecked ? <><X size={14} />撤销</> : <><CheckCheck size={14} />确认</>}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="checklist-summary">
-                    {selectedQcRecord.progress === 100 ? (
-                      <p className="checklist-complete">✓ 当前状态所有必检项已达标</p>
-                    ) : (
-                      <>
-                        {getCriticalMissingQcItems(selectedQcRecord.record.id, selectedQcRecord.record.status).length > 0 && (
-                          <p className="checklist-progress" style={{ color: '#b91c1c' }}>
-                            <AlertOctagon size={14} /> 关键步骤缺失（不可跳过）：{getCriticalMissingQcItems(selectedQcRecord.record.id, selectedQcRecord.record.status).map((m) => m.label).join('、')}
-                          </p>
-                        )}
-                        {(() => {
-                          const nonCriticalMissing = selectedQcRecord.missing.filter((m) => !m.critical);
-                          return nonCriticalMissing.length > 0 && (
-                            <p className="checklist-progress" style={{ color: '#b45309', marginTop: '4px' }}>
-                              <ShieldAlert size={14} /> 非关键步骤缺失（可跳过）：{nonCriticalMissing.map((m) => m.label).join('、')}
-                            </p>
-                          );
-                        })()}
-                      </>
-                    )}
-                  </div>
-
-                  <div className="detail-actions">
-                    <p className="hint">状态流转（关键步骤未完成不可跳过，非关键步骤可确认跳过）：</p>
-                    <div className="actions">
-                      {appConfig.statuses.map((status) => {
-                        const transition = getTransitionInfo(selectedQcRecord.record, status);
-                        return (
-                          <button
-                            key={status}
-                            type="button"
-                            onClick={() => updateStatus(selectedQcRecord.record.id, status)}
-                            disabled={transition.disabled}
-                            title={transition.title}
-                          >
-                            {status}
-                            {transition.showBlockedIcon && <AlertOctagon size={12} style={{ marginLeft: 4 }} />}
-                            {transition.showOptionalIcon && <ShieldAlert size={12} style={{ marginLeft: 4 }} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="empty-state" style={{ padding: '40px 20px' }}>
-                  <ShieldCheck size={48} style={{ color: '#d0d5dd' }} />
-                  <p className="empty">点击左侧任意记录查看质控详情和检查项。</p>
-                  <p className="hint">不同修复状态下需要完成的检查项不同，关键步骤缺失时无法直接标记完成。</p>
-                </div>
-              )}
-            </aside>
-          </section>
-
-          <section className="insights">
-            <div className="panel">
-              <div className="panel-title">
-                <ClipboardList size={18} />
-                <h2>质控规则说明</h2>
-              </div>
-              <div className="qc-rules-grid">
-                {appConfig.statuses.map((status) => {
-                  const items = qcCheckItems.filter((ci) => ci.requiredFor.includes(status));
-                  const criticalItems = items.filter((ci) => ci.critical);
-                  const count = records.filter((r) => r.status === status).length;
-                  const doneCount = records.filter((r) => r.status === status && getQcProgress(r.id, status) === 100).length;
-                  return (
-                    <div key={status} className="qc-rule-card">
-                      <div className="qc-rule-header">
-                        <span className={'status ' + statusClass(status)}>{status}</span>
-                        <span className="qc-rule-count">{doneCount}/{count} 达标</span>
-                      </div>
-                      <div className="qc-rule-items">
-                        {items.map((ci) => {
-                          const QcIcon = getQcIcon(ci.icon);
-                          return (
-                            <div key={ci.key} className="qc-rule-item">
-                              <QcIcon size={14} />
-                              <span>{ci.label}</span>
-                              {ci.critical && <span className="qc-critical-badge" style={{ marginLeft: '4px' }}>关键</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        </>
-      )}
-
-      {activeTab === 'dataManagement' && (
-        <section className="workspace data-management">
-          {showMigrationNotice && dataMigrationLog.length > 0 && (
-            <div className="data-notice migration-notice">
-              <div className="notice-header">
-                <RefreshCw size={20} />
-                <h3>数据迁移完成</h3>
-                <button className="notice-close" onClick={() => setShowMigrationNotice(false)}>
-                  <X size={16} />
-                </button>
-              </div>
-              <p className="notice-message">
-                您的本地数据已成功升级到新版本（v{CURRENT_SCHEMA_VERSION}）。以下是迁移详情：
-              </p>
-              <ul className="notice-log">
-                {dataMigrationLog.slice(0, 10).map((log, idx) => (
-                  <li key={idx}>
-                    <CheckCircle2 size={14} className="log-icon success" />
-                    <span>{log.message}</span>
-                    <small>{formatDateTime(log.timestamp)}</small>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {showRecoveryNotice && dataRecoveryLog.length > 0 && (
-            <div className="data-notice recovery-notice">
-              <div className="notice-header">
-                <AlertTriangle size={20} />
-                <h3>部分数据已恢复</h3>
-                <button className="notice-close" onClick={() => setShowRecoveryNotice(false)}>
-                  <X size={16} />
-                </button>
-              </div>
-              <p className="notice-message">
-                检测到部分数据损坏，已自动恢复为默认值。其他数据保持完整。以下是恢复详情：
-              </p>
-              <ul className="notice-log">
-                {dataRecoveryLog.slice(0, 10).map((log, idx) => (
-                  <li key={idx}>
-                    <AlertTriangle size={14} className="log-icon warning" />
-                    <span>{log.message}</span>
-                    <small>{formatDateTime(log.timestamp)}</small>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="panel form-panel data-panel">
-            <div className="panel-title">
-              <Database size={18} />
-              <h2>数据模型状态</h2>
-            </div>
-            <div className="data-model-status">
-              <div className="status-item">
-                <span className="status-label">Schema 版本</span>
-                <span className="status-value">v{CURRENT_SCHEMA_VERSION}</span>
-              </div>
-              <div className="status-item">
-                <span className="status-label">迁移记录</span>
-                <span className="status-value">{dataMigrationLog.length} 条</span>
-              </div>
-              <div className="status-item">
-                <span className="status-label">恢复记录</span>
-                <span className="status-value">{dataRecoveryLog.length} 条</span>
-              </div>
-            </div>
-            {(dataMigrationLog.length > 0 || dataRecoveryLog.length > 0) && (
-              <button
-                className="secondary"
-                type="button"
-                onClick={() => {
-                  clearMigrationAndRecoveryLogs(appConfig);
-                  setDataMigrationLog([]);
-                  setDataRecoveryLog([]);
-                  setShowMigrationNotice(false);
-                  setShowRecoveryNotice(false);
-                }}
-              >
-                <XCircle size={16} />清除迁移和恢复记录
-              </button>
-            )}
-          </div>
-
-          <div className="panel form-panel data-panel">
-            <div className="panel-title">
-              <Download size={18} />
-              <h2>完整备份导出</h2>
-            </div>
-            <p className="data-description">
-              将当前浏览器中存储的所有业务数据导出为完整备份包（JSON 文件），包含牙色记录、患者档案、色号库、拍照流程、交接单、质控配置、质控记录和协作时间线。
-            </p>
-            <div className="data-stats">
-              <div className="data-stat-item">
-                <ClipboardList size={20} />
-                <div>
-                  <strong>{records.length}</strong>
-                  <span>牙色记录</span>
-                </div>
-              </div>
-              <div className="data-stat-item">
-                <Users size={20} />
-                <div>
-                  <strong>{patients.length}</strong>
-                  <span>患者档案</span>
-                </div>
-              </div>
-            </div>
-            <div className="data-stats">
-              <div className="data-stat-item">
-                <Palette size={20} />
-                <div>
-                  <strong>{shadeLibrary.length}</strong>
-                  <span>色号库</span>
-                </div>
-              </div>
-              <div className="data-stat-item">
-                <Camera size={20} />
-                <div>
-                  <strong>{photoProcesses.length}</strong>
-                  <span>拍照流程</span>
-                </div>
-              </div>
-            </div>
-            <div className="data-stats">
-              <div className="data-stat-item">
-                <Package size={20} />
-                <div>
-                  <strong>{deliveryOrders.length}</strong>
-                  <span>交接单</span>
-                </div>
-              </div>
-              <div className="data-stat-item">
-                <ShieldCheck size={20} />
-                <div>
-                  <strong>{qcCheckItems.length}/{qcRecords.length}</strong>
-                  <span>质控配置/记录</span>
-                </div>
-              </div>
-            </div>
-            <div className="data-stats">
-              <div className="data-stat-item">
-                <History size={20} />
-                <div>
-                  <strong>{collabTimeline.length}</strong>
-                  <span>协作时间线</span>
-                </div>
-              </div>
-            </div>
-            <button className="primary" type="button" onClick={exportData}>
-              <Download size={18} />导出完整备份包
-            </button>
-          </div>
-
-          <div className="panel list-panel data-panel">
-            <div className="panel-title">
-              <HardDriveUpload size={18} />
-              <h2>数据导入</h2>
-            </div>
-            <p className="data-description">
-              选择从本系统导出的完整备份包 JSON 文件进行数据导入。导入前会按数据类型展示详细的新增、覆盖和跳过统计，确认后才会执行合并，并保持各类记录之间的关联关系。
-            </p>
-
-            {!importPreview ? (
-              <div className="import-area">
-                <label className="import-label">
-                  <Upload size={32} style={{ color: '#9ca3af' }} />
-                  <span>点击选择 JSON 备份文件或拖拽到此处</span>
-                  <p className="hint">仅支持由本系统导出的完整备份包文件</p>
-                  <input
-                    type="file"
-                    accept=".json,application/json"
-                    style={{ display: 'none' }}
-                    onChange={handleImportFile}
-                  />
-                </label>
-                {importFileName && (
-                  <p className="import-filename">已选择：{importFileName}</p>
-                )}
-              </div>
-            ) : (
-              <div className="import-preview">
-                <div className="import-preview-header">
-                  <CheckCircle2 size={20} style={{ color: 'var(--accent)' }} />
-                  <h3>备份文件解析成功</h3>
-                </div>
-
-                <div className="import-stats">
-                  <div className="import-stat-card">
-                    <h4>牙色记录</h4>
-                    <div className="import-stat-grid">
-                      <div className="import-stat-item">
-                        <span className="label">总计</span>
-                        <strong>{importPreview.totalRecords}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">新增</span>
-                        <strong className="text-success">{importPreview.newRecords}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">覆盖</span>
-                        <strong className="text-warning">{importPreview.overwrittenRecords}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="import-stat-card">
-                    <h4>患者档案</h4>
-                    <div className="import-stat-grid">
-                      <div className="import-stat-item">
-                        <span className="label">总计</span>
-                        <strong>{importPreview.totalPatients}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">新增</span>
-                        <strong className="text-success">{importPreview.newPatients}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">覆盖</span>
-                        <strong className="text-warning">{importPreview.overwrittenPatients}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="import-stat-card">
-                    <h4>色号库</h4>
-                    <div className="import-stat-grid">
-                      <div className="import-stat-item">
-                        <span className="label">总计</span>
-                        <strong>{importPreview.totalShades}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">新增</span>
-                        <strong className="text-success">{importPreview.newShades}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">覆盖</span>
-                        <strong className="text-warning">{importPreview.overwrittenShades}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="import-stat-card">
-                    <h4>拍照流程</h4>
-                    <div className="import-stat-grid">
-                      <div className="import-stat-item">
-                        <span className="label">总计</span>
-                        <strong>{importPreview.totalPhotoProcesses}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">新增</span>
-                        <strong className="text-success">{importPreview.newPhotoProcesses}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">覆盖</span>
-                        <strong className="text-warning">{importPreview.overwrittenPhotoProcesses}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="import-stat-card">
-                    <h4>交接单</h4>
-                    <div className="import-stat-grid">
-                      <div className="import-stat-item">
-                        <span className="label">总计</span>
-                        <strong>{importPreview.totalDeliveryOrders}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">新增</span>
-                        <strong className="text-success">{importPreview.newDeliveryOrders}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">覆盖</span>
-                        <strong className="text-warning">{importPreview.overwrittenDeliveryOrders}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="import-stat-card">
-                    <h4>质控配置</h4>
-                    <div className="import-stat-grid">
-                      <div className="import-stat-item">
-                        <span className="label">总计</span>
-                        <strong>{importPreview.totalQcCheckItems}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">新增</span>
-                        <strong className="text-success">{importPreview.newQcCheckItems}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">覆盖</span>
-                        <strong className="text-warning">{importPreview.overwrittenQcCheckItems}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="import-stat-card">
-                    <h4>质控记录</h4>
-                    <div className="import-stat-grid">
-                      <div className="import-stat-item">
-                        <span className="label">总计</span>
-                        <strong>{importPreview.totalQcRecords}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">新增</span>
-                        <strong className="text-success">{importPreview.newQcRecords}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">覆盖</span>
-                        <strong className="text-warning">{importPreview.overwrittenQcRecords}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="import-stat-card">
-                    <h4>协作时间线</h4>
-                    <div className="import-stat-grid">
-                      <div className="import-stat-item">
-                        <span className="label">总计</span>
-                        <strong>{importPreview.totalCollabTimeline}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">新增</span>
-                        <strong className="text-success">{importPreview.newCollabTimeline}</strong>
-                      </div>
-                      <div className="import-stat-item">
-                        <span className="label">跳过</span>
-                        <strong className="text-skip">{importPreview.skippedCollabTimeline}</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {importPreview.skippedQcRecords > 0 && (
-                  <div className="import-warning">
-                    <AlertTriangle size={18} />
-                    <div>
-                      <strong>{importPreview.skippedQcRecords} 条质控记录将被跳过</strong>
-                      <p>这些质控记录关联的牙色记录在导入数据和本地数据中均不存在，无法保持关联关系，将被自动跳过。</p>
-                    </div>
-                  </div>
-                )}
-
-                {importPreview.duplicatePatientNames.length > 0 && (
-                  <div className="import-warning">
-                    <AlertTriangle size={18} />
-                    <div>
-                      <strong>检测到重复患者姓名</strong>
-                      <p>以下患者姓名在当前数据中已存在：{importPreview.duplicatePatientNames.join('、')}</p>
-                      <p className="hint">系统将按 ID 合并数据，如有冲突请确认导入后检查。</p>
-                    </div>
-                  </div>
-                )}
-
-                {(importPreview.overwrittenRecords > 0 || importPreview.overwrittenPatients > 0 || importPreview.overwrittenShades > 0 || importPreview.overwrittenPhotoProcesses > 0 || importPreview.overwrittenDeliveryOrders > 0 || importPreview.overwrittenQcCheckItems > 0 || importPreview.overwrittenQcRecords > 0) && (
-                  <div className="import-warning">
-                    <AlertTriangle size={18} />
-                    <div>
-                      <strong>部分数据将被覆盖</strong>
-                      <p>导入数据中存在与本地相同 ID/key 的记录，导入后这些本地数据将被替换。各类型覆盖数量已在上方统计中标注。</p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="import-actions">
-                  <button type="button" className="secondary" onClick={cancelImport}>
-                    <X size={16} />取消
-                  </button>
-                  <button type="button" className="primary" onClick={confirmImport}>
-                    <CheckCircle2 size={16} />确认合并导入
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {activeTab === 'multiClinicCollab' && (
-        <section className="workspace collab-workspace" style={{ gridTemplateColumns: '420px minmax(0, 1fr)', gap: '18px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            <div className="panel data-panel">
-              <div className="panel-title">
-                <Tablet size={18} />
-                <h2>当前设备</h2>
-              </div>
-              <p className="data-description">
-                选择当前使用的诊室设备，所有新录入的记录将标记为该设备来源。
-              </p>
-              <div style={{ display: 'grid', gap: '10px' }}>
-                {appConfig.devices.map(device => (
-                  <button
-                    key={device.id}
-                    type="button"
-                    onClick={() => switchDevice(device.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      border: currentDeviceId === device.id
-                        ? `2px solid ${device.color}`
-                        : '2px solid #e5e7eb',
-                      background: currentDeviceId === device.id ? '#f0fdfa' : '#fff',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '10px',
-                      background: device.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      flexShrink: 0
-                    }}>
-                      <Tablet size={20} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#111827' }}>{device.name}</div>
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{device.room}</div>
-                    </div>
-                    {currentDeviceId === device.id && (
-                      <CheckCircle2 size={18} style={{ color: device.color }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="panel data-panel">
-              <div className="panel-title">
-                <Zap size={18} />
-                <h2>模拟其他设备录入</h2>
-              </div>
-              <p className="data-description">
-                模拟从其他诊室平板导入数据，用于测试离线协作合并流程。
-              </p>
-              <div style={{ display: 'grid', gap: '12px' }}>
-                <label>
-                  <span>选择模拟设备</span>
-                  <select
-                    value={collabSimulateDevice}
-                    onChange={(e) => setCollabSimulateDevice(e.target.value)}
-                  >
-                    {appConfig.devices.filter(d => d.id !== currentDeviceId).map(d => (
-                      <option key={d.id} value={d.id}>{d.name}（{d.room}）</option>
-                    ))}
-                  </select>
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <label>
-                    <span>患者姓名</span>
-                    <input
-                      type="text"
-                      value={collabForm.patient}
-                      onChange={(e) => setCollabForm({ ...collabForm, patient: e.target.value })}
-                      placeholder="林雨"
-                    />
-                  </label>
-                  <label>
-                    <span>牙位</span>
-                    <select
-                      value={collabForm.tooth}
-                      onChange={(e) => setCollabForm({ ...collabForm, tooth: e.target.value })}
-                    >
-                      {appConfig.fields.find(f => f.key === 'tooth').options.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>比色结果</span>
-                    <select
-                      value={collabForm.shade}
-                      onChange={(e) => setCollabForm({ ...collabForm, shade: e.target.value })}
-                    >
-                      {getShadeOptions().map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>状态</span>
-                    <select
-                      value={collabForm.status}
-                      onChange={(e) => setCollabForm({ ...collabForm, status: e.target.value })}
-                    >
-                      {appConfig.statuses.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <label>
-                  <span>拍照备注</span>
-                  <textarea
-                    value={collabForm.photoNote}
-                    onChange={(e) => setCollabForm({ ...collabForm, photoNote: e.target.value })}
-                    placeholder="请输入拍照备注"
-                  />
-                </label>
-                <label>
-                  <span>复诊日期</span>
-                  <input
-                    type="date"
-                    value={collabForm.followUp}
-                    onChange={(e) => setCollabForm({ ...collabForm, followUp: e.target.value })}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={simulateAddRecord}
-                  style={{ marginTop: '4px' }}
-                >
-                  <RefreshCw size={16} />模拟导入该设备数据
-                </button>
-              </div>
-            </div>
-
-            <div className="panel data-panel">
-              <div className="panel-title">
-                <Download size={18} />
-                <h2>导出本设备完整备份</h2>
-              </div>
-              <p className="data-description">
-                将当前设备的所有业务数据导出为完整备份包（JSON 文件），包含牙色记录、患者档案、色号库、拍照流程、交接单、质控配置、质控记录和协作时间线，用于导入其他设备。
-              </p>
-              <div className="data-stats">
-                <div className="data-stat-item">
-                  <ClipboardList size={20} />
-                  <div>
-                    <strong>{records.length}</strong>
-                    <span>牙色记录</span>
-                  </div>
-                </div>
-                <div className="data-stat-item">
-                  <Users size={20} />
-                  <div>
-                    <strong>{patients.length}</strong>
-                    <span>患者档案</span>
-                  </div>
-                </div>
-              </div>
-              <div className="data-stats">
-                <div className="data-stat-item">
-                  <Palette size={20} />
-                  <div>
-                    <strong>{shadeLibrary.length}</strong>
-                    <span>色号库</span>
-                  </div>
-                </div>
-                <div className="data-stat-item">
-                  <Package size={20} />
-                  <div>
-                    <strong>{deliveryOrders.length}</strong>
-                    <span>交接单</span>
-                  </div>
-                </div>
-              </div>
-              <button type="button" className="primary" onClick={exportCollabData}>
-                <Download size={18} />导出 {getDeviceInfo(currentDeviceId).name} 完整备份
-              </button>
-            </div>
-
-            <div className="panel data-panel">
-              <div className="panel-title">
-                <HardDriveUpload size={18} />
-                <h2>导入其他设备数据</h2>
-              </div>
-              <p className="data-description">
-                选择从其他诊室平板导出的完整备份包 JSON 文件，系统将自动检测冲突并提供处理方式，同时合并所有数据类型。
-              </p>
-              {!collabImportPreview ? (
-                <div className="collab-import-area">
-                  <label className="import-label">
-                    <Upload size={32} style={{ color: '#9ca3af' }} />
-                    <span>点击选择 JSON 备份文件或拖拽到此处</span>
-                    <p className="hint">仅支持由本系统多诊室协作功能导出的完整备份包文件</p>
-                    <input
-                      type="file"
-                      accept=".json,application/json"
-                      style={{ display: 'none' }}
-                      onChange={handleCollabImportFile}
-                    />
-                  </label>
-                  {collabImportFileName && (
-                    <p className="import-filename">已选择：{collabImportFileName}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="collab-import-result">
-                  <div className="collab-import-source">
-                    <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '10px',
-                      background: getDeviceInfo(collabImportPreview.sourceDeviceId).color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      flexShrink: 0
-                    }}>
-                      <Tablet size={22} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <strong>{collabImportPreview.sourceDeviceName}</strong>
-                      <span>
-                        {getDeviceInfo(collabImportPreview.sourceDeviceId).room}
-                        {collabImportPreview.exportedAt && ` · 导出时间 ${formatDateTime(collabImportPreview.exportedAt)}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="import-stats" style={{ marginTop: '14px' }}>
-                    <div className="import-stat-card">
-                      <h4>牙色记录</h4>
-                      <div className="import-stat-grid">
-                        <div className="import-stat-item">
-                          <span className="label">总计</span>
-                          <strong>{collabImportPreview.totalRecords}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">新增</span>
-                          <strong className="text-success">{collabImportPreview.addedRecords?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">冲突</span>
-                          <strong style={{ color: '#dc2626' }}>{collabImportPreview.conflicts?.length || 0}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="import-stat-card">
-                      <h4>患者档案</h4>
-                      <div className="import-stat-grid">
-                        <div className="import-stat-item">
-                          <span className="label">总计</span>
-                          <strong>{collabImportPreview.totalPatients}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">新增</span>
-                          <strong className="text-success">{collabImportPreview.newPatients?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">覆盖</span>
-                          <strong className="text-warning">{collabImportPreview.overwrittenPatients?.length || 0}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="import-stat-card">
-                      <h4>色号库</h4>
-                      <div className="import-stat-grid">
-                        <div className="import-stat-item">
-                          <span className="label">总计</span>
-                          <strong>{collabImportPreview.totalShades}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">新增</span>
-                          <strong className="text-success">{collabImportPreview.newShades?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">覆盖</span>
-                          <strong className="text-warning">{collabImportPreview.existingImportShades?.length || 0}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="import-stat-card">
-                      <h4>拍照流程</h4>
-                      <div className="import-stat-grid">
-                        <div className="import-stat-item">
-                          <span className="label">总计</span>
-                          <strong>{collabImportPreview.totalPhotoProcesses || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">新增</span>
-                          <strong className="text-success">{collabImportPreview.newPhotoProcesses?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">覆盖</span>
-                          <strong className="text-warning">{collabImportPreview.overwrittenPhotoProcesses?.length || 0}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="import-stat-card">
-                      <h4>交接单</h4>
-                      <div className="import-stat-grid">
-                        <div className="import-stat-item">
-                          <span className="label">总计</span>
-                          <strong>{collabImportPreview.totalDeliveryOrders || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">新增</span>
-                          <strong className="text-success">{collabImportPreview.newDeliveryOrders?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">覆盖</span>
-                          <strong className="text-warning">{collabImportPreview.overwrittenDeliveryOrders?.length || 0}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="import-stat-card">
-                      <h4>质控配置</h4>
-                      <div className="import-stat-grid">
-                        <div className="import-stat-item">
-                          <span className="label">总计</span>
-                          <strong>{collabImportPreview.totalQcCheckItems || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">新增</span>
-                          <strong className="text-success">{collabImportPreview.newQcCheckItems?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">覆盖</span>
-                          <strong className="text-warning">{collabImportPreview.overwrittenQcCheckItems?.length || 0}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="import-stat-card">
-                      <h4>质控记录</h4>
-                      <div className="import-stat-grid">
-                        <div className="import-stat-item">
-                          <span className="label">总计</span>
-                          <strong>{collabImportPreview.totalQcRecords || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">新增</span>
-                          <strong className="text-success">{collabImportPreview.newQcRecords?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">覆盖</span>
-                          <strong className="text-warning">{collabImportPreview.overwrittenQcRecords?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">跳过</span>
-                          <strong className="text-skip">{collabImportPreview.skippedQcRecords?.length || 0}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="import-stat-card">
-                      <h4>协作时间线</h4>
-                      <div className="import-stat-grid">
-                        <div className="import-stat-item">
-                          <span className="label">总计</span>
-                          <strong>{collabImportPreview.totalCollabTimeline || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">新增</span>
-                          <strong className="text-success">{collabImportPreview.newCollabTimeline?.length || 0}</strong>
-                        </div>
-                        <div className="import-stat-item">
-                          <span className="label">跳过</span>
-                          <strong className="text-skip">{(collabImportPreview.totalCollabTimeline || 0) - (collabImportPreview.newCollabTimeline?.length || 0)}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {(collabImportPreview.overwrittenPatients?.length > 0 || collabImportPreview.existingImportShades?.length > 0 || collabImportPreview.overwrittenPhotoProcesses?.length > 0 || collabImportPreview.overwrittenDeliveryOrders?.length > 0 || collabImportPreview.overwrittenQcCheckItems?.length > 0 || collabImportPreview.overwrittenQcRecords?.length > 0) && (
-                    <div className="import-warning" style={{ marginTop: '12px' }}>
-                      <AlertTriangle size={18} />
-                      <div>
-                        <strong>部分数据将被覆盖</strong>
-                        <p>导入数据中存在与本地相同 ID/key 的记录，导入后这些本地数据将被替换。各类型覆盖数量已在上方统计中标注。</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {(!collabConflicts || collabConflicts.length === 0) && (!collabImportPreview.crossEntityConflicts || Object.values(collabImportPreview.crossEntityConflicts).every(items => !items || items.length === 0)) && (
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                      <button type="button" className="secondary" onClick={cancelCollabImport}>
-                        <X size={16} />取消
-                      </button>
-                      <button type="button" className="primary" onClick={confirmCollabImport}>
-                        <CheckCircle2 size={16} />确认导入
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            {collabConflicts && collabConflicts.length > 0 && (
-              <div className="panel data-panel collab-conflicts">
-                <div className="collab-conflicts-header">
-                  <AlertTriangle size={20} />
-                  <h3>检测到 {collabConflicts.length} 条比色记录冲突，请选择处理方式</h3>
-                </div>
-                <ul className="collab-conflict-list">
-                  {collabConflicts.map(conflict => {
-                    const localInfo = getDeviceInfo(conflict.local.deviceId);
-                    const importInfo = getDeviceInfo(conflict.import.deviceId);
-                    return (
-                      <li key={conflict.key} className="collab-conflict-item">
-                        <div className="conflict-patient-info">
-                          <Users size={18} style={{ color: 'var(--accent)' }} />
-                          <strong>{conflict.patient}</strong>
-                          <span>· 牙位 {conflict.tooth}</span>
-                        </div>
-                        <div className="conflict-compare">
-                          <div className="conflict-side conflict-local">
-                            <div className="conflict-side-label" style={{ color: localInfo.color }}>
-                              本地版本 · {localInfo.name}
-                            </div>
-                            <div><strong style={{ fontSize: '16px' }}>{conflict.local.shade}</strong> · {conflict.local.status}</div>
-                            <div style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px' }}>
-                              {conflict.local.photoNote || '无备注'}
-                            </div>
-                            <div className="conflict-time">
-                              v{conflict.local.version} · {formatDateTime(conflict.local.lastModified)}
-                            </div>
-                          </div>
-                          <div className="conflict-vs">VS</div>
-                          <div className="conflict-side conflict-import">
-                            <div className="conflict-side-label" style={{ color: importInfo.color }}>
-                              导入版本 · {importInfo.name}
-                            </div>
-                            <div><strong style={{ fontSize: '16px' }}>{conflict.import.shade}</strong> · {conflict.import.status}</div>
-                            <div style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px' }}>
-                              {conflict.import.photoNote || '无备注'}
-                            </div>
-                            <div className="conflict-time">
-                              v{conflict.import.version} · {formatDateTime(conflict.import.lastModified)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {conflict.fieldDiffs && conflict.fieldDiffs.length > 0 && (
-                          <div className="field-diff-section">
-                            <div className="field-diff-header">
-                              <Layers size={14} />
-                              <span>字段级差异预览（{conflict.fieldDiffs.length} 个字段不同）</span>
-                            </div>
-                            <table className="field-diff-table">
-                              <thead>
-                                <tr>
-                                  <th>字段</th>
-                                  <th>本地值</th>
-                                  <th>导入值</th>
-                                  <th>选择</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {conflict.fieldResolutions?.map((fr, fIdx) => (
-                                  <tr key={fr.fieldKey} className={fr.resolution === 'import' ? 'field-diff-import' : 'field-diff-local'}>
-                                    <td className="field-diff-label">{fr.fieldLabel}</td>
-                                    <td className="field-diff-value">{String(fr.localValue ?? '') || '—'}</td>
-                                    <td className="field-diff-value">{String(fr.importValue ?? '') || '—'}</td>
-                                    <td className="field-diff-choice">
-                                      <label className="field-choice-label">
-                                        <input
-                                          type="radio"
-                                          name={`field-${conflict.key}-${fr.fieldKey}`}
-                                          checked={fr.resolution === 'local'}
-                                          onChange={() => setFieldResolution(conflict.key, fr.fieldKey, 'local')}
-                                        />
-                                        <span>本地</span>
-                                      </label>
-                                      <label className="field-choice-label">
-                                        <input
-                                          type="radio"
-                                          name={`field-${conflict.key}-${fr.fieldKey}`}
-                                          checked={fr.resolution === 'import'}
-                                          onChange={() => setFieldResolution(conflict.key, fr.fieldKey, 'import')}
-                                        />
-                                        <span>导入</span>
-                                      </label>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-
-                        <div className="conflict-resolution">
-                          <label
-                            className={`conflict-option ${conflict.resolution === 'keepLocal' ? 'selected' : ''}`}
-                          >
-                            <input
-                              type="radio"
-                              name={`resolution-${conflict.key}`}
-                              checked={conflict.resolution === 'keepLocal'}
-                              onChange={() => setConflictResolution(conflict.key, 'keepLocal')}
-                            />
-                            <div className="conflict-option-content">
-                              <strong>保留本地</strong>
-                              <span>保留当前设备的数据，忽略导入版本</span>
-                            </div>
-                          </label>
-                          <label
-                            className={`conflict-option ${conflict.resolution === 'useImport' ? 'selected' : ''}`}
-                          >
-                            <input
-                              type="radio"
-                              name={`resolution-${conflict.key}`}
-                              checked={conflict.resolution === 'useImport'}
-                              onChange={() => setConflictResolution(conflict.key, 'useImport')}
-                            />
-                            <div className="conflict-option-content">
-                              <strong>采用导入</strong>
-                              <span>用导入的数据覆盖当前本地版本</span>
-                            </div>
-                          </label>
-                          <label
-                            className={`conflict-option ${conflict.resolution === 'makeCopy' ? 'selected' : ''}`}
-                          >
-                            <input
-                              type="radio"
-                              name={`resolution-${conflict.key}`}
-                              checked={conflict.resolution === 'makeCopy'}
-                              onChange={() => setConflictResolution(conflict.key, 'makeCopy')}
-                            />
-                            <div className="conflict-option-content">
-                              <strong>生成副本</strong>
-                              <span>两者都保留，导入数据作为副本新增</span>
-                            </div>
-                          </label>
-                          {conflict.fieldDiffs && conflict.fieldDiffs.length > 0 && (
-                            <label
-                              className={`conflict-option ${conflict.resolution === 'fieldMerge' ? 'selected' : ''}`}
-                            >
-                              <input
-                                type="radio"
-                                name={`resolution-${conflict.key}`}
-                                checked={conflict.resolution === 'fieldMerge'}
-                                onChange={() => setConflictResolution(conflict.key, 'fieldMerge')}
-                              />
-                              <div className="conflict-option-content">
-                                <strong>字段级合并</strong>
-                                <span>按上方字段选择逐项合并本地与导入值</span>
-                              </div>
-                            </label>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-
-            {collabImportPreview && collabImportPreview.crossEntityConflicts && (() => {
-              const ceConflicts = collabImportPreview.crossEntityConflicts;
-              const totalCeConflicts = Object.values(ceConflicts).reduce((sum, items) => sum + items.length, 0);
-              if (totalCeConflicts === 0) return null;
-              return (
-                <div className="panel data-panel collab-conflicts" style={{ borderColor: '#f59e0b' }}>
-                  <div className="collab-conflicts-header" style={{ color: '#92400e' }}>
-                    <GitMerge size={20} />
-                    <h3>跨实体冲突检测 · 共 {totalCeConflicts} 条需处理</h3>
-                  </div>
-
-                  {collabImportPreview.duplicatePatients && collabImportPreview.duplicatePatients.length > 0 && (
-                    <div className="import-warning" style={{ marginTop: '12px' }}>
-                      <AlertOctagon size={18} />
-                      <div>
-                        <strong>检测到 {collabImportPreview.duplicatePatients.length} 位同名患者</strong>
-                        <p>以下患者姓名在本地和导入数据中均存在，但ID不同，可能为同一人：{collabImportPreview.duplicatePatients.map(dp => `"${dp.import.name}"`).join('、')}</p>
-                        <p className="hint">导入时将为同名患者自动生成副本（添加"导入副本"后缀）</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {collabImportPreview.potentialOrphans && collabImportPreview.potentialOrphans.length > 0 && (
-                    <div className="import-warning" style={{ marginTop: '8px' }}>
-                      <AlertCircle size={18} />
-                      <div>
-                        <strong>检测到 {collabImportPreview.potentialOrphans.length} 个潜在孤立拍照流程</strong>
-                        <p>部分拍照流程关联的比色记录在合并后可能不存在，合并时将自动清理这些孤立记录</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {Object.entries(ceConflicts).map(([entityType, items]) => {
-                    if (!items || items.length === 0) return null;
-                    const entityName = MERGE_ENTITY_NAMES[entityType] || entityType;
-                    return (
-                      <div key={entityType} className="cross-entity-section">
-                        <h4 className="cross-entity-title">{entityName}冲突 · {items.length} 条</h4>
-                        <ul className="collab-conflict-list">
-                          {items.map(item => {
-                            const res = crossEntityResolutions[item.entityKey] || { resolution: 'keepLocal', fieldResolutions: item.fieldDiffs.map(fd => ({ ...fd, resolution: 'import' })) };
-                            return (
-                              <li key={item.entityKey} className="collab-conflict-item">
-                                <div className="conflict-patient-info">
-                                  {entityType === 'patients' && <Users size={16} style={{ color: 'var(--accent)' }} />}
-                                  {entityType === 'photoProcesses' && <Camera size={16} style={{ color: 'var(--accent)' }} />}
-                                  {entityType === 'deliveryOrders' && <Package size={16} style={{ color: 'var(--accent)' }} />}
-                                  {entityType === 'qcRecords' && <ClipboardList size={16} style={{ color: 'var(--accent)' }} />}
-                                  <strong>{item.local.name || item.local.orderNo || item.local.recordId || item.local.id?.slice(0, 8)}</strong>
-                                  {item.local.name && <span>· {item.local.phone || item.local.id?.slice(0, 8)}</span>}
-                                </div>
-                                {item.fieldDiffs && item.fieldDiffs.length > 0 && (
-                                  <table className="field-diff-table">
-                                    <thead>
-                                      <tr>
-                                        <th>字段</th>
-                                        <th>本地值</th>
-                                        <th>导入值</th>
-                                        <th>选择</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {res.fieldResolutions?.map((fr, fIdx) => (
-                                        <tr key={fr.fieldKey} className={fr.resolution === 'import' ? 'field-diff-import' : 'field-diff-local'}>
-                                          <td className="field-diff-label">{fr.fieldLabel}</td>
-                                          <td className="field-diff-value">{String(fr.localValue ?? '') || '—'}</td>
-                                          <td className="field-diff-value">{String(fr.importValue ?? '') || '—'}</td>
-                                          <td className="field-diff-choice">
-                                            <label className="field-choice-label">
-                                              <input
-                                                type="radio"
-                                                name={`ce-field-${item.entityKey}-${fr.fieldKey}`}
-                                                checked={fr.resolution === 'local'}
-                                                onChange={() => setCrossEntityFieldResolution(item.entityKey, fr.fieldKey, 'local')}
-                                              />
-                                              <span>本地</span>
-                                            </label>
-                                            <label className="field-choice-label">
-                                              <input
-                                                type="radio"
-                                                name={`ce-field-${item.entityKey}-${fr.fieldKey}`}
-                                                checked={fr.resolution === 'import'}
-                                                onChange={() => setCrossEntityFieldResolution(item.entityKey, fr.fieldKey, 'import')}
-                                              />
-                                              <span>导入</span>
-                                            </label>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                )}
-                                <div className="conflict-resolution">
-                                  <label className={`conflict-option ${res.resolution === 'keepLocal' ? 'selected' : ''}`}>
-                                    <input
-                                      type="radio"
-                                      name={`ce-resolution-${item.entityKey}`}
-                                      checked={res.resolution === 'keepLocal'}
-                                      onChange={() => setCrossEntityResolution(item.entityKey, 'keepLocal')}
-                                    />
-                                    <div className="conflict-option-content">
-                                      <strong>保留本地</strong>
-                                      <span>保留当前设备数据</span>
-                                    </div>
-                                  </label>
-                                  <label className={`conflict-option ${res.resolution === 'useImport' ? 'selected' : ''}`}>
-                                    <input
-                                      type="radio"
-                                      name={`ce-resolution-${item.entityKey}`}
-                                      checked={res.resolution === 'useImport'}
-                                      onChange={() => setCrossEntityResolution(item.entityKey, 'useImport')}
-                                    />
-                                    <div className="conflict-option-content">
-                                      <strong>采用导入</strong>
-                                      <span>用导入数据覆盖本地</span>
-                                    </div>
-                                  </label>
-                                  <label className={`conflict-option ${res.resolution === 'makeCopy' ? 'selected' : ''}`}>
-                                    <input
-                                      type="radio"
-                                      name={`ce-resolution-${item.entityKey}`}
-                                      checked={res.resolution === 'makeCopy'}
-                                      onChange={() => setCrossEntityResolution(item.entityKey, 'makeCopy')}
-                                    />
-                                    <div className="conflict-option-content">
-                                      <strong>生成副本</strong>
-                                      <span>两者都保留</span>
-                                    </div>
-                                  </label>
-                                  {item.fieldDiffs && item.fieldDiffs.length > 0 && (
-                                    <label className={`conflict-option ${res.resolution === 'fieldMerge' ? 'selected' : ''}`}>
-                                      <input
-                                        type="radio"
-                                        name={`ce-resolution-${item.entityKey}`}
-                                        checked={res.resolution === 'fieldMerge'}
-                                        onChange={() => setCrossEntityResolution(item.entityKey, 'fieldMerge')}
-                                      />
-                                      <div className="conflict-option-content">
-                                        <strong>字段级合并</strong>
-                                        <span>逐字段选择合并</span>
-                                      </div>
-                                    </label>
-                                  )}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    );
-                  })}
-
-                  <div className="import-actions" style={{ marginTop: '16px' }}>
-                    <button type="button" className="secondary" onClick={cancelCollabImport}>
-                      <X size={16} />取消导入
-                    </button>
-                    <button type="button" className="primary" onClick={confirmCollabImport}>
-                      <GitMerge size={16} />确认合并
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {(!collabConflicts || collabConflicts.length === 0) && collabImportPreview && (!collabImportPreview.crossEntityConflicts || Object.values(collabImportPreview.crossEntityConflicts).every(items => !items || items.length === 0)) && (
-              <div style={{ display: 'flex', gap: '10px', marginTop: '0' }}>
-                <button type="button" className="secondary" onClick={cancelCollabImport}>
-                  <X size={16} />取消
-                </button>
-                <button type="button" className="primary" onClick={confirmCollabImport}>
-                  <CheckCircle2 size={16} />确认导入
-                </button>
-              </div>
-            )}
-
-            <div className="panel data-panel collab-timeline-panel">
-              <div className="panel-title">
-                <History size={18} />
-                <h2>协作操作时间线</h2>
-              </div>
-              {collabTimeline.length === 0 ? (
-                <div className="shade-preview-empty">
-                  <History size={32} style={{ opacity: 0.3 }} />
-                  <p>暂无协作操作记录</p>
-                  <p className="hint" style={{ marginTop: '4px', fontSize: '13px' }}>
-                    切换设备、导入导出、处理冲突等操作会记录在此
-                  </p>
-                </div>
-              ) : (
-                <ul className="collab-timeline-list">
-                  {collabTimeline.slice(0, 50).map(entry => {
-                    const device = getDeviceInfo(entry.deviceId);
-                    const IconForType = () => {
-                      switch (entry.type) {
-                        case 'device-switch': return <RefreshCw size={14} />;
-                        case 'export': return <Download size={14} />;
-                        case 'import-added':
-                        case 'import-patients': return <Plus size={14} />;
-                        case 'conflict-resolve-keep': return <ShieldCheck size={14} />;
-                        case 'conflict-resolve-import': return <ArrowLeftRight size={14} />;
-                        case 'conflict-resolve-copy': return <Copy size={14} />;
-                        case 'simulate': return <Zap size={14} />;
-                        default: return <Clock size={14} />;
-                      }
-                    };
-                    const typeClass = entry.type?.includes('conflict') ? ' conflict-entry' : '';
-                    return (
-                      <li key={entry.id} className={`collab-timeline-entry${typeClass}`}>
-                        <div className="collab-tl-icon" style={{
-                          background: entry.type?.includes('conflict')
-                            ? '#fef2f2' : device.color ? `${device.color}15` : '#f3f4f6',
-                          color: entry.type?.includes('conflict') ? '#dc2626' : (device.color || '#6b7280')
-                        }}>
-                          <IconForType />
-                        </div>
-                        <div className="collab-tl-content">
-                          <div className="collab-tl-header">
-                            <span className="collab-tl-type">{entry.title}</span>
-                            {entry.deviceId && (
-                              <span className="collab-tl-device" style={{
-                                background: `${device.color}15`,
-                                color: device.color
-                              }}>
-                                {device.name}
-                              </span>
-                            )}
-                          </div>
-                          <div className="collab-tl-detail">{entry.detail}</div>
-                          <div className="collab-tl-time">{formatDateTime(entry.at)}</div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-
-            <div className="panel data-panel">
-              <div className="panel-title">
-                <Layers size={18} />
-                <h2>记录设备来源一览</h2>
-              </div>
-              <p className="data-description">
-                查看当前所有记录的设备来源、最后修改时间和版本号信息。
-              </p>
-              <div className="records" style={{ maxHeight: '380px' }}>
-                {records.length === 0 ? (
-                  <p className="empty">暂无记录</p>
-                ) : (
-                  records.map(record => {
-                    const device = getDeviceInfo(record.deviceId);
-                    return (
-                      <div key={record.id} className="record">
-                        <div className="record-head">
-                          <div>
-                            <h3>{record.patient}</h3>
-                            <p>牙位 {record.tooth} · 色号 {record.shade}</p>
-                          </div>
-                          <span className={`status ${statusClass(record.status)}`}>{record.status}</span>
-                        </div>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          marginTop: '10px',
-                          paddingTop: '10px',
-                          borderTop: '1px solid #f3f4f6',
-                          flexWrap: 'wrap'
-                        }}>
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '3px 8px',
-                            background: `${device.color}15`,
-                            color: device.color,
-                            borderRadius: '6px',
-                            fontSize: '11px',
-                            fontWeight: '700'
-                          }}>
-                            <Tablet size={12} />
-                            {device.name}
-                          </span>
-                          <span style={{ color: '#9ca3af', fontSize: '11px', fontWeight: '600' }}>
-                            v{record.version || 1}
-                          </span>
-                          <span style={{ color: '#9ca3af', fontSize: '11px', marginLeft: 'auto' }}>
-                            {formatDateTime(record.lastModified)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {shadeDetailModal && (
         <div className="modal-overlay" onClick={() => setShadeDetailModal(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="panel-title" style={{ marginBottom: 0 }}>
-                <div className={'shade-swatch-sm shade-' + (shadeDetailModal.code && shadeDetailModal.code.charAt(0).match(/[a-d]/i) ? shadeDetailModal.code.charAt(0).toLowerCase() : 'default')}>
+                <div className={'shade-swatch-sm shade-' + shadeDetailModal.code.charAt(0).toLowerCase()}>
                   <span>{shadeDetailModal.code}</span>
                 </div>
                 <h2>色号 {shadeDetailModal.code} 详情</h2>
@@ -7640,250 +2725,6 @@ function App() {
           </div>
         </div>
       )}
-
-      {deleteShadeConfirm && (
-        <div className="modal-overlay" onClick={cancelDeleteShade}>
-          <div className="modal-content modal-small" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="panel-title" style={{ marginBottom: 0 }}>
-                <AlertTriangle size={20} style={{ color: '#dc2626' }} />
-                <h2>删除色号确认</h2>
-              </div>
-              <button className="modal-close" onClick={cancelDeleteShade}>
-                <X size={20} />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="delete-warning">
-                <div className="warning-icon">
-                  <AlertOctagon size={40} style={{ color: '#dc2626' }} />
-                </div>
-                <div className="warning-content">
-                  <p className="warning-title">确定要删除色号 <strong>{deleteShadeConfirm.code}</strong> 吗？</p>
-                  {deleteShadeConfirm.usedByCount > 0 && (
-                    <div className="warning-alert">
-                      <AlertTriangle size={16} />
-                      <span>该色号目前被 <strong>{deleteShadeConfirm.usedByCount}</strong> 条比色记录使用。删除后：</span>
-                    </div>
-                  )}
-                  <ul className="warning-list">
-                    {deleteShadeConfirm.usedByCount > 0 && (
-                      <li>历史记录中的色号文本会被保留，不会影响已保存的记录</li>
-                    )}
-                    {deleteShadeConfirm.usedByCount > 0 && (
-                      <li>色号选择器和列表中将不再显示该色号</li>
-                    )}
-                    {deleteShadeConfirm.usedByCount > 0 && (
-                      <li>查看旧记录时，色号详情可能无法显示完整说明</li>
-                    )}
-                    {deleteShadeConfirm.usedByCount === 0 && (
-                      <li>该色号将从色号库中永久移除</li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="secondary" onClick={cancelDeleteShade}>
-                取消
-              </button>
-              <button type="button" className="danger" onClick={() => confirmDeleteShade(deleteShadeConfirm.code)}>
-                <Trash2 size={16} />确认删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showPrintSummary && selectedDeliveryOrder && (
-        <div className="modal-overlay print-modal-overlay" onClick={() => setShowPrintSummary(false)}>
-          <div className="print-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="print-modal-header">
-              <div className="panel-title" style={{ marginBottom: 0 }}>
-                <Printer size={18} />
-                <h2>交接单打印摘要</h2>
-              </div>
-              <div className="print-header-actions">
-                <button
-                  type="button"
-                  className="primary print-action-btn"
-                  onClick={() => window.print()}
-                >
-                  <Printer size={16} />打印
-                </button>
-                <button
-                  type="button"
-                  className="secondary print-action-btn"
-                  onClick={() => setShowPrintSummary(false)}
-                >
-                  <X size={16} />关闭
-                </button>
-              </div>
-            </div>
-            <div className="print-modal-body">
-              <div className="print-summary-a4" id="print-summary-area">
-                <div className="print-summary-header">
-                  <div className="print-clinic-name">
-                    <SmilePlus size={28} style={{ color: 'var(--accent)' }} />
-                    <h1>技工所交接摘要</h1>
-                  </div>
-                  <div className="print-summary-meta">
-                    <div className="print-meta-row">
-                      <span className="print-meta-label">打印日期：</span>
-                      <span className="print-meta-value">{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="print-section print-order-info">
-                  <h3 className="print-section-title">交接单基本信息</h3>
-                  <div className="print-info-grid">
-                    <div className="print-info-item">
-                      <span className="print-info-label">交接单号</span>
-                      <span className="print-info-value print-order-no">{selectedDeliveryOrder.orderNo}</span>
-                    </div>
-                    <div className="print-info-item">
-                      <span className="print-info-label">技工所</span>
-                      <span className="print-info-value">{selectedDeliveryOrder.labName}</span>
-                    </div>
-                    <div className="print-info-item">
-                      <span className="print-info-label">交接状态</span>
-                      <span className={`print-info-value print-status ${deliveryOrderStatusClass(selectedDeliveryOrder.status)}`}>
-                        {selectedDeliveryOrder.status}
-                      </span>
-                    </div>
-                    <div className="print-info-item">
-                      <span className="print-info-label">关联记录数</span>
-                      <span className="print-info-value">{selectedDeliveryOrder.recordIds.length} 条</span>
-                    </div>
-                  </div>
-                  {selectedDeliveryOrder.remark && (
-                    <div className="print-remark">
-                      <span className="print-info-label">交接备注：</span>
-                      <span>{selectedDeliveryOrder.remark}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="print-section print-records">
-                  <h3 className="print-section-title">关联患者与修复详情</h3>
-                  <table className="print-records-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: '6%' }}>序号</th>
-                        <th style={{ width: '12%' }}>患者姓名</th>
-                        <th style={{ width: '8%' }}>牙位</th>
-                        <th style={{ width: '8%' }}>色号</th>
-                        <th style={{ width: '26%' }}>拍照备注</th>
-                        <th style={{ width: '12%' }}>复诊日期</th>
-                        <th style={{ width: '28%' }}>质控缺失项</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedDeliveryOrder.recordIds.map((rid, idx) => {
-                        const record = getRecordById(rid);
-                        if (!record) return null;
-                        const qc = getQcByRecordId(rid);
-                        const missingItems = getMissingQcItemsByQc(qc, record.status);
-                        return (
-                          <tr key={rid}>
-                            <td className="print-cell-center">{idx + 1}</td>
-                            <td className="print-cell-bold">{record.patient}</td>
-                            <td className="print-cell-center">{record.tooth}</td>
-                            <td className="print-cell-center print-shade-cell">{record.shade}</td>
-                            <td>{record.photoNote || <span className="print-empty">—</span>}</td>
-                            <td className="print-cell-center">{record.followUp || <span className="print-empty">未排期</span>}</td>
-                            <td>
-                              {missingItems.length > 0 ? (
-                                <div className="print-missing-list">
-                                  {missingItems.map((item) => (
-                                    <span
-                                      key={item.key}
-                                      className={`print-missing-tag ${item.critical ? 'critical' : ''}`}
-                                    >
-                                      {item.critical && '★ '}{item.label}
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="print-all-checked">✓ 全部完成</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="print-section print-timeline-section">
-                  <h3 className="print-section-title">发送与回收时间</h3>
-                  <div className="print-timeline">
-                    <div className="print-timeline-item">
-                      <div className="print-timeline-dot print-dot-create"></div>
-                      <div className="print-timeline-content">
-                        <span className="print-timeline-label">创建时间</span>
-                        <span className="print-timeline-value">
-                          {selectedDeliveryOrder.createdAt
-                            ? new Date(selectedDeliveryOrder.createdAt).toLocaleString('zh-CN', {
-                                year: 'numeric', month: '2-digit', day: '2-digit',
-                                hour: '2-digit', minute: '2-digit'
-                              })
-                            : '—'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="print-timeline-item">
-                      <div className={`print-timeline-dot ${selectedDeliveryOrder.sentAt ? 'print-dot-sent' : 'print-dot-pending'}`}></div>
-                      <div className="print-timeline-content">
-                        <span className="print-timeline-label">发送时间</span>
-                        <span className="print-timeline-value">
-                          {selectedDeliveryOrder.sentAt
-                            ? new Date(selectedDeliveryOrder.sentAt).toLocaleString('zh-CN', {
-                                year: 'numeric', month: '2-digit', day: '2-digit',
-                                hour: '2-digit', minute: '2-digit'
-                              })
-                            : '待发送'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="print-timeline-item">
-                      <div className={`print-timeline-dot ${selectedDeliveryOrder.receivedAt ? 'print-dot-received' : 'print-dot-pending'}`}></div>
-                      <div className="print-timeline-content">
-                        <span className="print-timeline-label">回收时间</span>
-                        <span className="print-timeline-value">
-                          {selectedDeliveryOrder.receivedAt
-                            ? new Date(selectedDeliveryOrder.receivedAt).toLocaleString('zh-CN', {
-                                year: 'numeric', month: '2-digit', day: '2-digit',
-                                hour: '2-digit', minute: '2-digit'
-                              })
-                            : '待回收'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="print-section print-signatures">
-                  <div className="print-signature-item">
-                    <span className="print-signature-label">诊所经办人签字：</span>
-                    <span className="print-signature-line"></span>
-                  </div>
-                  <div className="print-signature-item">
-                    <span className="print-signature-label">技工所签收人签字：</span>
-                    <span className="print-signature-line"></span>
-                  </div>
-                </div>
-
-                <div className="print-footer">
-                  <span>本摘要由牙科诊所牙色比色记录系统自动生成 · {appConfig.title}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     </main>
   );
 }
