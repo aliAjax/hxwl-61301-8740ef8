@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SmilePlus, Plus, Search, Trash2, RotateCcw, CheckCircle2, AlertTriangle, ClipboardList, CalendarDays, Users, UserPlus, Edit3, Phone, MapPin, AlertCircle, FileText, Palette, Info, X, Save, CalendarCheck, Stethoscope, Camera, User, Sun, CheckSquare, ChevronRight, ChevronLeft, Upload, Image as ImageIcon, ArrowRight, Square, CheckCheck, Send, Package, ArrowLeftRight, Layers, GripVertical, Clock, AlertOctagon, CalendarRange, Database } from 'lucide-react';
-import { loadCategory, saveCategory } from './dataStore';
+import { DATA_CATEGORIES, loadCategory, saveCategory } from './dataStore';
 import { useDataManagement } from './hooks/useDataManagement';
 import './App.css';
 
@@ -367,27 +367,13 @@ function withIds(items) {
 }
 
 function loadRecords() {
-  const raw = localStorage.getItem(appConfig.storage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return withIds(appConfig.seed);
-    }
-  }
-  return withIds(appConfig.seed);
+  const data = loadCategory(DATA_CATEGORIES.records, appConfig);
+  return Array.isArray(data) ? data : withIds(appConfig.seed);
 }
 
 function loadPatients() {
-  const raw = localStorage.getItem(appConfig.patientStorage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return withPatientIds(appConfig.patientSeed);
-    }
-  }
-  return withPatientIds(appConfig.patientSeed);
+  const data = loadCategory(DATA_CATEGORIES.patients, appConfig);
+  return Array.isArray(data) ? data : withPatientIds(appConfig.patientSeed);
 }
 
 function withPatientIds(patients) {
@@ -395,44 +381,23 @@ function withPatientIds(patients) {
 }
 
 function loadShadeLibrary() {
-  const raw = localStorage.getItem(appConfig.shadeLibraryStorage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return appConfig.shadeLibrarySeed;
-    }
-  }
-  return appConfig.shadeLibrarySeed;
+  const data = loadCategory(DATA_CATEGORIES.shadeLibrary, appConfig);
+  return Array.isArray(data) ? data : appConfig.shadeLibrarySeed;
 }
 
 function loadPhotoProcesses() {
-  const raw = localStorage.getItem(appConfig.photoProcessStorage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  }
-  return [];
+  const data = loadCategory(DATA_CATEGORIES.photoProcesses, appConfig);
+  return Array.isArray(data) ? data : [];
 }
 
 function loadDeliveryOrders() {
-  const raw = localStorage.getItem(appConfig.deliveryOrderStorage);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return appConfig.deliveryOrderSeed;
-    }
-  }
-  return appConfig.deliveryOrderSeed;
+  const data = loadCategory(DATA_CATEGORIES.deliveryOrders, appConfig);
+  return Array.isArray(data) ? data : appConfig.deliveryOrderSeed;
 }
 
 function loadQcCheckItems() {
   try {
-    const data = loadCategory('qcCheckItems', appConfig);
+    const data = loadCategory(DATA_CATEGORIES.qcCheckItems, appConfig);
     if (Array.isArray(data) && data.length > 0) return data;
   } catch {}
   return appConfig.qcCheckItems.map((ci) => ({ ...ci }));
@@ -440,7 +405,7 @@ function loadQcCheckItems() {
 
 function loadQcRecords() {
   try {
-    const data = loadCategory('qcRecords', appConfig);
+    const data = loadCategory(DATA_CATEGORIES.qcRecords, appConfig);
     if (Array.isArray(data)) return data;
   } catch {}
   return [];
@@ -448,7 +413,7 @@ function loadQcRecords() {
 
 function loadCollabTimeline() {
   try {
-    const data = loadCategory('collabTimeline', appConfig);
+    const data = loadCategory(DATA_CATEGORIES.collabTimeline, appConfig);
     if (Array.isArray(data)) return data;
   } catch {}
   return [];
@@ -558,47 +523,56 @@ function App() {
   } = dataManagement;
 
   useEffect(() => {
-    initializeData();
+    const result = initializeData();
+    const data = result.data || {};
+    if (Array.isArray(data.records)) setRecords(data.records);
+    if (Array.isArray(data.patients)) setPatients(data.patients);
+    if (Array.isArray(data.shadeLibrary)) setShadeLibrary(data.shadeLibrary);
+    if (Array.isArray(data.photoProcesses)) setPhotoProcesses(data.photoProcesses);
+    if (Array.isArray(data.deliveryOrders)) setDeliveryOrders(data.deliveryOrders);
+    if (Array.isArray(data.qcCheckItems)) setQcCheckItems(data.qcCheckItems);
+    if (Array.isArray(data.qcRecords)) setQcRecords(data.qcRecords);
+    if (Array.isArray(data.collabTimeline)) setCollabTimeline(data.collabTimeline);
   }, []);
 
   function persistRecords(next) {
     setRecords(next);
-    localStorage.setItem(appConfig.storage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.records, next, appConfig);
   }
 
   function persistPatients(next) {
     setPatients(next);
-    localStorage.setItem(appConfig.patientStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.patients, next, appConfig);
   }
 
   function persistShadeLibrary(next) {
     setShadeLibrary(next);
-    localStorage.setItem(appConfig.shadeLibraryStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.shadeLibrary, next, appConfig);
   }
 
   function persistPhotoProcesses(next) {
     setPhotoProcesses(next);
-    localStorage.setItem(appConfig.photoProcessStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.photoProcesses, next, appConfig);
   }
 
   function persistDeliveryOrders(next) {
     setDeliveryOrders(next);
-    localStorage.setItem(appConfig.deliveryOrderStorage, JSON.stringify(next));
+    saveCategory(DATA_CATEGORIES.deliveryOrders, next, appConfig);
   }
 
   function persistQcCheckItems(next) {
     setQcCheckItems(next);
-    saveCategory('qcCheckItems', next, appConfig);
+    saveCategory(DATA_CATEGORIES.qcCheckItems, next, appConfig);
   }
 
   function persistQcRecords(next) {
     setQcRecords(next);
-    saveCategory('qcRecords', next, appConfig);
+    saveCategory(DATA_CATEGORIES.qcRecords, next, appConfig);
   }
 
   function persistCollabTimeline(next) {
     setCollabTimeline(next);
-    saveCategory('collabTimeline', next, appConfig);
+    saveCategory(DATA_CATEGORIES.collabTimeline, next, appConfig);
   }
 
   function getPhotoProcessByRecordId(recordId) {
